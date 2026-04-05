@@ -1,16 +1,15 @@
 import { db } from '@/lib/db'
-import { calendarioAgan, pruebaExtraordinaria, agoraEventos } from '@/lib/db/schema'
+import {
+  calendarioAgan,
+  pruebaExtraordinaria,
+  agoraEventos,
+} from '@/lib/db/schema'
 import { PRUEBAS_TRIPTICO, PRUEBAS_DESTINO } from '@/lib/db/constants'
-import { getAmbosAgonistas } from '@/lib/db/queries'
 import { eq, and } from 'drizzle-orm'
 import { addDays, endOfDay, format, parseISO } from 'date-fns'
+import { getAmbosAgonistas } from '@/lib/db/queries'
 
-function horaAleatoriaEnVentana(horaMin: number, horaMax: number): number {
-  if (horaMax <= horaMin) return horaMin
-  return (
-    horaMin + Math.floor(Math.random() * (horaMax - horaMin + 1))
-  )
-}
+type CalendarioRow = typeof calendarioAgan.$inferSelect
 
 export async function generarCalendarioAgan(): Promise<void> {
   const existente = await db.select().from(calendarioAgan).limit(1)
@@ -19,41 +18,29 @@ export async function generarCalendarioAgan(): Promise<void> {
     return
   }
 
-  const start = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!start) throw new Error('NEXT_PUBLIC_AGON_START_DATE no está definida')
-
-  parseISO(start)
-
   const semanasSagradas = [2, 3, 4]
-  const semanaSagrada =
+  const semanaSagradaSemana =
     semanasSagradas[Math.floor(Math.random() * semanasSagradas.length)]
 
-  const tripticoBarajado = [...PRUEBAS_TRIPTICO]
+  const tripticoOrden = [...PRUEBAS_TRIPTICO]
     .sort(() => Math.random() - 0.5)
     .map((p) => p.id)
 
-  const destinoBarajado = [...PRUEBAS_DESTINO]
+  const destinoOrden = [...PRUEBAS_DESTINO]
     .sort(() => Math.random() - 0.5)
     .map((p) => p.id)
 
-  const destinoHorarios: Record<string, { dia: number; hora: number }> = {}
+  const destinoHorarios: Record<string, { dia: number }> = {}
   const diasUsados = new Set<number>()
 
-  destinoBarajado.forEach((pruebaId) => {
-    const config = PRUEBAS_DESTINO.find((p) => p.id === pruebaId)
-    if (!config) return
-
+  destinoOrden.forEach((pruebaId) => {
     let intentos = 0
     let diaAsignado = -1
 
-    while (intentos < 50 && diaAsignado === -1) {
-      const dia = Math.floor(Math.random() * 27) + 1
+    while (intentos < 100 && diaAsignado === -1) {
+      const dia = Math.floor(Math.random() * 25) + 3
       if (!diasUsados.has(dia)) {
-        const horaRandom = horaAleatoriaEnVentana(
-          config.ventana.horaMin,
-          config.ventana.horaMax
-        )
-        destinoHorarios[pruebaId] = { dia, hora: horaRandom }
+        destinoHorarios[pruebaId] = { dia }
         diasUsados.add(dia)
         diaAsignado = dia
       }
@@ -61,13 +48,9 @@ export async function generarCalendarioAgan(): Promise<void> {
     }
 
     if (diaAsignado === -1) {
-      for (let d = 1; d <= 27; d++) {
+      for (let d = 3; d <= 27; d++) {
         if (!diasUsados.has(d)) {
-          const horaRandom = horaAleatoriaEnVentana(
-            config.ventana.horaMin,
-            config.ventana.horaMax
-          )
-          destinoHorarios[pruebaId] = { dia: d, hora: horaRandom }
+          destinoHorarios[pruebaId] = { dia: d }
           diasUsados.add(d)
           break
         }
@@ -77,13 +60,15 @@ export async function generarCalendarioAgan(): Promise<void> {
 
   await db.insert(calendarioAgan).values({
     id: crypto.randomUUID(),
-    semanaSagradaSemana: semanaSagrada,
-    tripticoOrden: tripticoBarajado,
-    destinoOrden: destinoBarajado,
+    semanaSagradaSemana,
+    tripticoOrden,
+    destinoOrden,
     destinoHorarios,
   })
 
-  console.log(`Calendario generado — Semana Sagrada: semana ${semanaSagrada}`)
+  console.log(
+    `Calendario generado — Semana Sagrada: semana ${semanaSagradaSemana}`
+  )
 }
 
 export async function getCalendario() {
@@ -91,43 +76,82 @@ export async function getCalendario() {
   return result[0] ?? null
 }
 
-export async function activarTripticoDia(dia: number): Promise<void> {
+export async function verificarYActivarPruebas(diaActual: number): Promise<{
+  tripticoActivado: boolean
+  destinoLatente: string | null
+}> {
   const calendario = await getCalendario()
-  if (!calendario) return
+  if (!calendario) return { tripticoActivado: false, destinoLatente: null }
 
   const start = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!start) return
+  if (!start) return { tripticoActivado: false, destinoLatente: null }
 
   const inicio = parseISO(start)
-  const fecha = format(addDays(inicio, dia - 1), 'yyyy-MM-dd')
-  const semana = Math.ceil(dia / 7)
+  const fecha = format(addDays(inicio, diaActual - 1), 'yyyy-MM-dd')
+  const semana = Math.ceil(diaActual / 7)
+  const diaDeLaSemana = ((diaActual - 1) % 7) + 1
 
-  const diaDeLaSemana = ((dia - 1) % 7) + 1
-  if (diaDeLaSemana > 3) return
+  let tripticoActivado = false
 
-  const yaHay = await db
+  if (diaDeLaSemana <= 3) {
+    tripticoActivado = await insertarTripticoSiCorresponde(
+      diaActual,
+      diaDeLaSemana,
+      semana,
+      fecha,
+      calendario
+    )
+  }
+
+  const destinoLatente = await getEventoDestinoLatente(
+    diaActual,
+    fecha,
+    semana,
+    calendario
+  )
+
+  return { tripticoActivado, destinoLatente }
+}
+
+async function insertarTripticoSiCorresponde(
+  diaActual: number,
+  diaDeLaSemana: number,
+  semana: number,
+  fecha: string,
+  calendario: CalendarioRow
+): Promise<boolean> {
+  const tripticoOrden = calendario.tripticoOrden as string[]
+  const indiceBase = (semana - 1) * 3
+  const indice = indiceBase + (diaDeLaSemana - 1)
+
+  if (indice >= tripticoOrden.length) return false
+
+  const pruebaId = tripticoOrden[indice]
+
+  const yaExiste = await db
+    .select()
+    .from(pruebaExtraordinaria)
+    .where(eq(pruebaExtraordinaria.pruebaId, pruebaId))
+    .limit(1)
+
+  if (yaExiste.length > 0) return false
+
+  const config = PRUEBAS_TRIPTICO.find((p) => p.id === pruebaId)
+  if (!config) return false
+
+  const duplicadoDia = await db
     .select()
     .from(pruebaExtraordinaria)
     .where(
       and(
-        eq(pruebaExtraordinaria.dia, dia),
+        eq(pruebaExtraordinaria.dia, diaActual),
         eq(pruebaExtraordinaria.tipo, 'triptico'),
         eq(pruebaExtraordinaria.fecha, fecha)
       )
     )
     .limit(1)
 
-  if (yaHay.length > 0) return
-
-  const tripticoOrden = calendario.tripticoOrden as string[]
-  const indiceBase = (semana - 1) * 3
-  const indice = indiceBase + (diaDeLaSemana - 1)
-
-  if (indice >= tripticoOrden.length) return
-
-  const pruebaId = tripticoOrden[indice]
-  const config = PRUEBAS_TRIPTICO.find((p) => p.id === pruebaId)
-  if (!config) return
+  if (duplicadoDia.length > 0) return false
 
   const diasHastaDomingo = 7 - diaDeLaSemana
   const fechaBase = parseISO(fecha)
@@ -136,7 +160,7 @@ export async function activarTripticoDia(dia: number): Promise<void> {
   await db.insert(pruebaExtraordinaria).values({
     id: crypto.randomUUID(),
     semana,
-    dia,
+    dia: diaActual,
     fecha,
     pruebaId,
     tipo: 'triptico',
@@ -144,84 +168,112 @@ export async function activarTripticoDia(dia: number): Promise<void> {
     kleosBonus: config.kleos,
     dificultad: config.dificultad,
     activa: true,
+    completadaPorJavier: false,
+    completadaPorMatias: false,
     fechaExpira,
   })
 
-  await publicarEventoAgora(
-    `El Altis lanza una nueva prueba del Tríptico: "${config.descripcion}" Vale ${config.kleos} kleos. Disponible hasta el domingo.`,
+  await publicarEnAgora(
+    `📜 El Altis lanza una nueva prueba del Tríptico Semanal: "${config.descripcion}" Vale ${config.kleos} kleos. Disponible hasta el domingo.`,
     { tipo: 'triptico', pruebaId, semana }
   )
+
+  return true
 }
 
-export async function verificarEventosDestino(
+async function getEventoDestinoLatente(
   diaActual: number,
-  horaActual: number
-): Promise<void> {
+  _fecha: string,
+  _semana: number,
+  calendario: CalendarioRow
+): Promise<string | null> {
+  const destinoHorarios = calendario.destinoHorarios as Record<
+    string,
+    { dia: number }
+  >
+
+  const pruebaIdHoy = Object.entries(destinoHorarios).find(
+    ([, horario]) => horario.dia === diaActual
+  )?.[0]
+
+  if (!pruebaIdHoy) return null
+
+  const yaExiste = await db
+    .select()
+    .from(pruebaExtraordinaria)
+    .where(eq(pruebaExtraordinaria.pruebaId, pruebaIdHoy))
+    .limit(1)
+
+  if (yaExiste.length > 0) return null
+
+  return pruebaIdHoy
+}
+
+export async function activarEventoDestino(
+  pruebaId: string,
+  diaActual: number
+): Promise<boolean> {
   const calendario = await getCalendario()
-  if (!calendario) return
+  if (!calendario) return false
 
   const start = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!start) return
+  if (!start) return false
 
   const inicio = parseISO(start)
   const fecha = format(addDays(inicio, diaActual - 1), 'yyyy-MM-dd')
   const semana = Math.ceil(diaActual / 7)
 
-  const destinoHorarios = calendario.destinoHorarios as Record<
-    string,
-    { dia: number; hora: number }
-  >
+  const yaExiste = await db
+    .select()
+    .from(pruebaExtraordinaria)
+    .where(eq(pruebaExtraordinaria.pruebaId, pruebaId))
+    .limit(1)
 
-  for (const [pruebaId, horario] of Object.entries(destinoHorarios)) {
-    if (horario.dia !== diaActual || horario.hora !== horaActual) continue
+  if (yaExiste.length > 0) return false
 
-    const yaExiste = await db
-      .select()
-      .from(pruebaExtraordinaria)
-      .where(eq(pruebaExtraordinaria.pruebaId, pruebaId))
-      .limit(1)
+  const config = PRUEBAS_DESTINO.find((p) => p.id === pruebaId)
+  if (!config) return false
 
-    if (yaExiste.length > 0) continue
-
-    const config = PRUEBAS_DESTINO.find((p) => p.id === pruebaId)
-    if (!config) continue
-
-    if (
-      horaActual < config.ventana.horaMin ||
-      horaActual > config.ventana.horaMax
-    ) {
-      continue
-    }
-
-    const fechaExpira = new Date()
-    fechaExpira.setHours(
-      fechaExpira.getHours() + config.ventana.duracionHoras
-    )
-
-    await db.insert(pruebaExtraordinaria).values({
-      id: crypto.randomUUID(),
-      semana,
-      dia: diaActual,
-      fecha,
-      pruebaId,
-      tipo: 'destino',
-      descripcion: config.descripcion,
-      kleosBonus: config.kleos,
-      dificultad: config.dificultad,
-      activa: true,
-      fechaExpira,
-    })
-
-    await publicarEventoAgora(
-      `⚡ El Altis lanza un Evento del Destino: "${config.descripcion}" Vale ${config.kleos} kleos. Expira en ${config.ventana.duracionHoras} horas.`,
-      { tipo: 'destino', pruebaId, semana }
-    )
-
-    console.log(`Evento del Destino activado: ${pruebaId}`)
+  const horaActual = new Date().getHours()
+  if (
+    horaActual < config.ventana.horaMin ||
+    horaActual > config.ventana.horaMax
+  ) {
+    return false
   }
+
+  const fechaExpira = new Date()
+  fechaExpira.setHours(fechaExpira.getHours() + config.ventana.duracionHoras)
+
+  const finDelDia = new Date()
+  finDelDia.setHours(23, 59, 59, 999)
+  const expiraFinal = fechaExpira > finDelDia ? finDelDia : fechaExpira
+
+  await db.insert(pruebaExtraordinaria).values({
+    id: crypto.randomUUID(),
+    semana,
+    dia: diaActual,
+    fecha,
+    pruebaId,
+    tipo: 'destino',
+    descripcion: config.descripcion,
+    kleosBonus: config.kleos,
+    dificultad: config.dificultad,
+    activa: true,
+    completadaPorJavier: false,
+    completadaPorMatias: false,
+    fechaExpira: expiraFinal,
+  })
+
+  await publicarEnAgora(
+    `⚡ El Altis desencadena un Evento del Destino: "${config.descripcion}" Vale ${config.kleos} kleos. El tiempo corre.`,
+    { tipo: 'destino', pruebaId, semana }
+  )
+
+  return true
 }
 
-async function publicarEventoAgora(
+async function publicarEnAgora(
   contenido: string,
   metadata: object
 ): Promise<void> {

@@ -13,6 +13,8 @@ import { SectionHeader } from '@/components/agon/section-header'
 import { LoadingAltis } from '@/components/agon/loading-altis'
 import { ErrorAltis } from '@/components/agon/error-altis'
 import { cn } from '@/lib/utils'
+import { useEventosDestino } from '@/hooks/use-eventos-destino'
+import { EventoDestinoOverlay } from '@/components/agon/evento-destino-overlay'
 import type { Agonista, Hegemonia } from '@/lib/db/schema'
 
 type TabAltis = 'batalla' | 'habitos' | 'evolucion' | 'dias'
@@ -49,6 +51,27 @@ export default function AltisPage() {
   const [tab, setTab] = useState<TabAltis>('batalla')
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const {
+    destinoLatente,
+    eventoActivado,
+    pruebaDestinoId,
+    verificar,
+    activarDestino,
+    cerrarOverlay,
+  } = useEventosDestino()
+
+  useEffect(() => {
+    void verificar()
+  }, [verificar])
+
+  useEffect(() => {
+    if (!destinoLatente || eventoActivado || tab !== 'batalla') return
+    const timer = setTimeout(() => {
+      void activarDestino()
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [destinoLatente, eventoActivado, activarDestino, tab])
 
   const cargar = useCallback(async () => {
     setCargando(true)
@@ -279,6 +302,11 @@ export default function AltisPage() {
           </AgonCard>
         </div>
       )}
+
+      <EventoDestinoOverlay
+        pruebaId={eventoActivado ? pruebaDestinoId : null}
+        onCerrar={cerrarOverlay}
+      />
     </div>
   )
 }

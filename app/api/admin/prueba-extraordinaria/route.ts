@@ -16,7 +16,7 @@ export async function POST() {
   return NextResponse.json(
     {
       error:
-        'La Prueba Extraordinaria es automática (Tríptico y Destino). Usa los crons o POST /api/cron/init con CRON_SECRET.',
+        'La Prueba Extraordinaria es automática (Tríptico y Destino). Genera el calendario en Admin o con POST /api/admin/calendario.',
     },
     { status: 410 }
   )

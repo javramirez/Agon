@@ -5,8 +5,7 @@ import {
   getAclamacionesHoy,
   getTiposAclamacionHoyPorEvento,
 } from '@/lib/db/queries'
-import { AgoraFeed } from '@/components/agon/agora-feed'
-import { EmptyState } from '@/components/agon/empty-state'
+import { AgoraConTrigger } from '@/components/agon/agora-con-trigger'
 
 export const revalidate = 30
 
@@ -45,19 +44,11 @@ export default async function AgoraPage() {
         </p>
       </div>
 
-      {eventos.length === 0 ? (
-        <EmptyState
-          icono="🏛️"
-          titulo="El Ágora está en silencio."
-          descripcion="Las hazañas del Gran Agon aparecerán aquí cuando el agon comience."
-        />
-      ) : (
-        <AgoraFeed
-          eventosIniciales={eventos}
-          aclamacionesHoy={usadas}
-          tiposPorEvento={tiposPorEvento}
-        />
-      )}
+      <AgoraConTrigger
+        eventosIniciales={eventos}
+        aclamacionesHoy={usadas}
+        tiposPorEvento={tiposPorEvento}
+      />
     </div>
   )
 }

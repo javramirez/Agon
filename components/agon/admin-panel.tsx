@@ -22,6 +22,8 @@ interface DiagnosticoCronica {
 
 export function AdminPanel() {
   const [semanaSagradaActiva, setSemanaSagradaActiva] = useState(false)
+  const [generandoCalendario, setGenerandoCalendario] = useState(false)
+  const [calendarioGenerado, setCalendarioGenerado] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [mensaje, setMensaje] = useState('')
   const [generandoCronica, setGenerandoCronica] = useState(false)
@@ -36,6 +38,30 @@ export function AdminPanel() {
       .then((r) => r.json())
       .then((d) => setSemanaSagradaActiva(d.activa))
   }, [])
+
+  useEffect(() => {
+    fetch('/api/admin/calendario')
+      .then((r) => r.json())
+      .then((d: { existe?: boolean }) => {
+        if (d.existe) setCalendarioGenerado(true)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function generarCalendario() {
+    setGenerandoCalendario(true)
+    const res = await fetch('/api/admin/calendario', { method: 'POST' })
+    const data = (await res.json()) as { ok?: boolean; error?: string }
+    if (data.ok) {
+      setCalendarioGenerado(true)
+      setMensaje(
+        '🗓️ Calendario del Gran Agon generado. Los eventos se activarán con los triggers (dashboard, Ágora, Altis).'
+      )
+    } else {
+      setMensaje(`Error: ${data.error ?? res.statusText}`)
+    }
+    setGenerandoCalendario(false)
+  }
 
   async function activarSemanaSagrada() {
     setEnviando(true)
@@ -126,15 +152,27 @@ export function AdminPanel() {
       <div className="space-y-3">
         <div>
           <h2 className="font-display text-lg font-semibold">
-            Pruebas Extraordinarias (V2)
+            Calendario del Gran Agon
           </h2>
           <p className="text-xs text-muted-foreground font-body mt-1">
-            El Tríptico Semanal y los Eventos del Destino se activan por cron
-            (horario del Altis). El calendario se genera con{' '}
-            <code className="text-amber/90">/api/cron/init</code> protegido por{' '}
-            <code className="text-amber/90">CRON_SECRET</code>.
+            Genera el calendario el día 1 del desafío. Sortea la Semana Sagrada
+            y distribuye los 20 Eventos del Destino en los días 3–27. Solo se
+            puede generar una vez. Los eventos se activan con triggers en
+            dashboard, Ágora y Altis.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => void generarCalendario()}
+          disabled={generandoCalendario || calendarioGenerado}
+          className="px-6 py-3 bg-amber text-black font-display font-bold text-sm tracking-widest uppercase rounded-lg hover:bg-amber/90 transition-all disabled:opacity-40"
+        >
+          {calendarioGenerado
+            ? '✓ Calendario generado'
+            : generandoCalendario
+              ? 'Generando...'
+              : 'Generar Calendario del Gran Agon'}
+        </button>
       </div>
 
       <div className="space-y-3">
