@@ -7,7 +7,7 @@ import {
   hegemonias,
   inscripciones,
 } from '@/lib/db/schema'
-import { eq, and, gte, lte } from 'drizzle-orm'
+import { eq, and, gte, lte, asc } from 'drizzle-orm'
 import { getAmbosAgonistas, getSemanaActual, getSemanaRango } from '@/lib/db/queries'
 import { NIVEL_LABELS } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
@@ -28,6 +28,7 @@ interface DatosSemana {
     kleosGanador: number
     kleosRival: number
   }
+  eventosDestacados: string[]
 }
 
 interface DatosAgonista {
@@ -100,7 +101,7 @@ async function recopilarDatosSemana(semana: number): Promise<DatosSemana> {
 
   const [a1, a2] = ambos
 
-  const [pruebas1, pruebas2, inscripciones1, inscripciones2, hegemoniaData] =
+  const [pruebas1, pruebas2, inscripciones1, inscripciones2, hegemoniaData, eventos] =
     await Promise.all([
       db
         .select()
@@ -147,6 +148,16 @@ async function recopilarDatosSemana(semana: number): Promise<DatosSemana> {
         .from(hegemonias)
         .where(eq(hegemonias.semana, semana))
         .limit(1),
+      db
+        .select()
+        .from(agoraEventos)
+        .where(
+          and(
+            gte(agoraEventos.createdAt, inicioDia),
+            lte(agoraEventos.createdAt, finDia)
+          )
+        )
+        .orderBy(asc(agoraEventos.createdAt)),
     ])
 
   const calcularDatos = (
@@ -182,6 +193,21 @@ async function recopilarDatosSemana(semana: number): Promise<DatosSemana> {
 
   const heg = hegemoniaData[0]
 
+  const tiposDestacados = [
+    'dia_perfecto',
+    'inscripcion_desbloqueada',
+    'hegemonia_ganada',
+    'senalamiento',
+    'prueba_extraordinaria',
+  ] as const
+
+  const eventosDestacados = eventos
+    .filter((e) =>
+      (tiposDestacados as readonly string[]).includes(e.tipo)
+    )
+    .map((e) => e.contenido)
+    .slice(0, 10)
+
   return {
     semana,
     fechaInicio: inicioStr,
@@ -199,17 +225,23 @@ async function recopilarDatosSemana(semana: number): Promise<DatosSemana> {
       kleosGanador: heg?.kleosGanador ?? 0,
       kleosRival: heg?.kleosRival ?? 0,
     },
+    eventosDestacados,
   }
 }
 
 function construirPrompt(datos: DatosSemana): string {
-  const { agonista1, agonista2, hegemonia, semana } = datos
+  const { agonista1, agonista2, hegemonia, semana, eventosDestacados } = datos
 
   const ganadorTexto = hegemonia.empate
     ? 'La semana terminó en empate — el Altis no pudo decidir.'
     : hegemonia.ganador
       ? `${hegemonia.ganador} conquistó La Hegemonía de esta semana.`
       : 'La Hegemonía no fue reclamada esta semana.'
+
+  const eventosTexto =
+    eventosDestacados.length > 0
+      ? `\nEVENTOS DESTACADOS DE LA SEMANA:\n${eventosDestacados.map((e, i) => `${i + 1}. ${e}`).join('\n')}`
+      : '\nEVENTOS: Sin eventos destacados esta semana.'
 
   return `Eres el cronista del Gran Agon — una competencia épica de 29 días de disciplina personal entre dos amigos. Escribes en el estilo del universo Agon: épico, filosófico, con referencias a la antigua Grecia, pero también con humor y calidez humana. Nunca cursi, siempre con peso.
 
@@ -232,14 +264,16 @@ AGONISTA 2: ${agonista2.nombre}
 - Inscripciones nuevas: ${agonista2.inscripcionesNuevas}
 
 HEGEMONÍA: ${ganadorTexto}
+${eventosTexto}
 
 Escribe La Crónica del Período en exactamente 120-150 palabras en español. Debe:
 1. Comenzar con una frase épica sobre el agon o la semana
-2. Narrar el rendimiento de ambos agonistas con datos reales
+2. Narrar el rendimiento de ambos agonistas mencionando eventos reales si los hay
 3. Declarar el resultado de La Hegemonía con peso dramático
 4. Terminar con una frase filosófica que mire hacia la semana siguiente
 
+IMPORTANTE: Si hay eventos destacados, menciónalos en la narrativa con el tono del universo Agon. No inventes eventos que no están en la lista.
 NO uses markdown, bullets ni formato especial. Solo prosa fluida y épica.
-NO inventes datos que no están en los números dados.
+NO inventes datos que no están en los números ni en la lista de eventos dados.
 SÍ puedes hacer referencias filosóficas griegas cuando corresponda.`
 }
