@@ -90,9 +90,44 @@ export async function generarCronica(semana?: number): Promise<string> {
   return relato
 }
 
+/** Igual que getSemanaRango pero con fecha de inicio del Gran Agon explícita (p. ej. primera fecha con datos en DB). */
+function rangoSemanaDesdeFechaInicio(
+  fechaInicioGranAgon: string,
+  semana: number
+): { inicioStr: string; finStr: string } {
+  const inicio = new Date(fechaInicioGranAgon)
+  const inicioSemana = new Date(inicio)
+  inicioSemana.setDate(inicio.getDate() + (semana - 1) * 7)
+  const finSemana = new Date(inicioSemana)
+  finSemana.setDate(inicioSemana.getDate() + 6)
+
+  return {
+    inicioStr: inicioSemana.toISOString().split('T')[0],
+    finStr: finSemana.toISOString().split('T')[0],
+  }
+}
+
 async function recopilarDatosSemana(semana: number): Promise<DatosSemana> {
   const { inicioSemana: inicioStr, finSemana: finStr } = getSemanaRango(semana)
+  return recopilarDatosEnRango(semana, inicioStr, finStr)
+}
 
+async function recopilarDatosSemanaConFecha(
+  semana: number,
+  fechaInicioGranAgon: string
+): Promise<DatosSemana> {
+  const { inicioStr, finStr } = rangoSemanaDesdeFechaInicio(
+    fechaInicioGranAgon,
+    semana
+  )
+  return recopilarDatosEnRango(semana, inicioStr, finStr)
+}
+
+async function recopilarDatosEnRango(
+  semana: number,
+  inicioStr: string,
+  finStr: string
+): Promise<DatosSemana> {
   const inicioDia = new Date(inicioStr + 'T12:00:00.000Z')
   const finDia = new Date(finStr + 'T23:59:59.999Z')
 
@@ -227,6 +262,56 @@ async function recopilarDatosSemana(semana: number): Promise<DatosSemana> {
     },
     eventosDestacados,
   }
+}
+
+export async function generarCronicaConFecha(
+  semana: number,
+  fechaInicioOverride: string
+): Promise<string> {
+  const datos = await recopilarDatosSemanaConFecha(semana, fechaInicioOverride)
+
+  const prompt = construirPrompt(datos)
+
+  const response = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 400,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  const relato = response.content
+    .filter((b) => b.type === 'text')
+    .map((b) => (b as { text: string }).text)
+    .join('')
+    .trim()
+
+  await db.delete(cronicas).where(eq(cronicas.semana, semana))
+
+  await db.insert(cronicas).values({
+    id: crypto.randomUUID(),
+    semana,
+    fechaInicio: datos.fechaInicio,
+    fechaFin: datos.fechaFin,
+    relato,
+    metadata: datos as unknown as Record<string, unknown>,
+  })
+
+  const ambos = await getAmbosAgonistas()
+  if (ambos.length > 0) {
+    await db.insert(agoraEventos).values({
+      id: crypto.randomUUID(),
+      agonistId: ambos[0].id,
+      tipo: 'cronica_semanal',
+      contenido: relato,
+      metadata: {
+        semana,
+        tipo: 'cronica_prueba',
+        fechaInicio: datos.fechaInicio,
+        fechaFin: datos.fechaFin,
+      },
+    })
+  }
+
+  return relato
 }
 
 function construirPrompt(datos: DatosSemana): string {

@@ -4,7 +4,7 @@ import { db } from '@/lib/db'
 import { pruebasDiarias } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getAmbosAgonistas } from '@/lib/db/queries'
-import { generarCronica } from '@/lib/cronica/generar'
+import { generarCronicaConFecha } from '@/lib/cronica/generar'
 
 export async function GET() {
   const { userId } = await auth()
@@ -99,47 +99,40 @@ export async function POST() {
     return NextResponse.json({ error: 'Solo el administrador.' }, { status: 403 })
   }
 
-  const ambos = await getAmbosAgonistas()
-  if (ambos.length < 2) {
-    return NextResponse.json(
-      { error: 'Faltan agonistas en DB.' },
-      { status: 400 }
-    )
-  }
-
-  const [a1, a2] = ambos
-
-  const [pruebas1, pruebas2] = await Promise.all([
-    db.select().from(pruebasDiarias).where(eq(pruebasDiarias.agonistId, a1.id)),
-    db.select().from(pruebasDiarias).where(eq(pruebasDiarias.agonistId, a2.id)),
-  ])
-
-  const todasLasFechas = [
-    ...pruebas1.map((p) => String(p.fecha)),
-    ...pruebas2.map((p) => String(p.fecha)),
-  ].sort()
-
-  if (todasLasFechas.length === 0) {
-    return NextResponse.json(
-      { error: 'No hay registros en pruebas_diarias.' },
-      { status: 400 }
-    )
-  }
-
-  const prevStart = process.env.NEXT_PUBLIC_AGON_START_DATE
   try {
-    process.env.NEXT_PUBLIC_AGON_START_DATE = todasLasFechas[0]
-    const relato = await generarCronica(1)
+    const ambos = await getAmbosAgonistas()
+    if (ambos.length < 2) {
+      return NextResponse.json(
+        { error: 'Faltan agonistas en DB.' },
+        { status: 400 }
+      )
+    }
+
+    const [a1, a2] = ambos
+
+    const [pruebas1, pruebas2] = await Promise.all([
+      db.select().from(pruebasDiarias).where(eq(pruebasDiarias.agonistId, a1.id)),
+      db.select().from(pruebasDiarias).where(eq(pruebasDiarias.agonistId, a2.id)),
+    ])
+
+    const todasLasFechas = [
+      ...pruebas1.map((p) => String(p.fecha)),
+      ...pruebas2.map((p) => String(p.fecha)),
+    ].sort()
+
+    if (todasLasFechas.length === 0) {
+      return NextResponse.json(
+        { error: 'No hay registros en pruebas_diarias.' },
+        { status: 400 }
+      )
+    }
+
+    const relato = await generarCronicaConFecha(1, todasLasFechas[0])
+
     return NextResponse.json({ ok: true, relato })
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : 'Error al generar la crónica'
     return NextResponse.json({ error: message }, { status: 500 })
-  } finally {
-    if (prevStart === undefined) {
-      delete process.env.NEXT_PUBLIC_AGON_START_DATE
-    } else {
-      process.env.NEXT_PUBLIC_AGON_START_DATE = prevStart
-    }
   }
 }
