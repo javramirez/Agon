@@ -10,7 +10,7 @@ import {
   inscripciones,
   semanaSagrada,
 } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, gte } from 'drizzle-orm'
 import { getOrCreateAgonista, actualizarNivel } from '@/lib/db/queries'
 import {
   KLEOS_POR_PRUEBA,
@@ -152,13 +152,27 @@ export async function POST(req: Request) {
   }
 
   if (esDiaPerfecto(p) && !diaPerfectoAnterior) {
-    await db.insert(agoraEventos).values({
-      id: crypto.randomUUID(),
-      agonistId: agonista.id,
-      tipo: 'dia_perfecto',
-      contenido: `${agonista.nombre} completó todas las pruebas del agon de hoy. El agon es suyo.`,
-      metadata: { fecha: hoy, kleos: kleosTotalDia },
-    })
+    const yaPublicado = await db
+      .select()
+      .from(agoraEventos)
+      .where(
+        and(
+          eq(agoraEventos.agonistId, agonista.id),
+          eq(agoraEventos.tipo, 'dia_perfecto'),
+          gte(agoraEventos.createdAt, new Date(`${hoy}T00:00:00`))
+        )
+      )
+      .limit(1)
+
+    if (yaPublicado.length === 0) {
+      await db.insert(agoraEventos).values({
+        id: crypto.randomUUID(),
+        agonistId: agonista.id,
+        tipo: 'dia_perfecto',
+        contenido: `${agonista.nombre} completó todas las pruebas del agon de hoy. El agon es suyo.`,
+        metadata: { fecha: hoy, kleos: kleosTotalDia },
+      })
+    }
   }
 
   const agonistaNuevo = await getOrCreateAgonista(userId)
