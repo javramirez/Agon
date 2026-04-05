@@ -1,15 +1,20 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { PruebaCard } from './prueba-card'
 import { AgonCard } from './agon-card'
-import { CierreDramatico } from './cierre-dramatico'
 import { InscripcionOverlay } from './inscripcion-overlay'
-import { useRouter } from 'next/navigation'
-import { usePulso } from '@/hooks/use-pulso'
-import type { PruebaDiaria, Llama } from '@/lib/db/schema'
+import { CierreDramatico } from './cierre-dramatico'
 import { mostrarToast } from './toast-agon'
-import { NivelSubida } from './nivel-subida'
+import {
+  calcularKleosLocal,
+  esDiaPerfectoLocal,
+  aplicarCambio,
+  type EstadoPruebas,
+} from '@/lib/kleos-client'
+import { NIVEL_LABELS, type NivelKey } from '@/lib/db/constants'
+import type { PruebaDiaria, Llama } from '@/lib/db/schema'
 
 const PRUEBAS_CONFIG = [
   { id: 'agua', nombre: 'Solo agua', tipo: 'toggle' as const, kleos: 10, icono: '💧', unidad: 'sin bebidas azucaradas' },
@@ -21,113 +26,143 @@ const PRUEBAS_CONFIG = [
   { id: 'cardio', nombre: 'Cardio', tipo: 'contador_semanal' as const, kleos: 25, icono: '🏃', unidad: 'sesiones esta semana', meta: 3 },
 ]
 
-function contarPruebasCompletadas(
-  p: {
-    soloAgua: boolean
-    sinComidaRapida: boolean
-    pasos: number
-    horasSueno: number
-    paginasLeidas: number
-    sesionesGym: number
-    sesionesCardio: number
-  } | null
-): number {
-  if (!p) return 0
-  let count = 0
-  if (p.soloAgua) count++
-  if (p.sinComidaRapida) count++
-  if (p.pasos >= 10000) count++
-  if (p.horasSueno >= 7) count++
-  if (p.paginasLeidas >= 10) count++
-  if (p.sesionesGym >= 4) count++
-  if (p.sesionesCardio >= 3) count++
-  return count
+function estadoDesdePrueba(prueba: PruebaDiaria): EstadoPruebas {
+  return {
+    soloAgua: prueba.soloAgua,
+    sinComidaRapida: prueba.sinComidaRapida,
+    pasos: prueba.pasos,
+    horasSueno: prueba.horasSueno,
+    paginasLeidas: prueba.paginasLeidas,
+    sesionesGym: prueba.sesionesGym,
+    sesionesCardio: prueba.sesionesCardio,
+  }
 }
 
 interface Props {
   prueba: PruebaDiaria
   llamas: Llama[]
+  nivel: string
+  nombreAntagonista?: string
+  pruebasAntagonista?: number
 }
 
-export function PruebasDelDia({ prueba, llamas }: Props) {
+export function PruebasDelDia({
+  prueba,
+  llamas,
+  nivel,
+  nombreAntagonista = 'El Antagonista',
+  pruebasAntagonista = 0,
+}: Props) {
   const router = useRouter()
-  const { data: pulsoData } = usePulso(15000)
-  const [diaPerfecto, setDiaPerfecto] = useState(prueba.diaPerfecto)
-  const [kleos, setKleos] = useState(prueba.kleosGanado)
-  const [inscripcionNueva, setInscripcionNueva] = useState<string | null>(null)
-  const [, setMostrarDashboard] = useState(true)
-  const [nivelSubida, setNivelSubida] = useState<{
-    nivelAnterior: string
-    nivelNuevo: string
-  } | null>(null)
 
-  const nombreAntagonista =
-    pulsoData?.antagonista?.nombre ?? 'El Antagonista'
-  const pruebasAntagonista = contarPruebasCompletadas(
-    pulsoData?.antagonista?.pruebas ?? null
-  )
+  const [estado, setEstado] = useState<EstadoPruebas>(() => estadoDesdePrueba(prueba))
+  const estadoRef = useRef(estado)
+  estadoRef.current = estado
+
+  const [inscripcionNueva, setInscripcionNueva] = useState<string | null>(null)
+  const [guardando, setGuardando] = useState(false)
+
+  const pendingRef = useRef<AbortController | null>(null)
+  const seqRef = useRef(0)
+  const inFlightRef = useRef(0)
 
   useEffect(() => {
-    setKleos(prueba.kleosGanado)
-    setDiaPerfecto(prueba.diaPerfecto)
-  }, [prueba.kleosGanado, prueba.diaPerfecto])
+    const next = estadoDesdePrueba(prueba)
+    estadoRef.current = next
+    setEstado(next)
+  }, [prueba])
+
+  const kleos = calcularKleosLocal(estado, 1, 1, nivel)
+  const diaPerfecto = esDiaPerfectoLocal(estado)
+
+  const pruebasCompletadas = [
+    estado.soloAgua,
+    estado.sinComidaRapida,
+    estado.pasos >= 10000,
+    estado.horasSueno >= 7,
+    estado.paginasLeidas >= 10,
+    estado.sesionesGym >= 4,
+    estado.sesionesCardio >= 3,
+  ].filter(Boolean).length
 
   const handleChange = useCallback(
-    async (campo: string, valor: boolean | number) => {
-      try {
-        const res = await fetch('/api/pruebas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ campo, valor }),
-        })
+    (campo: string, valor: boolean | number) => {
+      const estadoAnterior = estadoRef.current
+      const nuevoEstado = aplicarCambio(estadoAnterior, campo, valor)
+      estadoRef.current = nuevoEstado
+      setEstado(nuevoEstado)
 
-        if (!res.ok) {
-          throw new Error('Error al guardar')
-        }
-
-        const data = (await res.json()) as {
-          kleos: number
-          diaPerfecto: boolean
-          inscripcionDesbloqueada?: string | null
-          nivelSubido: { nivelAnterior: string; nivelNuevo: string } | null
-        }
-        setKleos(data.kleos)
-
-        if (data.diaPerfecto && !diaPerfecto) {
-          setDiaPerfecto(true)
-          mostrarToast({
-            tipo: 'exito',
-            icono: '🏛️',
-            mensaje: 'El agon es tuyo. El Altis lo registró.',
-          })
-        }
-
-        if (data.inscripcionDesbloqueada) {
-          setInscripcionNueva(data.inscripcionDesbloqueada)
-        }
-
-        if (data.nivelSubido) {
-          setNivelSubida({
-            nivelAnterior: data.nivelSubido.nivelAnterior,
-            nivelNuevo: data.nivelSubido.nivelNuevo,
-          })
-          mostrarToast({
-            tipo: 'info',
-            icono: '⬆️',
-            mensaje: 'El Altis te reconoce. Nuevo nivel en el Gran Agon.',
-          })
-        }
-
-        router.refresh()
-      } catch {
+      if (esDiaPerfectoLocal(nuevoEstado) && !esDiaPerfectoLocal(estadoAnterior)) {
         mostrarToast({
-          tipo: 'error',
-          icono: '⚠️',
-          mensaje: 'El Altis no pudo guardar. Intenta de nuevo.',
+          tipo: 'exito',
+          icono: '🏛️',
+          mensaje: 'El agon es tuyo. El Altis lo registró.',
         })
       }
+
+      if (pendingRef.current) {
+        pendingRef.current.abort()
+      }
+
+      const controller = new AbortController()
+      pendingRef.current = controller
+
+      const mySeq = ++seqRef.current
+      inFlightRef.current += 1
+      setGuardando(true)
+
+      fetch('/api/pruebas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campo, valor }),
+        signal: controller.signal,
+      })
+        .then(async (res) => {
+          if (mySeq !== seqRef.current) return
+          if (!res.ok) throw new Error('Error del servidor')
+          const data = (await res.json()) as {
+            inscripcionDesbloqueada?: string | null
+            nivelSubido: { nivelAnterior: string; nivelNuevo: string } | null
+          }
+
+          if (data.inscripcionDesbloqueada) {
+            setInscripcionNueva(data.inscripcionDesbloqueada)
+          }
+
+          if (data.nivelSubido) {
+            const nk = data.nivelSubido.nivelNuevo as NivelKey
+            mostrarToast({
+              tipo: 'exito',
+              icono: '⬆️',
+              mensaje: `El Altis te reconoce: ${NIVEL_LABELS[nk] ?? data.nivelSubido.nivelNuevo}`,
+            })
+            router.refresh()
+          }
+        })
+        .catch((err: Error) => {
+          if (err.name === 'AbortError') return
+          if (mySeq !== seqRef.current) return
+
+          estadoRef.current = estadoAnterior
+          setEstado(estadoAnterior)
+          mostrarToast({
+            tipo: 'error',
+            icono: '⚠️',
+            mensaje: 'El Altis no pudo guardar. Intenta de nuevo.',
+          })
+        })
+        .finally(() => {
+          inFlightRef.current -= 1
+          if (inFlightRef.current <= 0) {
+            inFlightRef.current = 0
+            setGuardando(false)
+          }
+          if (pendingRef.current === controller) {
+            pendingRef.current = null
+          }
+        })
     },
-    [diaPerfecto, router]
+    [router]
   )
 
   const getLlama = (habitoId: string) =>
@@ -135,32 +170,19 @@ export function PruebasDelDia({ prueba, llamas }: Props) {
 
   const getValor = (id: string): boolean | number => {
     const map: Record<string, boolean | number> = {
-      agua: prueba.soloAgua,
-      comida: prueba.sinComidaRapida,
-      pasos: prueba.pasos,
-      sueno: prueba.horasSueno,
-      lectura: prueba.paginasLeidas,
-      gym: prueba.sesionesGym,
-      cardio: prueba.sesionesCardio,
+      agua: estado.soloAgua,
+      comida: estado.sinComidaRapida,
+      pasos: estado.pasos,
+      sueno: estado.horasSueno,
+      lectura: estado.paginasLeidas,
+      gym: estado.sesionesGym,
+      cardio: estado.sesionesCardio,
     }
     return map[id] ?? false
   }
 
-  const pruebasCompletadas = PRUEBAS_CONFIG.filter((p) => {
-    const v = getValor(p.id)
-    return p.tipo === 'toggle' ? v === true : typeof v === 'number' && p.meta ? v >= p.meta : false
-  }).length
-
   return (
     <div className="space-y-4">
-      {nivelSubida && (
-        <NivelSubida
-          key={nivelSubida.nivelNuevo}
-          nivelAnterior={nivelSubida.nivelAnterior}
-          nivelActual={nivelSubida.nivelNuevo}
-        />
-      )}
-
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-lg font-semibold tracking-wide">
@@ -168,11 +190,14 @@ export function PruebasDelDia({ prueba, llamas }: Props) {
           </h2>
           <p className="text-xs text-muted-foreground font-body mt-0.5">
             {pruebasCompletadas}/7 completadas hoy
+            {guardando && (
+              <span className="ml-2 text-muted-foreground/50">· guardando...</span>
+            )}
           </p>
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground font-body">kleos del día</p>
-          <p className="font-display text-lg font-bold text-amber">
+          <p className="font-display text-xl font-bold text-amber">
             ◆ {kleos}
           </p>
         </div>
@@ -216,10 +241,7 @@ export function PruebasDelDia({ prueba, llamas }: Props) {
         pruebasCompletadas={pruebasCompletadas}
         nombreAntagonista={nombreAntagonista}
         pruebasAntagonista={pruebasAntagonista}
-        onCerrar={() => {
-          setMostrarDashboard(true)
-          router.refresh()
-        }}
+        onCerrar={() => {}}
       />
 
       <InscripcionOverlay

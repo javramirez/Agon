@@ -1,14 +1,31 @@
-import { getCurrentAgonista } from '@/lib/auth'
+import { getCurrentAgonista, getAntagonista } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { NivelBadge } from '@/components/agon/nivel-badge'
 import { KleosBadge } from '@/components/agon/kleos-badge'
 import { PulsoRealtime } from '@/components/agon/pulso-realtime'
 import { PruebasDelDia } from '@/components/agon/pruebas-del-dia'
 import { getDiaDelAgan, getDiasRestantes, getMensajeHora } from '@/lib/utils'
-import { getOrCreatePruebaDiariaHoy, getLlamasAgonista } from '@/lib/db/queries'
+import {
+  getOrCreatePruebaDiariaHoy,
+  getLlamasAgonista,
+  getPruebaDiariaAntagonista,
+} from '@/lib/db/queries'
 import { AGONISTAS } from '@/lib/auth'
 import { SemanaSagradaBanner } from '@/components/agon/semana-sagrada-banner'
 import { PruebaExtraordinariaBanner } from '@/components/agon/prueba-extraordinaria-banner'
+import type { PruebaDiaria } from '@/lib/db/schema'
+
+function contarPruebas(p: PruebaDiaria): number {
+  let count = 0
+  if (p.soloAgua) count++
+  if (p.sinComidaRapida) count++
+  if (p.pasos >= 10000) count++
+  if (p.horasSueno >= 7) count++
+  if (p.paginasLeidas >= 10) count++
+  if (p.sesionesGym >= 4) count++
+  if (p.sesionesCardio >= 3) count++
+  return count
+}
 
 export default async function DashboardPage() {
   const agonista = await getCurrentAgonista()
@@ -18,9 +35,14 @@ export default async function DashboardPage() {
     (a) => a.clerkId !== agonista.clerkId
   )
 
-  const [pruebaHoy, llamas] = await Promise.all([
+  const antagonista = await getAntagonista(agonista.clerkId)
+
+  const [pruebaHoy, llamas, pruebaAntagonista] = await Promise.all([
     getOrCreatePruebaDiariaHoy(agonista.id),
     getLlamasAgonista(agonista.id),
+    antagonista
+      ? getPruebaDiariaAntagonista(antagonista.id)
+      : Promise.resolve(null),
   ])
 
   const diaActual = getDiaDelAgan()
@@ -65,6 +87,11 @@ export default async function DashboardPage() {
       <PruebasDelDia
         prueba={pruebaHoy}
         llamas={llamas}
+        nivel={agonista.nivel}
+        nombreAntagonista={antagonistaConfig?.nombre ?? 'El Antagonista'}
+        pruebasAntagonista={
+          pruebaAntagonista ? contarPruebas(pruebaAntagonista) : 0
+        }
       />
 
     </div>

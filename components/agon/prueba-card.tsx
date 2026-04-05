@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useCallback } from 'react'
 import { cn } from '@/lib/utils'
 import { LlamaIndicator } from './llama-indicator'
 import { FotoUpload } from './foto-upload'
@@ -22,7 +22,8 @@ interface Props {
   llama?: Llama
   fotoUrl?: string | null
   onFotoSubida?: () => void
-  onChange: (campo: string, valor: boolean | number) => Promise<void>
+  onChange: (campo: string, valor: boolean | number) => void
+  disabled?: boolean
 }
 
 const campoMap: Record<string, string> = {
@@ -42,55 +43,56 @@ export function PruebaCard({
   fotoUrl,
   onFotoSubida,
   onChange,
+  disabled = false,
 }: Props) {
-  const [cargando, setCargando] = useState(false)
-  const [valorLocal, setValorLocal] = useState(valor)
   const campo = campoMap[prueba.id]
-
-  useEffect(() => {
-    setValorLocal(valor)
-  }, [valor])
 
   const completado =
     prueba.tipo === 'toggle'
-      ? valorLocal === true
-      : typeof valorLocal === 'number' && prueba.meta
-        ? valorLocal >= prueba.meta
+      ? valor === true
+      : typeof valor === 'number' && prueba.meta
+        ? valor >= prueba.meta
         : false
 
-  async function handleToggle() {
-    if (prueba.tipo !== 'toggle' || cargando) return
-    setCargando(true)
-    const nuevo = !valorLocal
-    setValorLocal(nuevo)
-    await onChange(campo, nuevo)
-    setCargando(false)
-  }
+  const handleToggle = useCallback(() => {
+    if (prueba.tipo !== 'toggle' || disabled) return
+    onChange(campo, !valor)
+  }, [prueba.tipo, disabled, onChange, campo, valor])
 
-  async function handleContador(delta: number) {
-    if (prueba.tipo === 'toggle' || cargando) return
-    setCargando(true)
-    const actual = typeof valorLocal === 'number' ? valorLocal : 0
-    const nuevo = Math.max(0, actual + delta)
-    setValorLocal(nuevo)
-    await onChange(campo, nuevo)
-    setCargando(false)
-  }
+  const handleContador = useCallback(
+    (delta: number) => {
+      if (prueba.tipo === 'toggle' || disabled) return
+      const actual = typeof valor === 'number' ? valor : 0
+      const nuevo = Math.max(0, actual + delta)
+      onChange(campo, nuevo)
+    },
+    [prueba.tipo, disabled, onChange, campo, valor]
+  )
+
+  const handleInputBlur = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      if (disabled) return
+      const nuevo = Math.max(0, parseInt(e.target.value, 10) || 0)
+      onChange(campo, nuevo)
+    },
+    [disabled, onChange, campo]
+  )
 
   return (
     <div
       className={cn(
-        'rounded-xl border p-4 transition-all duration-300',
+        'rounded-xl border p-4 transition-all duration-200',
         completado
           ? 'bg-surface-2 border-amber/20'
-          : 'bg-surface-1 border-border'
+          : 'bg-surface-1 border-border',
+        disabled && 'opacity-60'
       )}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <span
             className={cn(
-              'text-2xl flex-shrink-0 transition-all duration-300',
+              'text-2xl flex-shrink-0 transition-all duration-200',
               completado ? 'opacity-100' : 'opacity-40'
             )}
           >
@@ -127,14 +129,14 @@ export function PruebaCard({
         {prueba.tipo === 'toggle' ? (
           <button
             type="button"
-            onClick={() => void handleToggle()}
-            disabled={cargando}
+            onClick={handleToggle}
+            disabled={disabled}
             className={cn(
               'w-12 h-12 rounded-full border-2 flex items-center justify-center',
-              'transition-all duration-300 flex-shrink-0 active:scale-95',
+              'transition-all duration-200 flex-shrink-0 active:scale-95',
               completado
                 ? 'bg-amber border-amber text-black'
-                : 'bg-transparent border-border-strong text-muted-foreground'
+                : 'bg-transparent border-border-strong text-muted-foreground hover:border-amber/40'
             )}
           >
             {completado && <span className="text-base font-bold">✓</span>}
@@ -145,18 +147,10 @@ export function PruebaCard({
             inputMode="numeric"
             pattern="[0-9]*"
             min={0}
-            value={typeof valorLocal === 'number' ? valorLocal : 0}
-            onChange={(e) => {
-              const nuevo = Math.max(0, parseInt(e.target.value, 10) || 0)
-              setValorLocal(nuevo)
-            }}
-            onBlur={async (e) => {
-              const nuevo = Math.max(0, parseInt(e.target.value, 10) || 0)
-              setCargando(true)
-              await onChange(campo, nuevo)
-              setCargando(false)
-            }}
-            disabled={cargando}
+            defaultValue={typeof valor === 'number' ? valor : 0}
+            key={typeof valor === 'number' ? valor : 0}
+            onBlur={handleInputBlur}
+            disabled={disabled}
             className={cn(
               'w-24 text-center bg-surface-2 border border-border rounded-xl',
               'px-2 py-2 text-sm font-body font-semibold',
@@ -169,12 +163,13 @@ export function PruebaCard({
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               type="button"
-              onClick={() => void handleContador(-1)}
-              disabled={cargando || valorLocal === 0}
+              onClick={() => handleContador(-1)}
+              disabled={disabled || valor === 0}
               className={cn(
                 'w-10 h-10 rounded-full bg-surface-2 border border-border',
                 'text-muted-foreground flex items-center justify-center text-lg',
-                'transition-all active:scale-95 disabled:opacity-30'
+                'transition-all active:scale-95 disabled:opacity-30',
+                'hover:border-border-strong hover:text-foreground'
               )}
             >
               −
@@ -185,16 +180,17 @@ export function PruebaCard({
                 completado ? 'text-amber' : 'text-foreground'
               )}
             >
-              {typeof valorLocal === 'number' ? valorLocal : 0}
+              {typeof valor === 'number' ? valor : 0}
             </span>
             <button
               type="button"
-              onClick={() => void handleContador(1)}
-              disabled={cargando}
+              onClick={() => handleContador(1)}
+              disabled={disabled}
               className={cn(
                 'w-10 h-10 rounded-full bg-surface-2 border border-border',
                 'text-muted-foreground flex items-center justify-center text-lg',
-                'transition-all active:scale-95 disabled:opacity-30'
+                'transition-all active:scale-95 disabled:opacity-30',
+                'hover:border-border-strong hover:text-foreground'
               )}
             >
               +
@@ -203,15 +199,15 @@ export function PruebaCard({
         )}
       </div>
 
-      {prueba.tipo !== 'toggle' && prueba.meta && typeof valorLocal === 'number' && (
+      {prueba.tipo !== 'toggle' && prueba.meta && typeof valor === 'number' && (
         <div className="mt-3 h-0.5 bg-surface-3 rounded-full overflow-hidden">
           <div
             className={cn(
-              'h-full rounded-full transition-all duration-500',
+              'h-full rounded-full transition-all duration-300',
               completado ? 'bg-amber' : 'bg-border-strong'
             )}
             style={{
-              width: `${Math.min((valorLocal / prueba.meta) * 100, 100)}%`,
+              width: `${Math.min((valor / prueba.meta) * 100, 100)}%`,
             }}
           />
         </div>
@@ -219,9 +215,11 @@ export function PruebaCard({
 
       {(prueba.id === 'gym' || prueba.id === 'cardio') && (
         <FotoUpload
-          tipo={prueba.id}
+          tipo={prueba.id as 'gym' | 'cardio'}
           urlActual={fotoUrl}
-          onSubida={() => onFotoSubida?.()}
+          onSubida={() => {
+            onFotoSubida?.()
+          }}
         />
       )}
     </div>
