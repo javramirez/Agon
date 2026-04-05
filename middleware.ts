@@ -9,15 +9,17 @@ const isProtectedRoute = createRouteMatcher([
   '/poderes(.*)',
   '/inscripciones(.*)',
   '/cronicas(.*)',
-  '/correspondencia(.*)',
   '/oraculo(.*)',
+  '/correspondencia(.*)',
   '/contrato(.*)',
   '/veredicto(.*)',
   '/admin(.*)',
   '/api/(.*)',
 ])
 
-const isCronRoute = createRouteMatcher(['/api/cron(.*)'])
+const isCronRoute = createRouteMatcher([
+  '/api/cron(.*)',
+])
 
 const isOnboardingRoute = createRouteMatcher(['/onboarding(.*)'])
 
@@ -27,7 +29,7 @@ const AUTHORIZED_USER_IDS = [
 ].filter(Boolean) as string[]
 
 export default clerkMiddleware(async (auth, req) => {
-  // Las rutas de cron se autentican con CRON_SECRET — no con Clerk
+  // Rutas de cron — se autentican con CRON_SECRET, no con Clerk
   if (isCronRoute(req)) {
     return NextResponse.next()
   }
@@ -36,7 +38,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   if (isProtectedRoute(req) || isOnboardingRoute(req)) {
     if (!userId) {
-      return NextResponse.redirect(new URL('/sign-in', req.url))
+      return Nextsponse.redirect(new URL('/sign-in', req.url))
     }
 
     if (!AUTHORIZED_USER_IDS.includes(userId)) {
