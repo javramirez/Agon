@@ -1,0 +1,404 @@
+import { db } from './index'
+import {
+  agonistas,
+  pruebasDiarias,
+  llamas,
+  kleosLog,
+  agoraEventos,
+  aclamaciones,
+  hegemonias,
+  inscripciones,
+} from './schema'
+import { eq, and, gte, lte, desc, count } from 'drizzle-orm'
+import { AGONISTAS } from '@/lib/auth/agonistas'
+import {
+  NIVEL_THRESHOLDS,
+  NIVEL_LABELS,
+} from '@/lib/db/constants'
+import type { NivelKey } from '@/lib/db/constants'
+
+// ─── AGONISTAS ────────────────────────────────────────
+
+export async function getOrCreateAgonista(clerkId: string) {
+  const existing = await db
+    .select()
+    .from(agonistas)
+    .where(eq(agonistas.clerkId, clerkId))
+    .limit(1)
+
+  if (existing.length > 0) return existing[0]
+
+  const info = Object.values(AGONISTAS).find((a) => a.clerkId === clerkId)
+  if (!info) throw new Error('Usuario no autorizado')
+
+  const nuevo = await db
+    .insert(agonistas)
+    .values({
+      id: crypto.randomUUID(),
+      clerkId,
+      nombre: info.nombre,
+    })
+    .returning()
+
+  return nuevo[0]
+}
+
+export async function getAmbosAgonistas() {
+  return db.select().from(agonistas)
+}
+
+export async function getAgonistaByClerkId(clerkId: string) {
+  const result = await db
+    .select()
+    .from(agonistas)
+    .where(eq(agonistas.clerkId, clerkId))
+    .limit(1)
+  return result[0] ?? null
+}
+
+export async function sellarOraculo(clerkId: string, mensaje: string) {
+  const agonista = await getAgonistaByClerkId(clerkId)
+  if (!agonista) throw new Error('Agonista no encontrado')
+  if (agonista.oraculoSellado) throw new Error('El Oráculo ya fue consultado')
+
+  await db
+    .update(agonistas)
+    .set({ oraculoMensaje: mensaje, oraculoSellado: true })
+    .where(eq(agonistas.clerkId, clerkId))
+}
+
+// ─── PRUEBAS DIARIAS ──────────────────────────────────
+
+export async function getPruebaDiariaHoy(agonistId: string) {
+  const hoy = new Date().toISOString().split('T')[0]
+  const result = await db
+    .select()
+    .from(pruebasDiarias)
+    .where(
+      and(
+        eq(pruebasDiarias.agonistId, agonistId),
+        eq(pruebasDiarias.fecha, hoy)
+      )
+    )
+    .limit(1)
+  return result[0] ?? null
+}
+
+export async function getOrCreatePruebaDiariaHoy(agonistId: string) {
+  const hoy = new Date().toISOString().split('T')[0]
+
+  const existing = await db
+    .select()
+    .from(pruebasDiarias)
+    .where(
+      and(
+        eq(pruebasDiarias.agonistId, agonistId),
+        eq(pruebasDiarias.fecha, hoy)
+      )
+    )
+    .limit(1)
+
+  if (existing.length > 0) return existing[0]
+
+  const nueva = await db
+    .insert(pruebasDiarias)
+    .values({
+      id: crypto.randomUUID(),
+      agonistId,
+      fecha: hoy,
+    })
+    .returning()
+
+  return nueva[0]
+}
+
+export async function getPruebaDiariaAntagonista(antagonistId: string) {
+  const hoy = new Date().toISOString().split('T')[0]
+  const result = await db
+    .select()
+    .from(pruebasDiarias)
+    .where(
+      and(
+        eq(pruebasDiarias.agonistId, antagonistId),
+        eq(pruebasDiarias.fecha, hoy)
+      )
+    )
+    .limit(1)
+  return result[0] ?? null
+}
+
+export async function getKleosSemanaActual(agonistId: string) {
+  const hoy = new Date()
+  const inicioSemana = new Date(hoy)
+  inicioSemana.setDate(hoy.getDate() - hoy.getDay())
+  const inicioStr = inicioSemana.toISOString().split('T')[0]
+
+  const result = await db
+    .select()
+    .from(kleosLog)
+    .where(
+      and(
+        eq(kleosLog.agonistId, agonistId),
+        gte(kleosLog.fecha, inicioStr)
+      )
+    )
+
+  return result.reduce((sum, r) => sum + r.cantidad, 0)
+}
+
+// ─── LLAMAS ───────────────────────────────────────────
+
+export async function getLlamasAgonista(agonistId: string) {
+  return db
+    .select()
+    .from(llamas)
+    .where(eq(llamas.agonistId, agonistId))
+}
+
+// ─── ÁGORA ────────────────────────────────────────────
+
+export async function getAgoraEventos(limit = 30) {
+  const eventos = await db
+    .select()
+    .from(agoraEventos)
+    .orderBy(desc(agoraEventos.createdAt))
+    .limit(limit)
+
+  return eventos
+}
+
+export async function getAclamacionesPorEvento(eventoId: string) {
+  return db
+    .select()
+    .from(aclamaciones)
+    .where(eq(aclamaciones.eventoId, eventoId))
+}
+
+export async function getAclamacionesHoy(agonistId: string) {
+  const hoy = new Date().toISOString().split('T')[0]
+  const result = await db
+    .select({ count: count() })
+    .from(aclamaciones)
+    .where(
+      and(
+        eq(aclamaciones.agonistId, agonistId),
+        eq(aclamaciones.fecha, hoy)
+      )
+    )
+  return Number(result[0]?.count ?? 0)
+}
+
+export async function getTiposAclamacionHoyPorEvento(agonistId: string) {
+  const hoy = new Date().toISOString().split('T')[0]
+  const rows = await db
+    .select({
+      eventoId: aclamaciones.eventoId,
+      tipo: aclamaciones.tipo,
+    })
+    .from(aclamaciones)
+    .where(
+      and(
+        eq(aclamaciones.agonistId, agonistId),
+        eq(aclamaciones.fecha, hoy)
+      )
+    )
+  const map: Record<string, string> = {}
+  for (const r of rows) {
+    map[r.eventoId] = r.tipo
+  }
+  return map
+}
+
+// ─── ALTIS ────────────────────────────────────────────
+
+export async function getStatsCompletos(agonistId: string) {
+  const [todasLasPruebas, todasLasLlamas, todasLasInscripciones] =
+    await Promise.all([
+      db
+        .select()
+        .from(pruebasDiarias)
+        .where(eq(pruebasDiarias.agonistId, agonistId)),
+      db.select().from(llamas).where(eq(llamas.agonistId, agonistId)),
+      db
+        .select()
+        .from(inscripciones)
+        .where(eq(inscripciones.agonistId, agonistId)),
+    ])
+
+  const diasPerfectos = todasLasPruebas.filter((p) => p.diaPerfecto).length
+  const mejorRacha = Math.max(0, ...todasLasLlamas.map((l) => l.rachMaxima))
+  const rachaActual = Math.max(0, ...todasLasLlamas.map((l) => l.rachaActual))
+
+  return {
+    diasPerfectos,
+    mejorRacha,
+    rachaActual,
+    inscripciones: todasLasInscripciones.length,
+    totalPruebas: todasLasPruebas.length,
+  }
+}
+
+// ─── HEGEMONÍA ────────────────────────────────────────
+
+export async function getHegemonias() {
+  return db
+    .select()
+    .from(hegemonias)
+    .orderBy(desc(hegemonias.semana))
+}
+
+export async function getKleosPorSemana(agonistId: string, semana: number) {
+  const { inicioSemana, finSemana } = getSemanaRango(semana)
+
+  const result = await db
+    .select()
+    .from(kleosLog)
+    .where(
+      and(
+        eq(kleosLog.agonistId, agonistId),
+        gte(kleosLog.fecha, inicioSemana),
+        lte(kleosLog.fecha, finSemana)
+      )
+    )
+
+  return result.reduce((sum, r) => sum + r.cantidad, 0)
+}
+
+export async function calcularYGuardarHegemonia(semana: number) {
+  const { inicioSemana, finSemana } = getSemanaRango(semana)
+
+  const ambos = await getAmbosAgonistas()
+  if (ambos.length < 2) return null
+
+  const [a1, a2] = ambos
+
+  const [kleos1, kleos2] = await Promise.all([
+    getKleosPorSemana(a1.id, semana),
+    getKleosPorSemana(a2.id, semana),
+  ])
+
+  const empate = kleos1 === kleos2
+  const ganadorId = empate ? null : kleos1 > kleos2 ? a1.id : a2.id
+
+  const existing = await db
+    .select()
+    .from(hegemonias)
+    .where(eq(hegemonias.semana, semana))
+    .limit(1)
+
+  if (existing.length > 0) {
+    const updated = await db
+      .update(hegemonias)
+      .set({
+        ganadorId,
+        kleosGanador: Math.max(kleos1, kleos2),
+        kleosRival: Math.min(kleos1, kleos2),
+        empate,
+      })
+      .where(eq(hegemonias.semana, semana))
+      .returning()
+    return updated[0]
+  }
+
+  const nueva = await db
+    .insert(hegemonias)
+    .values({
+      id: crypto.randomUUID(),
+      semana,
+      fechaInicio: inicioSemana,
+      fechaFin: finSemana,
+      ganadorId,
+      kleosGanador: Math.max(kleos1, kleos2),
+      kleosRival: Math.min(kleos1, kleos2),
+      empate,
+    })
+    .returning()
+
+  if (!empate && ganadorId) {
+    const ganador = ambos.find((a) => a.id === ganadorId)
+    if (ganador) {
+      await db.insert(agoraEventos).values({
+        id: crypto.randomUUID(),
+        agonistId: ganadorId,
+        tipo: 'hegemonia_ganada',
+        contenido: `${ganador.nombre} conquistó La Hegemonía de la semana ${semana}. El Altis lo registra.`,
+        metadata: { semana, kleos: Math.max(kleos1, kleos2) },
+      })
+    }
+  }
+
+  return nueva[0]
+}
+
+export function getSemanaRango(semana: number) {
+  const start = process.env.NEXT_PUBLIC_AGON_START_DATE
+  if (!start) throw new Error('NEXT_PUBLIC_AGON_START_DATE no está definida')
+
+  const inicio = new Date(start)
+  const inicioSemana = new Date(inicio)
+  inicioSemana.setDate(inicio.getDate() + (semana - 1) * 7)
+  const finSemana = new Date(inicioSemana)
+  finSemana.setDate(inicioSemana.getDate() + 6)
+
+  return {
+    inicioSemana: inicioSemana.toISOString().split('T')[0],
+    finSemana: finSemana.toISOString().split('T')[0],
+  }
+}
+
+export function getSemanaActual(): number {
+  const start = process.env.NEXT_PUBLIC_AGON_START_DATE
+  if (!start) return 1
+
+  const inicio = new Date(start)
+  const hoy = new Date()
+  const diff = Math.floor(
+    (hoy.getTime() - inicio.getTime()) / (7 * 24 * 60 * 60 * 1000)
+  )
+  return Math.max(1, diff + 1)
+}
+
+// ─── NIVEL ────────────────────────────────────────────
+
+export async function actualizarNivel(
+  agonistId: string,
+  kleosTotal: number
+): Promise<{ nivelAnterior: string; nivelNuevo: string } | null> {
+  const ordenados = (
+    Object.entries(NIVEL_THRESHOLDS) as [NivelKey, number][]
+  ).sort((a, b) => a[1] - b[1])
+
+  let nivelNuevo: NivelKey = 'aspirante'
+  for (const [key, threshold] of ordenados) {
+    if (kleosTotal >= threshold) nivelNuevo = key
+  }
+
+  const agonista = await db
+    .select()
+    .from(agonistas)
+    .where(eq(agonistas.id, agonistId))
+    .limit(1)
+
+  if (!agonista[0]) return null
+
+  const nivelAnterior = agonista[0].nivel
+
+  if (nivelNuevo !== nivelAnterior) {
+    await db
+      .update(agonistas)
+      .set({ nivel: nivelNuevo, updatedAt: new Date() })
+      .where(eq(agonistas.id, agonistId))
+
+    await db.insert(agoraEventos).values({
+      id: crypto.randomUUID(),
+      agonistId,
+      tipo: 'nivel_subido',
+      contenido: `${agonista[0].nombre} alcanzó el nivel ${NIVEL_LABELS[nivelNuevo]}. El Altis lo reconoce.`,
+      metadata: { nivelAnterior, nivelNuevo },
+    })
+
+    return { nivelAnterior, nivelNuevo }
+  }
+
+  return null
+}

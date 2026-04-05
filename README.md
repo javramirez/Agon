@@ -1,36 +1,163 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AGON
 
-## Getting Started
+> "La excelencia no se declara. Se inscribe."
 
-First, run the development server:
+Plataforma de gamificación para el Gran Agon — un desafío personal de 29 días de disciplina entre dos agonistas. Registro de hábitos diarios, sistema de kleos (XP), niveles, inscripciones (logros), batalla en tiempo real, y La Ceremonia del Veredicto final.
+
+---
+
+## El universo
+
+| Término | Significado |
+| --- | --- |
+| **El Gran Agon** | El desafío completo de 29 días |
+| **Agonista** | Cada participante |
+| **Antagonista** | El rival de cada agonista |
+| **Kleos** | Puntos acumulados (gloria ganada con actos) |
+| **Las Pruebas** | Los 7 hábitos diarios a completar |
+| **El Altis** | El scoreboard — registro del Gran Agon |
+| **El Ágora** | El feed social compartido |
+| **La Hegemonía** | El ganador de cada semana |
+| **Las Inscripciones** | Los logros desbloqueados |
+| **El Oráculo** | Mensaje sellado del día 1, revelado el día 29 |
+| **La Ekecheiria** | La tregua sagrada (Cláusula 69) |
+| **El Señalamiento** | Poder de desafío al antagonista (1 vez) |
+
+---
+
+## Stack tecnológico
+
+| Capa | Tecnología |
+| --- | --- |
+| Frontend | Next.js 15 (App Router) + TypeScript |
+| Estilos | Tailwind CSS + shadcn/ui |
+| Auth | Clerk |
+| Base de datos | Neon (PostgreSQL serverless) |
+| ORM | Drizzle ORM |
+| Storage | Vercel Blob (fotos de gym/cardio) |
+| IA | Anthropic API — Claude Haiku (La Crónica del Período) |
+| Deploy | Vercel |
+
+---
+
+## Documentación técnica
+
+| Documento | Contenido |
+| --- | --- |
+| [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Decisiones de stack, diagrama lógico, trade-offs |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Deploy desde cero (Clerk, Neon, Vercel, verificación) |
+| [docs/API.md](docs/API.md) | Todos los endpoints `/api/*` |
+| [docs/database-schema.sql](docs/database-schema.sql) | Esquema SQL de referencia (fuente de verdad: `lib/db/schema.ts`) |
+
+---
+
+## Instalación local
+
+### Prerrequisitos
+
+- Node.js 18+
+- Cuenta en [Clerk](https://clerk.com)
+- Cuenta en [Neon](https://neon.tech)
+- Cuenta en [Vercel](https://vercel.com) (para Blob)
+- Cuenta en [Anthropic](https://console.anthropic.com)
+
+### Pasos
 
 ```bash
+# 1. Clonar el repositorio
+git clone https://github.com/[usuario]/agon.git
+cd agon
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Configurar variables de entorno
+cp .env.example .env.local
+# Completar todas las variables en .env.local
+
+# 4. Aplicar schema a la DB
+npm run db:push
+
+# 5. Iniciar servidor de desarrollo
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La app estará disponible en `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts disponibles
 
-## Learn More
+```bash
+npm run dev          # Servidor de desarrollo
+npm run build        # Build de producción
+npm run start        # Servidor de producción local
+npm run lint         # Linting con ESLint
+npm run db:push      # Aplicar schema a Neon (sin migraciones)
+npm run db:studio    # Abrir Drizzle Studio (explorador de DB)
+npm run db:generate  # Generar archivos de migración
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Variables de entorno
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Ver [.env.example](.env.example) para la lista completa con comentarios.
 
-## Deploy on Vercel
+Las variables críticas son:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk frontend
+- `CLERK_SECRET_KEY` — Clerk backend
+- `CLERK_JAVIER_USER_ID` — ID del primer agonista
+- `CLERK_MATIAS_USER_ID` — ID del segundo agonista
+- `DATABASE_URL` — Neon Direct Connection URL
+- `BLOB_READ_WRITE_TOKEN` — Vercel Blob token
+- `ANTHROPIC_API_KEY` — Para La Crónica del Período
+- `NEXT_PUBLIC_AGON_START_DATE` — Fecha inicio (YYYY-MM-DD)
+- `NEXT_PUBLIC_AGON_END_DATE` — Fecha fin (YYYY-MM-DD)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Estructura del proyecto
+
+```
+agon/
+├── app/
+│   ├── (auth)/sign-in/          # Login Clerk
+│   ├── (protected)/             # Rutas protegidas (solo agonistas)
+│   │   ├── dashboard/           # Las Pruebas del día
+│   │   ├── altis/               # Scoreboard y estadísticas
+│   │   ├── agora/               # El Ágora
+│   │   ├── correspondencia/     # Chat directo
+│   │   ├── poderes/             # Provocaciones, Señalamiento, Ekecheiria
+│   │   ├── inscripciones/       # Logros
+│   │   ├── cronicas/            # Crónicas IA
+│   │   ├── perfil/              # Perfil del agonista
+│   │   ├── oraculo/             # Oráculo sellado
+│   │   ├── contrato/            # Cláusulas
+│   │   ├── veredicto/           # Ceremonia final
+│   │   └── admin/               # Panel admin (Javier)
+│   ├── api/                     # API Routes
+│   ├── onboarding/              # Onboarding + Oráculo día 1
+│   └── unauthorized/            # Usuario no autorizado
+├── components/
+│   ├── agon/                    # UI del universo Agon
+│   └── layout/                  # Navbar, MobileNav
+├── hooks/                       # usePulso, useCorrespondencia, etc.
+├── lib/
+│   ├── auth/                    # AGONISTAS, helpers
+│   ├── cronica/                 # Generación de crónicas con IA
+│   ├── db/                      # schema, queries, constants
+│   └── inscripciones/           # Triggers de logros
+├── docs/                        # Documentación técnica
+├── middleware.ts                # Clerk + lista blanca de agonistas
+└── types/                       # Tipos TypeScript
+```
+
+---
+
+## El Gran Agon en producción
+
+**URL:** [agon.vercel.app](https://agon.vercel.app)  
+**Período:** 6 de abril — 4 de mayo de 2026  
+**Agonistas:** Javier Ramírez y Matías Rufin
