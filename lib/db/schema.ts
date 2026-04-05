@@ -237,16 +237,33 @@ export const semanaSagrada = pgTable('semana_sagrada', {
 })
 
 // ─── PRUEBA EXTRAORDINARIA ────────────────────────────
-// Reto semanal opcional con kleos bonus
+// Tríptico semanal + Eventos del Destino (V2)
 
 export const pruebaExtraordinaria = pgTable('prueba_extraordinaria', {
   id: varchar('id', { length: 256 }).primaryKey(),
   semana: integer('semana').notNull(),
+  dia: integer('dia').notNull(),
+  fecha: date('fecha').notNull(),
+  pruebaId: varchar('prueba_id', { length: 64 }).notNull(),
+  tipo: varchar('tipo', { length: 32 }).notNull(),
   descripcion: text('descripcion').notNull(),
   kleosBonus: integer('kleos_bonus').notNull(),
+  dificultad: varchar('dificultad', { length: 32 }).notNull(),
   activa: boolean('activa').default(true).notNull(),
   fechaExpira: timestamp('fecha_expira').notNull(),
+  completadaPorJavier: boolean('completada_por_javier').default(false).notNull(),
+  completadaPorMatias: boolean('completada_por_matias').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Calendario pre-generado del Gran Agon (día 1)
+export const calendarioAgan = pgTable('calendario_agon', {
+  id: varchar('id', { length: 256 }).primaryKey(),
+  generadoEn: timestamp('generado_en').defaultNow().notNull(),
+  semanaSagradaSemana: integer('semana_sagrada_semana').notNull(),
+  tripticoOrden: jsonb('triptico_orden').notNull(),
+  destinoOrden: jsonb('destino_orden').notNull(),
+  destinoHorarios: jsonb('destino_horarios').notNull(),
 })
 
 // ─── CRÓNICAS ─────────────────────────────────────────

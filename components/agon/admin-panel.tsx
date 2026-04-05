@@ -1,9 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PRUEBAS_EXTRAORDINARIAS } from '@/lib/db/constants'
-import { cn } from '@/lib/utils'
-
 interface DiagnosticoCronica {
   agonista1: {
     nombre: string
@@ -25,9 +22,6 @@ interface DiagnosticoCronica {
 
 export function AdminPanel() {
   const [semanaSagradaActiva, setSemanaSagradaActiva] = useState(false)
-  const [pruebaSeleccionada, setPruebaSeleccionada] = useState<string | null>(
-    null
-  )
   const [enviando, setEnviando] = useState(false)
   const [mensaje, setMensaje] = useState('')
   const [generandoCronica, setGenerandoCronica] = useState(false)
@@ -49,26 +43,6 @@ export function AdminPanel() {
     if (res.ok) {
       setSemanaSagradaActiva(true)
       setMensaje('⚡ La Semana Sagrada fue activada. El Ágora ya lo sabe.')
-    } else {
-      const d = await res.json()
-      setMensaje(d.error ?? 'Error')
-    }
-    setEnviando(false)
-  }
-
-  async function activarPruebaExtraordinaria() {
-    if (!pruebaSeleccionada) return
-    setEnviando(true)
-    const res = await fetch('/api/admin/prueba-extraordinaria', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pruebaId: pruebaSeleccionada }),
-    })
-    if (res.ok) {
-      setMensaje(
-        '🌟 La Prueba Extraordinaria fue activada. Expira a medianoche.'
-      )
-      setPruebaSeleccionada(null)
     } else {
       const d = await res.json()
       setMensaje(d.error ?? 'Error')
@@ -152,40 +126,15 @@ export function AdminPanel() {
       <div className="space-y-3">
         <div>
           <h2 className="font-display text-lg font-semibold">
-            La Prueba Extraordinaria
+            Pruebas Extraordinarias (V2)
           </h2>
           <p className="text-xs text-muted-foreground font-body mt-1">
-            Selecciona y activa el reto del día. Expira a medianoche.
+            El Tríptico Semanal y los Eventos del Destino se activan por cron
+            (horario del Altis). El calendario se genera con{' '}
+            <code className="text-amber/90">/api/cron/init</code> protegido por{' '}
+            <code className="text-amber/90">CRON_SECRET</code>.
           </p>
         </div>
-
-        <div className="space-y-2">
-          {PRUEBAS_EXTRAORDINARIAS.map((p) => (
-            <button
-              type="button"
-              key={p.id}
-              onClick={() => setPruebaSeleccionada(p.id)}
-              className={cn(
-                'w-full text-left px-4 py-3 rounded-lg border text-sm font-body transition-all',
-                pruebaSeleccionada === p.id
-                  ? 'bg-surface-2 border-amber/40 text-foreground'
-                  : 'bg-surface-1 border-border text-muted-foreground hover:border-border'
-              )}
-            >
-              <span className="text-foreground">{p.descripcion}</span>
-              <span className="text-amber ml-2 text-xs">+{p.kleos} kleos</span>
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={activarPruebaExtraordinaria}
-          disabled={enviando || !pruebaSeleccionada}
-          className="px-6 py-3 bg-amber text-black font-display font-bold text-sm tracking-widest uppercase rounded-lg hover:bg-amber/90 transition-all disabled:opacity-40"
-        >
-          Activar Prueba Extraordinaria
-        </button>
       </div>
 
       <div className="space-y-3">

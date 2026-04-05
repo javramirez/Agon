@@ -12,7 +12,7 @@ import {
 } from '@/lib/db/queries'
 import { AGONISTAS } from '@/lib/auth'
 import { SemanaSagradaBanner } from '@/components/agon/semana-sagrada-banner'
-import { PruebaExtraordinariaBanner } from '@/components/agon/prueba-extraordinaria-banner'
+import { PruebasExtraordinariasPanel } from '@/components/agon/pruebas-extraordinarias-panel'
 import type { PruebaDiaria } from '@/lib/db/schema'
 
 function contarPruebas(p: PruebaDiaria): number {
@@ -65,7 +65,7 @@ export default async function DashboardPage() {
       </div>
 
       <SemanaSagradaBanner />
-      <PruebaExtraordinariaBanner />
+      <PruebasExtraordinariasPanel />
 
       <div className="bg-surface-1 rounded-lg border border-border p-4 space-y-3">
         <div className="flex items-center justify-between">
