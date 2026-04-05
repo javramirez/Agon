@@ -17,6 +17,8 @@ const isProtectedRoute = createRouteMatcher([
   '/api/(.*)',
 ])
 
+const isCronRoute = createRouteMatcher(['/api/cron(.*)'])
+
 const isOnboardingRoute = createRouteMatcher(['/onboarding(.*)'])
 
 const AUTHORIZED_USER_IDS = [
@@ -25,6 +27,11 @@ const AUTHORIZED_USER_IDS = [
 ].filter(Boolean) as string[]
 
 export default clerkMiddleware(async (auth, req) => {
+  // Las rutas de cron se autentican con CRON_SECRET — no con Clerk
+  if (isCronRoute(req)) {
+    return NextResponse.next()
+  }
+
   const { userId } = await auth()
 
   if (isProtectedRoute(req) || isOnboardingRoute(req)) {
