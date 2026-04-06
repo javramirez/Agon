@@ -11,8 +11,9 @@ const MAX_POR_REQUEST = 3
 
 /**
  * Ejecuta comentarios de dioses cuyo delay ya pasó (p. ej. al abrir Ágora / dashboard).
+ * @returns Cuántos comentarios se insertaron en `comentarios_agora` (texto generado).
  */
-export async function procesarComentariosPendientes(): Promise<void> {
+export async function procesarComentariosPendientes(): Promise<number> {
   const ahora = new Date()
 
   const pendientes = await db
@@ -26,6 +27,8 @@ export async function procesarComentariosPendientes(): Promise<void> {
     )
     .orderBy(asc(comentariosPendientes.procesarDespuesDe))
     .limit(MAX_POR_REQUEST)
+
+  let procesados = 0
 
   for (const pendiente of pendientes) {
     try {
@@ -52,7 +55,7 @@ export async function procesarComentariosPendientes(): Promise<void> {
         (c) => `${c.autorNombre}: ${c.contenido}`
       )
 
-      await generarComentarioDios(
+      const texto = await generarComentarioDios(
         pendiente.diosNombre,
         pendiente.eventoId,
         evento[0].contenido,
@@ -64,8 +67,15 @@ export async function procesarComentariosPendientes(): Promise<void> {
         .update(comentariosPendientes)
         .set({ procesado: true })
         .where(eq(comentariosPendientes.id, pendiente.id))
+
+      if (texto) procesados += 1
     } catch (err) {
-      console.error('Error procesando comentario pendiente:', err)
+      console.error(
+        `Error procesando comentario pendiente ${pendiente.id}:`,
+        err
+      )
     }
   }
+
+  return procesados
 }
