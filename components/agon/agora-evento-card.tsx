@@ -377,18 +377,39 @@ export function AgoraEventoCard({
           )}
         </button>
 
-        <button
-          type="button"
-          onClick={() => void abrirComentarios()}
-          className="relative text-xs font-body text-muted-foreground hover:text-foreground transition-colors pr-1"
-        >
-          {esOraculo ? '🔮 Consultar' : '💬 Comentar'}
-          {noLeidos > 0 && (
-            <span className="absolute -top-2 -right-4 min-w-4 h-4 px-1 bg-amber text-black text-xs font-bold rounded-full flex items-center justify-center leading-none">
-              {noLeidos > 9 ? '9+' : noLeidos}
+        {esOraculo ? (
+          <button
+            type="button"
+            onClick={() => void abrirComentarios()}
+            className="flex items-center gap-1.5 text-xs font-body text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span>🔮</span>
+            <span>Consultar al Oráculo</span>
+            {noLeidos > 0 && (
+              <span className="text-amber font-medium">
+                · {noLeidos} nuevo{noLeidos > 1 ? 's' : ''}
+              </span>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void abrirComentarios()}
+            className="flex items-center gap-1.5 text-xs font-body text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span>💬</span>
+            <span>
+              {comentariosCount > 0
+                ? `${comentariosCount} comentario${comentariosCount > 1 ? 's' : ''}`
+                : 'Comentar'}
             </span>
-          )}
-        </button>
+            {noLeidos > 0 && (
+              <span className="font-medium text-amber">
+                · {noLeidos} nuevo{noLeidos > 1 ? 's' : ''}
+              </span>
+            )}
+          </button>
+        )}
 
         {!esDios && (
           <div className="ml-auto">
