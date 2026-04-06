@@ -260,11 +260,7 @@ export function AgoraEventoCard({
   }
 
   function abrirComentarios() {
-    const nuevoEstado = !mostrarComentarios
-    setMostrarComentarios(nuevoEstado)
-    if (nuevoEstado) {
-      setVistos(comentariosCount)
-    }
+    setMostrarComentarios((prev) => !prev)
   }
 
   function sincronizarContadorComentarios() {

@@ -10,6 +10,8 @@ import { mostrarToast } from './toast-agon'
 import { DIOSES } from '@/lib/dioses/config'
 import type { AgoraEvento, ComentarioAgora } from '@/lib/db/schema'
 
+const POLL_RECIENTES_MS = 120000
+
 interface Props {
   eventosIniciales: AgoraEvento[]
   aclamacionesHoy: number
@@ -34,6 +36,8 @@ export function AgoraConTrigger({
   const pollingRecientesRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   )
+  /** Evita toasts repetidos para el mismo comentario en la sesión. */
+  const idsToastYaMostrados = useRef<Set<string>>(new Set())
   const primeraPasadaRecientes = useRef(true)
 
   useEffect(() => {
@@ -76,28 +80,6 @@ export function AgoraConTrigger({
   useEffect(() => {
     async function tick() {
       try {
-        const esPrimera = primeraPasadaRecientes.current
-
-        if (esPrimera) {
-          // Tras añadir `visto`, marcar históricos sin toasts (varios lotes de 10)
-          for (;;) {
-            const res = await fetch('/api/comentarios/recientes')
-            if (!res.ok) break
-            const data = (await res.json()) as {
-              comentariosDioses?: ComentarioAgora[]
-            }
-            const lista = data.comentariosDioses ?? []
-            if (lista.length === 0) break
-            await fetch('/api/comentarios/recientes', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ids: lista.map((c) => c.id) }),
-            })
-          }
-          primeraPasadaRecientes.current = false
-          return
-        }
-
         const res = await fetch('/api/comentarios/recientes')
         if (!res.ok) return
         const data = (await res.json()) as {
@@ -105,22 +87,28 @@ export function AgoraConTrigger({
         }
         const lista = data.comentariosDioses ?? []
 
-        if (lista.length > 0) {
-          for (const c of lista) {
-            const dios = DIOSES[c.autorId]
-            if (dios) {
-              mostrarToast({
-                tipo: 'info',
-                icono: dios.avatar,
-                mensaje: `${dios.nombre} ha hablado en El Ágora.`,
-              })
-            }
+        if (primeraPasadaRecientes.current) {
+          lista.forEach((c) => idsToastYaMostrados.current.add(c.id))
+          primeraPasadaRecientes.current = false
+          return
+        }
+
+        let huboToastNuevo = false
+        for (const c of lista) {
+          if (idsToastYaMostrados.current.has(c.id)) continue
+          idsToastYaMostrados.current.add(c.id)
+          const dios = DIOSES[c.autorId]
+          if (dios) {
+            mostrarToast({
+              tipo: 'info',
+              icono: dios.avatar,
+              mensaje: `${dios.nombre} ha hablado en El Ágora.`,
+            })
+            huboToastNuevo = true
           }
-          await fetch('/api/comentarios/recientes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: lista.map((c) => c.id) }),
-          })
+        }
+
+        if (huboToastNuevo) {
           router.refresh()
         }
       } catch {
@@ -131,7 +119,7 @@ export function AgoraConTrigger({
     void tick()
     pollingRecientesRef.current = setInterval(() => {
       void tick()
-    }, 30000)
+    }, POLL_RECIENTES_MS)
 
     return () => {
       if (pollingRecientesRef.current) clearInterval(pollingRecientesRef.current)

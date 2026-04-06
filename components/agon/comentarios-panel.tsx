@@ -56,11 +56,33 @@ export function ComentariosPanel({
         oraculoCerrado?: boolean
         yaPreguntoOraculo?: boolean
       }
-      setComentarios(data.comentarios)
+      let list = data.comentarios ?? []
+
+      const idsNoVistos = list
+        .filter((c) => c.autorTipo === 'dios' && !c.visto)
+        .map((c) => c.id)
+
+      if (idsNoVistos.length > 0) {
+        const markRes = await fetch('/api/comentarios/recientes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: idsNoVistos }),
+        })
+        if (markRes.ok) {
+          const idSet = new Set(idsNoVistos)
+          list = list.map((c) =>
+            c.autorTipo === 'dios' && idSet.has(c.id)
+              ? { ...c, visto: true }
+              : c
+          )
+        }
+      }
+
+      setComentarios(list)
       setOraculoCerrado(!!data.oraculoCerrado)
       setYaPreguntoOraculo(!!data.yaPreguntoOraculo)
       onMetaRef.current?.({
-        total: data.comentarios.length,
+        total: list.length,
         yaPreguntoOraculo: !!data.yaPreguntoOraculo,
         oraculoCerrado: !!data.oraculoCerrado,
       })
