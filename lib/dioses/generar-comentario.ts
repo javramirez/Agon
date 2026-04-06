@@ -29,7 +29,8 @@ export async function generarComentarioDios(
   diosNombre: string,
   eventoId: string,
   contextoEvento: string,
-  otrosComentarios: string[] = []
+  otrosComentarios: string[] = [],
+  tipoEvento: string = 'prueba_completada'
 ): Promise<string | null> {
   const dios = DIOSES[diosNombre]
   if (!dios) return null
@@ -40,28 +41,36 @@ export async function generarComentarioDios(
     return null
   }
 
+  const eventosEpicos = ['dia_perfecto', 'hegemonia_ganada', 'semana_sagrada']
+  const esEpico = eventosEpicos.includes(tipoEvento)
+
   const contextoConversacion =
     otrosComentarios.length > 0
-      ? `\nComentarios previos en este evento:\n${otrosComentarios.join('\n')}`
+      ? `\nComentarios previos:\n${otrosComentarios.join('\n')}`
       : ''
+
+  const instruccionLongitud = esEpico
+    ? 'Escribe un comentario de 2-3 oraciones con peso dramático.'
+    : 'Escribe UN comentario de UNA SOLA oración. Breve, directo, con carácter.'
 
   const prompt = `${dios.personalidad}
 
-El evento en El Ágora del Gran Agon es:
+El evento en El Ágora es:
 "${contextoEvento}"
 ${contextoConversacion}
 
-Escribe UN comentario breve (máximo 3 oraciones) en tu voz y personalidad.
-Si hay comentarios previos de otros dioses, puedes responderles o ignorarlos según tu carácter.
-Si eres Eris y hay comentarios de Apolo, es probable que quieras interrumpir.
-No uses hashtags, emojis excesivos ni formato especial.
-Habla en primera persona como dios.
-Sé conciso — menos es más en el Ágora.`
+${instruccionLongitud}
+${
+  diosNombre === 'eris' && otrosComentarios.length > 0
+    ? 'Si hay comentarios de Apolo, interrúmpelo con humor irreverente.'
+    : ''
+}
+No uses hashtags ni emojis. Habla en primera persona como dios.`
 
   try {
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 150,
+      max_tokens: esEpico ? 150 : 80,
       messages: [{ role: 'user', content: prompt }],
     })
 

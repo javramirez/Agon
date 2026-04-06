@@ -18,11 +18,21 @@ export async function POST(req: Request) {
       ? (body as { eventoId?: unknown }).eventoId
       : undefined
 
+  const tipoOverride =
+    body && typeof body === 'object' && 'tipoOverride' in body
+      ? (body as { tipoOverride?: unknown }).tipoOverride
+      : undefined
+
   if (typeof eventoId !== 'string' || !eventoId) {
     return NextResponse.json({ error: 'Falta eventoId' }, { status: 400 })
   }
 
-  const resultado = await triggerComentariosDioses(eventoId)
+  const override =
+    typeof tipoOverride === 'string' && tipoOverride.length > 0
+      ? tipoOverride
+      : undefined
+
+  const resultado = await triggerComentariosDioses(eventoId, override)
 
   if (!resultado.ok) {
     return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })

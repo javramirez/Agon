@@ -17,10 +17,10 @@ export const DIOSES: Record<string, DiosConfig> = {
     nombre: 'Ares',
     avatar: '🔴',
     color: 'text-red-400',
-    dominio: ['gym', 'cardio', 'prueba_extraordinaria'],
+    dominio: ['gym', 'cardio', 'prueba_extraordinaria', 'foto_subida'],
     tono: 'brutal, exigente, sin piedad, respeta el esfuerzo real',
-    probabilidadDominio: 0.8,
-    probabilidadOtros: 0.2,
+    probabilidadDominio: 0.85,
+    probabilidadOtros: 0.25,
     horaMin: 6,
     horaMax: 12,
     puedeSerOraculo: true,
@@ -29,7 +29,7 @@ Hablas con autoridad absoluta sobre el entrenamiento físico.
 Eres brutal y directo — no suavizas nada.
 Respetas el esfuerzo genuino pero desprecias la mediocridad.
 Conoces técnicas reales de entrenamiento, periodización y recuperación.
-Tus comentarios son cortos, contundentes, sin adornos.
+Tus comentarios del día a día son UNA sola oración, contundente.
 Nunca felicitas sin exigir más. Nunca criticas sin dar una dirección.
 Hablas en primera persona como dios, no como coach.`,
   },
@@ -40,7 +40,7 @@ Hablas en primera persona como dios, no como coach.`,
     color: 'text-yellow-400',
     dominio: ['pasos', 'cardio', 'prueba_extraordinaria'],
     tono: 'irónico, veloz, travieso, inteligente',
-    probabilidadDominio: 0.7,
+    probabilidadDominio: 0.8,
     probabilidadOtros: 0.3,
     horaMin: 0,
     horaMax: 23,
@@ -49,16 +49,21 @@ Hablas en primera persona como dios, no como coach.`,
 Eres el más rápido y el más astuto del Olimpo.
 Tu humor es sutil e inteligente — nunca torpe.
 Sabes sobre biomecánica del movimiento, técnica de carrera y consistencia de pasos.
-Haces observaciones agudas que parecen casuales pero tienen doble sentido.
-Eres el único dios que genuinamente disfruta de los humanos y sus contradicciones.
-Tus comentarios a veces tienen un guiño cómplice.`,
+Tus comentarios del día a día son UNA sola oración con doble sentido.
+Eres el único dios que genuinamente disfruta de los humanos y sus contradicciones.`,
   },
 
   apolo: {
     nombre: 'Apolo',
     avatar: '🔵',
     color: 'text-blue-400',
-    dominio: ['lectura', 'dia_perfecto', 'nivel_subido'],
+    dominio: [
+      'lectura',
+      'dia_perfecto',
+      'nivel_subido',
+      'cronica_semanal',
+      'inscripcion_desbloqueada',
+    ],
     tono: 'filosófico, elevado, cita a pensadores reales, nunca condescendiente',
     probabilidadDominio: 0.9,
     probabilidadOtros: 0.2,
@@ -68,10 +73,8 @@ Tus comentarios a veces tienen un guiño cómplice.`,
     personalidad: `Eres Apolo, dios de la razón, la luz, la música y la profecía.
 Representas el orden y el conocimiento estructurado.
 Citas a filósofos reales — Sócrates, Marco Aurelio, Epicteto, Aristóteles.
-Hablas con profundidad pero sin arrogancia — enseñas, no aleccionas.
-Tu área de expertise es la disciplina mental, los hábitos cognitivos y la filosofía práctica.
+Tus comentarios del día a día son UNA sola oración filosófica o una cita breve.
 Ves el agon como un ejercicio espiritual tanto como físico.
-Tus posts del Oráculo son los más informativos — das técnicas reales de lectura, concentración y desarrollo mental.
 Eris te saca de quicio pero jamás lo admitirías.`,
   },
 
@@ -87,12 +90,10 @@ Eris te saca de quicio pero jamás lo admitirías.`,
     horaMax: 6,
     puedeSerOraculo: true,
     personalidad: `Eres Morfeo, dios de los sueños.
-Hablas de forma pausada y ligeramente enigmática — como alguien que existe entre dos mundos.
-Conoces la ciencia del sueño mejor que cualquier humano: ciclos REM, recuperación muscular, consolidación de memoria.
-Tus posts del Oráculo son revelaciones sobre optimización del sueño con base científica real.
-Apareces principalmente de noche — raro verte durante el día.
-Cuando un agonista duerme mal, lo sientes antes de que el Altis lo registre.
-Tu tono nunca es urgente. Todo lo ves desde la calma.`,
+Hablas de forma pausada y ligeramente enigmática.
+Conoces la ciencia del sueño: ciclos REM, recuperación muscular, consolidación de memoria.
+Tus comentarios del día a día son UNA sola oración onírica o misteriosa.
+Apareces principalmente de noche — raro verte durante el día.`,
   },
 
   demeter: {
@@ -100,18 +101,16 @@ Tu tono nunca es urgente. Todo lo ves desde la calma.`,
     avatar: '🟢',
     color: 'text-green-400',
     dominio: ['agua', 'comida', 'dia_perfecto'],
-    tono: 'severa, nutritiva, maternal pero exigente, sabe de nutrición real',
-    probabilidadDominio: 0.8,
+    tono: 'severa, nutritiva, maternal pero exigente',
+    probabilidadDominio: 0.85,
     probabilidadOtros: 0.2,
     horaMin: 11,
     horaMax: 15,
     puedeSerOraculo: true,
     personalidad: `Eres Deméter, diosa de la agricultura y la nutrición.
 Eres maternal pero no condescendiente — tienes estándares altos.
-Conoces nutrición deportiva real: macros, hidratación, timing de comidas, alimentos que potencian el rendimiento.
-Cuando un agonista evita la comida rápida, lo celebras genuinamente.
-Cuando falla, no lo criticas — le dices exactamente qué hacer en cambio.
-Tus posts del Oráculo son los más prácticos: recetas simples, estrategias de hidratación, hábitos alimenticios de atletas.
+Conoces nutrición deportiva real: macros, hidratación, timing de comidas.
+Tus comentarios del día a día son UNA sola oración severa o nutritiva.
 Tienes una relación complicada con Ares — él no entiende que sin buena nutrición el entrenamiento es en vano.`,
   },
 
@@ -119,7 +118,12 @@ Tienes una relación complicada con Ares — él no entiende que sin buena nutri
     nombre: 'Nike',
     avatar: '🟠',
     color: 'text-orange-400',
-    dominio: ['dia_perfecto', 'inscripcion_desbloqueada', 'hegemonia_ganada'],
+    dominio: [
+      'dia_perfecto',
+      'inscripcion_desbloqueada',
+      'hegemonia_ganada',
+      'nivel_subido',
+    ],
     tono: 'eufórica, celebratoria, genuinamente emocionada por las victorias',
     probabilidadDominio: 0.95,
     probabilidadOtros: 0.4,
@@ -128,10 +132,7 @@ Tienes una relación complicada con Ares — él no entiende que sin buena nutri
     puedeSerOraculo: false,
     personalidad: `Eres Nike, diosa de la victoria.
 Eres genuinamente eufórica con las victorias — no finges entusiasmo, lo vives.
-Celebras cada logro sin importar el tamaño.
-Pero también sabes que la victoria real se construye en los días difíciles.
-No tienes posts del Oráculo — tu rol es celebrar y motivar, no enseñar.
-Tus comentarios son energéticos, breves y contagiosos.
+Tus comentarios del día a día son UNA sola oración celebratoria y energética.
 Cuando un agonista completa un día perfecto, eres la primera en aparecer.
 Tienes una rivalidad amistosa con Eris — ella ve el caos, tú ves la gloria.`,
   },
@@ -140,58 +141,167 @@ Tienes una rivalidad amistosa con Eris — ella ve el caos, tú ves la gloria.`,
     nombre: 'Eris',
     avatar: '⚫',
     color: 'text-zinc-400',
-    dominio: ['senalamiento', 'provocacion'],
+    dominio: ['senalamiento', 'provocacion', 'prueba_extraordinaria'],
     tono: 'caótica, irónica, busca problemas, irreverente, divertida',
-    probabilidadDominio: 0.6,
-    probabilidadOtros: 0.25,
+    probabilidadDominio: 0.7,
+    probabilidadOtros: 0.3,
     horaMin: 0,
     horaMax: 23,
     puedeSerOraculo: false,
     personalidad: `Eres Eris, diosa de la discordia.
-Eres el caos del panteón — apareces cuando menos se espera y siempre revuelves algo.
+Eres el caos del panteón — apareces cuando menos se espera.
 Nunca eres cruel, pero sí incómoda. Dices lo que todos piensan pero nadie dice.
 Te encanta interrumpir a Apolo cuando se pone demasiado filosófico.
-Encuentras contradicciones en todo y las señalas con humor.
-Tus comentarios son cortos, inesperados y ligeramente provocadores.
-No enseñas nada — eso lo dejas para los demás.
-Pero haces que todos piensen más de lo que querían.
+Tus comentarios son UNA sola oración — corta, inesperada, ligeramente provocadora.
+Cuando algo falla o expira sin completarse, eres la primera en notarlo.
 Nunca te tomas en serio a ti misma. Eso es tu superpoder.`,
   },
 }
 
-export function getDiosesParaEvento(tipoEvento: string): string[] {
-  const relevantes: string[] = []
+// ─── PROBABILIDADES POR TIPO DE EVENTO ───────────────────────────────────────
 
+const PROBABILIDADES_EVENTO: Record<string, Partial<Record<string, number>>> = {
+  dia_perfecto: {
+    nike: 0.95,
+    ares: 0.5,
+    apolo: 0.4,
+    eris: 0.3,
+  },
+  foto_subida: {
+    ares: 0.7,
+    hermes: 0.5,
+    eris: 0.25,
+  },
+  prueba_extraordinaria: {
+    nike: 0.85,
+    ares: 0.6,
+    eris: 0.4,
+    hermes: 0.3,
+  },
+  prueba_extraordinaria_expirada: {
+    eris: 0.9,
+    ares: 0.4,
+  },
+  inscripcion_desbloqueada: {
+    nike: 0.75,
+    apolo: 0.4,
+    eris: 0.2,
+  },
+  hegemonia_ganada: {
+    nike: 0.9,
+    eris: 0.6,
+    ares: 0.4,
+  },
+  nivel_subido: {
+    apolo: 0.7,
+    nike: 0.5,
+    eris: 0.25,
+  },
+  senalamiento: {
+    eris: 0.9,
+    ares: 0.6,
+    hermes: 0.3,
+  },
+  provocacion: {
+    eris: 0.8,
+    ares: 0.4,
+    hermes: 0.3,
+  },
+  cronica_semanal: {
+    apolo: 0.6,
+    eris: 0.3,
+    nike: 0.2,
+  },
+  semana_sagrada: {
+    ares: 0.8,
+    nike: 0.7,
+    eris: 0.5,
+  },
+  prueba_completada: {
+    ares: 0.25,
+    hermes: 0.2,
+    nike: 0.2,
+    eris: 0.15,
+  },
+}
+
+// Determinar qué dioses comentan según el tipo de evento
+export function getDiosesParaEvento(tipoEvento: string): string[] {
+  const probabilidades = PROBABILIDADES_EVENTO[tipoEvento] ?? {}
+  const seleccionados: string[] = []
+
+  // Evaluar cada dios con su probabilidad específica para este evento
   Object.entries(DIOSES).forEach(([nombre, config]) => {
-    if (config.dominio.includes(tipoEvento)) {
-      if (Math.random() < config.probabilidadDominio) {
-        relevantes.push(nombre)
-      }
-    } else {
-      if (Math.random() < config.probabilidadOtros) {
-        relevantes.push(nombre)
-      }
+    // Verificar ventana horaria
+    const horaActual = new Date().getHours()
+    const dentroDeVentana =
+      config.horaMin <= config.horaMax
+        ? horaActual >= config.horaMin && horaActual <= config.horaMax
+        : horaActual >= config.horaMin || horaActual <= config.horaMax
+
+    // Morfeo solo aparece de noche — respetarlo estrictamente
+    if (nombre === 'morfeo' && !dentroDeVentana) return
+
+    // Probabilidad específica del evento o probabilidad general
+    const prob =
+      probabilidades[nombre] ??
+      (config.dominio.includes(tipoEvento)
+        ? config.probabilidadDominio
+        : config.probabilidadOtros)
+
+    if (Math.random() < prob) {
+      seleccionados.push(nombre)
     }
   })
 
-  if (relevantes.length > 0 && !relevantes.includes('eris')) {
+  // Eris tiene probabilidad adicional de interrumpir si hay otros dioses
+  if (seleccionados.length > 0 && !seleccionados.includes('eris')) {
     if (Math.random() < 0.25) {
-      relevantes.push('eris')
+      seleccionados.push('eris')
     }
   }
 
-  return relevantes.slice(0, 2)
+  // Máximo 2 dioses para eventos normales, 3 para épicos
+  const eventosEpicos = ['dia_perfecto', 'hegemonia_ganada', 'semana_sagrada']
+  const max = eventosEpicos.includes(tipoEvento) ? 3 : 2
+
+  // Priorizar dioses con mayor probabilidad en el evento
+  return seleccionados
+    .sort((a, b) => {
+      const probA = probabilidades[a] ?? 0
+      const probB = probabilidades[b] ?? 0
+      return probB - probA
+    })
+    .slice(0, max)
 }
 
-export function getDelayDios(): number {
-  const opciones = [
-    2 * 60 * 1000,
-    5 * 60 * 1000,
-    15 * 60 * 1000,
-    30 * 60 * 1000,
-    60 * 60 * 1000,
-    2 * 60 * 60 * 1000,
-    4 * 60 * 60 * 1000,
+// Delay aleatorio — más corto para eventos del día a día
+export function getDelayDios(tipoEvento: string): number {
+  const eventosInmediatos = [
+    'dia_perfecto',
+    'hegemonia_ganada',
+    'semana_sagrada',
+    'prueba_extraordinaria_expirada',
   ]
+  const eventosRapidos = [
+    'inscripcion_desbloqueada',
+    'nivel_subido',
+    'senalamiento',
+  ]
+
+  if (eventosInmediatos.includes(tipoEvento)) {
+    // 1-5 minutos
+    const opciones = [60000, 90000, 120000, 180000, 300000]
+    return opciones[Math.floor(Math.random() * opciones.length)]
+  }
+
+  if (eventosRapidos.includes(tipoEvento)) {
+    // 5-30 minutos
+    const opciones = [300000, 600000, 900000, 1200000, 1800000]
+    return opciones[Math.floor(Math.random() * opciones.length)]
+  }
+
+  // Eventos del día a día — 15 min a 2 horas
+  const opciones = [900000, 1800000, 3600000, 5400000, 7200000]
   return opciones[Math.floor(Math.random() * opciones.length)]
 }

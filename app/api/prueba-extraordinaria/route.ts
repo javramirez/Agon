@@ -9,6 +9,7 @@ import {
   semanaSagrada,
 } from '@/lib/db/schema'
 import { eq, and, gte } from 'drizzle-orm'
+import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
 import { getOrCreateAgonista, getSemanaActual } from '@/lib/db/queries'
 
 const MAX_TRIPTICO_SEMANA = 2
@@ -194,4 +195,12 @@ export async function POST(req: Request) {
   })
 
   return NextResponse.json({ ok: true, kleos: kleosFinales, multiplicador })
+}
+
+export async function DELETE() {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { expiradas } = await procesarPruebasExpiradas(userId)
+  return NextResponse.json({ ok: true, expiradas })
 }

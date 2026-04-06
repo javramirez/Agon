@@ -9,6 +9,7 @@ import {
   desactivarSemanaSagradaSiTermino,
 } from '@/lib/pruebas-extraordinarias/semana-sagrada'
 import { getDiaDelAgan, isGranAgonActivo } from '@/lib/utils'
+import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
 
 export async function GET() {
   const { userId } = await auth()
@@ -28,6 +29,12 @@ export async function GET() {
   const semanaSagradaActivada = await verificarYActivarSemanaSagrada()
 
   await desactivarSemanaSagradaSiTermino()
+
+  try {
+    await procesarPruebasExpiradas(userId)
+  } catch {
+    // Silencioso: no bloquear verificación si falla expiración
+  }
 
   return NextResponse.json({
     ...resultado,

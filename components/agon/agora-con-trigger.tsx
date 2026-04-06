@@ -82,6 +82,7 @@ export function AgoraConTrigger({
     }
 
     void tick()
+    // Toasts de dioses — no saturar: cada 2 min (ver ventana en /api/comentarios/recientes)
     pollingRef.current = setInterval(() => {
       void tick()
     }, 120000)

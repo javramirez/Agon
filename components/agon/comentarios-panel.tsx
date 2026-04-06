@@ -1,12 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { DIOSES } from '@/lib/dioses/config'
 import { DiosAvatar } from './dios-avatar'
 import { cn } from '@/lib/utils'
 import type { ComentarioAgora } from '@/lib/db/schema'
+
+export interface ComentariosMeta {
+  total: number
+  yaPreguntoOraculo: boolean
+  oraculoCerrado: boolean
+}
 
 interface Props {
   eventoId: string
@@ -15,6 +21,10 @@ interface Props {
   postDiosId?: string
   /** Tras enviar comentario o recargar, para sincronizar el badge en la card */
   onComentariosCambiados?: () => void
+  /** Tras cada carga (incl. polling): sincronizar badge y estado del Oráculo */
+  onComentariosMeta?: (meta: ComentariosMeta) => void
+  /** Polling solo con panel abierto: 30000 normal, 10000 esperando Oráculo */
+  pollIntervalMs?: number
 }
 
 export function ComentariosPanel({
@@ -23,6 +33,8 @@ export function ComentariosPanel({
   diosNombre,
   postDiosId,
   onComentariosCambiados,
+  onComentariosMeta,
+  pollIntervalMs = 0,
 }: Props) {
   const [comentarios, setComentarios] = useState<ComentarioAgora[]>([])
   const [input, setInput] = useState('')
@@ -30,6 +42,9 @@ export function ComentariosPanel({
   const [cargando, setCargando] = useState(true)
   const [oraculoCerrado, setOraculoCerrado] = useState(false)
   const [yaPreguntoOraculo, setYaPreguntoOraculo] = useState(false)
+
+  const onMetaRef = useRef(onComentariosMeta)
+  onMetaRef.current = onComentariosMeta
 
   const cargar = useCallback(async () => {
     const params = new URLSearchParams({ eventoId })
@@ -44,6 +59,11 @@ export function ComentariosPanel({
       setComentarios(data.comentarios)
       setOraculoCerrado(!!data.oraculoCerrado)
       setYaPreguntoOraculo(!!data.yaPreguntoOraculo)
+      onMetaRef.current?.({
+        total: data.comentarios.length,
+        yaPreguntoOraculo: !!data.yaPreguntoOraculo,
+        oraculoCerrado: !!data.oraculoCerrado,
+      })
     }
     setCargando(false)
   }, [eventoId, postDiosId])
@@ -51,6 +71,14 @@ export function ComentariosPanel({
   useEffect(() => {
     void cargar()
   }, [cargar])
+
+  useEffect(() => {
+    if (!pollIntervalMs || pollIntervalMs <= 0) return
+    const id = setInterval(() => {
+      void cargar()
+    }, pollIntervalMs)
+    return () => clearInterval(id)
+  }, [pollIntervalMs, cargar])
 
   async function enviar() {
     if (!input.trim() || enviando) return

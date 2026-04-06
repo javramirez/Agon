@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
-import { ComentariosPanel } from './comentarios-panel'
+import {
+  ComentariosPanel,
+  type ComentariosMeta,
+} from './comentarios-panel'
 import { DiosAvatar } from './dios-avatar'
 import { DIOSES } from '@/lib/dioses/config'
-import type { AgoraEvento, Cronica } from '@/lib/db/schema'
+import type { AgoraEvento, ComentarioAgora, Cronica } from '@/lib/db/schema'
 import { CronicaCard } from './cronica-card'
 
 const ACLAMACIONES_CONFIG = [
@@ -58,19 +61,15 @@ export function AgoraEventoCard({
   const [likesCargados, setLikesCargados] = useState(false)
   const [comentariosCount, setComentariosCount] = useState(comentarioCountInicial)
   const [vistos, setVistos] = useState(comentarioCountInicial)
+  const [oracleState, setOracleState] = useState<{
+    yaPregunto: boolean
+    cerrado: boolean
+  } | null>(null)
+
+  const mostrarRef = useRef(false)
+  mostrarRef.current = mostrarComentarios
 
   const isCronica = evento.tipo === 'cronica_semanal'
-  const noLeidos = mostrarComentarios
-    ? 0
-    : Math.max(0, comentariosCount - vistos)
-
-  useEffect(() => {
-    setAclamacion(miAclamacion ?? null)
-  }, [miAclamacion])
-
-  useEffect(() => {
-    setUsadas(aclamacionesUsadas)
-  }, [aclamacionesUsadas])
 
   const metadata = evento.metadata as {
     esDios?: boolean
@@ -85,6 +84,19 @@ export function AgoraEventoCard({
   const postDiosId = metadata?.postDiosId
   const esOraculo = tipoDios === 'oraculo'
 
+  const esperandoOraculo = Boolean(
+    esOraculo &&
+      oracleState &&
+      oracleState.yaPregunto &&
+      !oracleState.cerrado
+  )
+
+  const pollIntervalMs = mostrarComentarios
+    ? esperandoOraculo
+      ? 10000
+      : 30000
+    : 0
+
   const diosConfig = diosNombre ? DIOSES[diosNombre] : null
   const icono = esDios
     ? (diosConfig?.avatar ?? '⚡')
@@ -95,11 +107,95 @@ export function AgoraEventoCard({
     locale: es,
   })
 
+  const noLeidos = mostrarComentarios
+    ? 0
+    : Math.max(0, comentariosCount - vistos)
+
+  useEffect(() => {
+    setAclamacion(miAclamacion ?? null)
+  }, [miAclamacion])
+
+  useEffect(() => {
+    setUsadas(aclamacionesUsadas)
+  }, [aclamacionesUsadas])
+
   useEffect(() => {
     if (isCronica) return
     setComentariosCount(comentarioCountInicial)
     setVistos(comentarioCountInicial)
   }, [comentarioCountInicial, isCronica])
+
+  useEffect(() => {
+    if (isCronica || !esOraculo || !postDiosId) return
+    const params = new URLSearchParams({ eventoId: evento.id, postDiosId })
+    void fetch(`/api/comentarios?${params.toString()}`)
+      .then((r) => r.json())
+      .then(
+        (d: {
+          comentarios?: ComentarioAgora[]
+          yaPreguntoOraculo?: boolean
+          oraculoCerrado?: boolean
+        }) => {
+          setOracleState({
+            yaPregunto: !!d.yaPreguntoOraculo,
+            cerrado: !!d.oraculoCerrado,
+          })
+          const n = d.comentarios?.length ?? 0
+          setComentariosCount((c) => Math.max(c, n))
+        }
+      )
+      .catch(() => {})
+  }, [evento.id, esOraculo, postDiosId, isCronica])
+
+  const handleComentariosMeta = useCallback((meta: ComentariosMeta) => {
+    setOracleState({
+      yaPregunto: meta.yaPreguntoOraculo,
+      cerrado: meta.oraculoCerrado,
+    })
+    setComentariosCount(meta.total)
+    if (mostrarRef.current) setVistos(meta.total)
+  }, [])
+
+  useEffect(() => {
+    if (isCronica || !esOraculo || !postDiosId) return
+    if (!esperandoOraculo || mostrarComentarios) return
+
+    const tick = async () => {
+      const params = new URLSearchParams({ eventoId: evento.id, postDiosId })
+      const res = await fetch(`/api/comentarios?${params.toString()}`)
+      if (!res.ok) return
+      const data = (await res.json()) as {
+        comentarios?: ComentarioAgora[]
+        yaPreguntoOraculo?: boolean
+        oraculoCerrado?: boolean
+      }
+      const list = data.comentarios ?? []
+      const tieneDios = list.some((c) => c.autorTipo === 'dios')
+      const cerrado = !!data.oraculoCerrado || tieneDios
+
+      setOracleState({
+        yaPregunto: !!data.yaPreguntoOraculo,
+        cerrado: cerrado,
+      })
+      setComentariosCount(list.length)
+
+      if (cerrado && tieneDios && !mostrarRef.current) {
+        setMostrarComentarios(true)
+        setVistos(Math.max(0, list.length - 1))
+      }
+    }
+
+    void tick()
+    const id = setInterval(() => void tick(), 10000)
+    return () => clearInterval(id)
+  }, [
+    isCronica,
+    esOraculo,
+    postDiosId,
+    esperandoOraculo,
+    mostrarComentarios,
+    evento.id,
+  ])
 
   useEffect(() => {
     if (isCronica) return
@@ -149,23 +245,11 @@ export function AgoraEventoCard({
     setMostrarAcciones(false)
   }
 
-  async function abrirComentarios() {
+  function abrirComentarios() {
     const nuevoEstado = !mostrarComentarios
     setMostrarComentarios(nuevoEstado)
     if (nuevoEstado) {
-      try {
-        const res = await fetch(
-          `/api/comentarios?eventoId=${evento.id}&countOnly=true`
-        )
-        if (res.ok) {
-          const d = (await res.json()) as { total?: number }
-          const t = d.total ?? 0
-          setComentariosCount(t)
-          setVistos(t)
-        }
-      } catch {
-        /* silencioso */
-      }
+      setVistos(comentariosCount)
     }
   }
 
@@ -378,6 +462,8 @@ export function AgoraEventoCard({
           esOraculo={esOraculo}
           diosNombre={diosNombre}
           postDiosId={postDiosId}
+          pollIntervalMs={pollIntervalMs}
+          onComentariosMeta={handleComentariosMeta}
           onComentariosCambiados={sincronizarContadorComentarios}
         />
       )}
