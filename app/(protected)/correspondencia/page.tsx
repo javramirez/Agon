@@ -1,5 +1,6 @@
 import { getCurrentAgonista, AGONISTAS } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { CorrespondenciaChat } from '@/components/agon/correspondencia-chat'
 import { getAgonistaByClerkId } from '@/lib/db/queries'
 
@@ -16,6 +17,17 @@ export default async function CorrespondenciaPage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      <div className="bg-surface-2 border border-border rounded-xl p-4 mb-4">
+        <p className="text-xs font-body text-muted-foreground leading-relaxed">
+          <span className="text-foreground font-medium">La Correspondencia</span>{' '}
+          ha sido reemplazada por los comentarios en{' '}
+          <Link href="/agora" className="text-amber hover:underline">
+            El Ágora
+          </Link>
+          . Los mensajes anteriores siguen disponibles aquí.
+        </p>
+      </div>
+
       <div className="pt-2">
         <p className="text-xs text-muted-foreground tracking-widest uppercase font-body mb-1">
           La Correspondencia

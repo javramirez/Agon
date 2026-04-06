@@ -43,12 +43,6 @@ const LINKS_AGONISTA = [
     desc: 'Tu mensaje sellado del día 1',
   },
   {
-    href: '/correspondencia',
-    label: 'La Correspondencia',
-    icon: '✉️',
-    desc: 'Tus cartas con el antagonista',
-  },
-  {
     href: '/contrato',
     label: 'El Contrato',
     icon: '📋',

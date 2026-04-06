@@ -30,8 +30,9 @@ export default async function AgoraPage() {
         <h1 className="font-display text-2xl font-bold tracking-wide">
           La Plaza del Agon.
         </h1>
-        <p className="text-xs text-muted-foreground font-body mt-1">
-          Donde las hazañas se comparten y el Altis las presencia.
+        <p className="text-xs text-muted-foreground font-body mt-1 leading-relaxed">
+          La plaza donde el agon se hace público. Los dioses observan. Los
+          agonistas hablan.
         </p>
       </div>
 

@@ -34,13 +34,7 @@ const LINKS = [
     href: '/oraculo',
     label: 'El Oráculo',
     icon: '⚖️',
-    desc: 'Tu mensaje del día 1',
-  },
-  {
-    href: '/correspondencia',
-    label: 'La Correspondencia',
-    icon: '✉️',
-    desc: 'Cartas con el antagonista',
+    desc: 'Tu mensaje sellado del día 1',
   },
   {
     href: '/contrato',

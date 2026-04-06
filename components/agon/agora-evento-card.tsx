@@ -280,19 +280,21 @@ export function AgoraEventoCard({
         />
       )}
 
-      <div className="flex items-center gap-3 pt-1 border-t border-border flex-wrap">
+      <div className="flex items-center gap-4 pt-1 border-t border-border flex-wrap">
         <button
           type="button"
           onClick={() => void toggleLike()}
           disabled={!likesCargados}
           className={cn(
-            'flex items-center gap-1.5 text-xs font-body transition-colors',
+            'flex items-center gap-1.5 text-xs font-body transition-all active:scale-95',
             miLike ? 'text-amber' : 'text-muted-foreground hover:text-foreground',
             !likesCargados && 'opacity-50'
           )}
         >
-          <span>{miLike ? '♥' : '♡'}</span>
-          <span>{likes > 0 ? likes : ''}</span>
+          <span className="text-sm">{miLike ? '♥' : '♡'}</span>
+          {likes > 0 && (
+            <span className="tabular-nums">{likes}</span>
+          )}
         </button>
 
         <button
@@ -302,7 +304,7 @@ export function AgoraEventoCard({
         >
           {esOraculo ? '🔮 Consultar' : '💬 Comentar'}
           {noLeidos > 0 && (
-            <span className="absolute -top-2 -right-1 min-w-4 h-4 px-1 bg-amber text-black text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+            <span className="absolute -top-2 -right-4 min-w-4 h-4 px-1 bg-amber text-black text-xs font-bold rounded-full flex items-center justify-center leading-none">
               {noLeidos > 9 ? '9+' : noLeidos}
             </span>
           )}
@@ -311,7 +313,7 @@ export function AgoraEventoCard({
         {!esDios && (
           <div className="ml-auto">
             {aclamacion ? (
-              <span className="text-xs font-body text-muted-foreground">
+              <span className="text-sm">
                 {ACLAMACIONES_CONFIG.find((a) => a.tipo === aclamacion)?.emoji}
               </span>
             ) : (
@@ -322,7 +324,7 @@ export function AgoraEventoCard({
                 className={cn(
                   'text-xs font-body transition-colors',
                   usadas >= 5
-                    ? 'text-muted-foreground/40'
+                    ? 'text-muted-foreground/30 cursor-not-allowed'
                     : 'text-muted-foreground hover:text-amber'
                 )}
               >
@@ -332,25 +334,28 @@ export function AgoraEventoCard({
           </div>
         )}
 
-        {esDios && tipoDios === 'voz_olimpo' && (
-          <div className="ml-auto flex gap-1.5 flex-wrap justify-end">
-            {ACLAMACIONES_CONFIG.map((a) => (
+        {esDios && tipoDios === 'voz_olimpo' && !aclamacion && (
+          <div className="ml-auto flex gap-2">
+            {ACLAMACIONES_CONFIG.slice(0, 3).map((a) => (
               <button
                 key={a.tipo}
                 type="button"
                 onClick={() => void aclamar(a.tipo)}
                 disabled={!!aclamacion || usadas >= 5}
-                className={cn(
-                  'text-base transition-all',
-                  aclamacion === a.tipo
-                    ? 'opacity-100'
-                    : 'opacity-40 hover:opacity-100'
-                )}
                 title={a.label}
+                className="text-base opacity-40 hover:opacity-100 transition-opacity active:scale-95"
               >
                 {a.emoji}
               </button>
             ))}
+          </div>
+        )}
+
+        {esDios && tipoDios === 'voz_olimpo' && !!aclamacion && (
+          <div className="ml-auto">
+            <span className="text-sm">
+              {ACLAMACIONES_CONFIG.find((a) => a.tipo === aclamacion)?.emoji}
+            </span>
           </div>
         )}
       </div>
