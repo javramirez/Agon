@@ -19,12 +19,30 @@ export function AgoraFeed({
   const [aclamacionesHoy, setAclamacionesHoy] = useState(aclamacionesInicial)
   const [tiposPorEvento, setTiposPorEvento] = useState(tiposInicial)
   const [refrescando, setRefrescando] = useState(false)
+  const [comentarioCounts, setComentarioCounts] = useState<
+    Record<string, number>
+  >({})
 
   useEffect(() => {
     setEventos(eventosIniciales)
     setAclamacionesHoy(aclamacionesInicial)
     setTiposPorEvento(tiposInicial)
   }, [eventosIniciales, aclamacionesInicial, tiposInicial])
+
+  useEffect(() => {
+    if (eventos.length === 0) return
+
+    fetch('/api/comentarios/counts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventoIds: eventos.map((e) => e.id) }),
+    })
+      .then((r) => r.json())
+      .then((d: { counts?: Record<string, number> }) =>
+        setComentarioCounts(d.counts ?? {})
+      )
+      .catch(() => {})
+  }, [eventos])
 
   const refrescar = useCallback(async () => {
     setRefrescando(true)
@@ -62,6 +80,7 @@ export function AgoraFeed({
           evento={evento}
           aclamacionesUsadas={aclamacionesHoy}
           miAclamacion={tiposPorEvento[evento.id] ?? null}
+          comentarioCountInicial={comentarioCounts[evento.id] ?? 0}
         />
       ))}
     </div>

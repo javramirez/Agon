@@ -84,7 +84,7 @@ export function AgoraConTrigger({
     void tick()
     pollingRef.current = setInterval(() => {
       void tick()
-    }, 30000)
+    }, 120000)
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current)

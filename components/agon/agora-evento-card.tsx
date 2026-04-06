@@ -37,12 +37,15 @@ interface Props {
   evento: AgoraEvento
   aclamacionesUsadas: number
   miAclamacion?: string | null
+  /** Total de comentarios (batch desde AgoraFeed) */
+  comentarioCountInicial?: number
 }
 
 export function AgoraEventoCard({
   evento,
   aclamacionesUsadas,
   miAclamacion,
+  comentarioCountInicial = 0,
 }: Props) {
   const router = useRouter()
   const [aclamacion, setAclamacion] = useState(miAclamacion ?? null)
@@ -53,8 +56,8 @@ export function AgoraEventoCard({
   const [likes, setLikes] = useState(0)
   const [miLike, setMiLike] = useState(false)
   const [likesCargados, setLikesCargados] = useState(false)
-  const [comentariosCount, setComentariosCount] = useState(0)
-  const [vistos, setVistos] = useState(0)
+  const [comentariosCount, setComentariosCount] = useState(comentarioCountInicial)
+  const [vistos, setVistos] = useState(comentarioCountInicial)
 
   const isCronica = evento.tipo === 'cronica_semanal'
   const noLeidos = mostrarComentarios
@@ -94,30 +97,9 @@ export function AgoraEventoCard({
 
   useEffect(() => {
     if (isCronica) return
-    fetch(`/api/comentarios?eventoId=${evento.id}&countOnly=true`)
-      .then((r) => r.json())
-      .then((d: { total?: number }) => {
-        const t = d.total ?? 0
-        setComentariosCount(t)
-        setVistos(t)
-      })
-      .catch(() => {})
-  }, [evento.id, isCronica])
-
-  useEffect(() => {
-    if (isCronica) return
-    const id = setInterval(() => {
-      fetch(`/api/comentarios?eventoId=${evento.id}&countOnly=true`)
-        .then((r) => r.json())
-        .then((d: { total?: number }) => {
-          const t = d.total ?? 0
-          setComentariosCount(t)
-          setVistos((prev) => (mostrarComentarios ? t : prev))
-        })
-        .catch(() => {})
-    }, 30000)
-    return () => clearInterval(id)
-  }, [evento.id, isCronica, mostrarComentarios])
+    setComentariosCount(comentarioCountInicial)
+    setVistos(comentarioCountInicial)
+  }, [comentarioCountInicial, isCronica])
 
   useEffect(() => {
     if (isCronica) return

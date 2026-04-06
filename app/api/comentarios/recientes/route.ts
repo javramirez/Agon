@@ -8,7 +8,8 @@ export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const hace35s = new Date(Date.now() - 35000)
+  // Ventana mayor que el intervalo de polling (120s) para no perder toasts
+  const desde = new Date(Date.now() - 150000)
 
   const recientes = await db
     .select()
@@ -16,7 +17,7 @@ export async function GET() {
     .where(
       and(
         eq(comentariosAgora.autorTipo, 'dios'),
-        gte(comentariosAgora.createdAt, hace35s)
+        gte(comentariosAgora.createdAt, desde)
       )
     )
 
