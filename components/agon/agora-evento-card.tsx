@@ -65,6 +65,7 @@ export function AgoraEventoCard({
     yaPregunto: boolean
     cerrado: boolean
   } | null>(null)
+  const [tiempoAtras, setTiempoAtras] = useState('')
 
   const mostrarRef = useRef(false)
   mostrarRef.current = mostrarComentarios
@@ -102,14 +103,27 @@ export function AgoraEventoCard({
     ? (diosConfig?.avatar ?? '⚡')
     : (TIPO_ICONOS[evento.tipo] ?? '◆')
 
-  const tiempoAtras = formatDistanceToNow(new Date(evento.createdAt), {
-    addSuffix: true,
-    locale: es,
-  })
-
   const noLeidos = mostrarComentarios
     ? 0
     : Math.max(0, comentariosCount - vistos)
+
+  useEffect(() => {
+    setTiempoAtras(
+      formatDistanceToNow(new Date(evento.createdAt), {
+        addSuffix: true,
+        locale: es,
+      })
+    )
+    const interval = setInterval(() => {
+      setTiempoAtras(
+        formatDistanceToNow(new Date(evento.createdAt), {
+          addSuffix: true,
+          locale: es,
+        })
+      )
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [evento.createdAt])
 
   useEffect(() => {
     setAclamacion(miAclamacion ?? null)

@@ -5,7 +5,7 @@ import {
   getAclamacionesHoy,
   getTiposAclamacionHoyPorEvento,
 } from '@/lib/db/queries'
-import { AgoraConTrigger } from '@/components/agon/agora-con-trigger'
+import { AgoraConTriggerClient } from '@/components/agon/agora-con-trigger-client'
 
 export const revalidate = 30
 
@@ -45,7 +45,7 @@ export default async function AgoraPage() {
         </p>
       </div>
 
-      <AgoraConTrigger
+      <AgoraConTriggerClient
         eventosIniciales={eventos}
         aclamacionesHoy={usadas}
         tiposPorEvento={tiposPorEvento}
