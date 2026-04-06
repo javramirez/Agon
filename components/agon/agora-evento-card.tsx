@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+import { ComentariosPanel } from './comentarios-panel'
+import { DiosAvatar } from './dios-avatar'
+import { DIOSES } from '@/lib/dioses/config'
 import type { AgoraEvento, Cronica } from '@/lib/db/schema'
 import { CronicaCard } from './cronica-card'
 
@@ -46,6 +49,12 @@ export function AgoraEventoCard({
   const [usadas, setUsadas] = useState(aclamacionesUsadas)
   const [cargando, setCargando] = useState(false)
   const [mostrarAcciones, setMostrarAcciones] = useState(false)
+  const [mostrarComentarios, setMostrarComentarios] = useState(false)
+  const [likes, setLikes] = useState(0)
+  const [miLike, setMiLike] = useState(false)
+  const [likesCargados, setLikesCargados] = useState(false)
+
+  const isCronica = evento.tipo === 'cronica_semanal'
 
   useEffect(() => {
     setAclamacion(miAclamacion ?? null)
@@ -55,33 +64,56 @@ export function AgoraEventoCard({
     setUsadas(aclamacionesUsadas)
   }, [aclamacionesUsadas])
 
-  if (evento.tipo === 'cronica_semanal') {
-    const metadata = evento.metadata as {
-      semana?: number
-      fechaInicio?: string
-      fechaFin?: string
-    } | null
-    const cronicaMock: Cronica = {
-      id: evento.id,
-      semana: metadata?.semana ?? 1,
-      fechaInicio:
-        metadata?.fechaInicio ??
-        new Date(evento.createdAt).toISOString().split('T')[0],
-      fechaFin:
-        metadata?.fechaFin ??
-        new Date(evento.createdAt).toISOString().split('T')[0],
-      relato: evento.contenido,
-      metadata: evento.metadata,
-      createdAt: evento.createdAt,
-    }
-    return <CronicaCard cronica={cronicaMock} />
-  }
+  const metadata = evento.metadata as {
+    esDios?: boolean
+    diosNombre?: string
+    tipoDios?: 'oraculo' | 'voz_olimpo'
+    postDiosId?: string
+  } | null
 
-  const icono = TIPO_ICONOS[evento.tipo] ?? '◆'
+  const esDios = metadata?.esDios === true
+  const diosNombre = metadata?.diosNombre
+  const tipoDios = metadata?.tipoDios
+  const postDiosId = metadata?.postDiosId
+  const esOraculo = tipoDios === 'oraculo'
+
+  const diosConfig = diosNombre ? DIOSES[diosNombre] : null
+  const icono = esDios
+    ? (diosConfig?.avatar ?? '⚡')
+    : (TIPO_ICONOS[evento.tipo] ?? '◆')
+
   const tiempoAtras = formatDistanceToNow(new Date(evento.createdAt), {
     addSuffix: true,
     locale: es,
   })
+
+  useEffect(() => {
+    if (isCronica) return
+    async function cargarLikes() {
+      const res = await fetch(`/api/likes?eventoId=${evento.id}`)
+      if (res.ok) {
+        const data = (await res.json()) as { total: number; miLike: boolean }
+        setLikes(data.total)
+        setMiLike(data.miLike)
+      }
+      setLikesCargados(true)
+    }
+    void cargarLikes()
+  }, [evento.id, isCronica])
+
+  async function toggleLike() {
+    if (isCronica) return
+    const res = await fetch('/api/likes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventoId: evento.id }),
+    })
+    if (res.ok) {
+      const data = (await res.json()) as { liked: boolean }
+      setMiLike(data.liked)
+      setLikes((prev) => (data.liked ? prev + 1 : Math.max(0, prev - 1)))
+    }
+  }
 
   async function aclamar(tipo: string) {
     if (aclamacion || usadas >= 5 || cargando) return
@@ -103,12 +135,72 @@ export function AgoraEventoCard({
     setMostrarAcciones(false)
   }
 
+  if (isCronica) {
+    const md = evento.metadata as {
+      semana?: number
+      fechaInicio?: string
+      fechaFin?: string
+    } | null
+    const cronicaMock: Cronica = {
+      id: evento.id,
+      semana: md?.semana ?? 1,
+      fechaInicio:
+        md?.fechaInicio ??
+        new Date(evento.createdAt).toISOString().split('T')[0],
+      fechaFin:
+        md?.fechaFin ??
+        new Date(evento.createdAt).toISOString().split('T')[0],
+      relato: evento.contenido,
+      metadata: evento.metadata,
+      createdAt: evento.createdAt,
+    }
+    return <CronicaCard cronica={cronicaMock} />
+  }
+
   return (
-    <div className="bg-surface-1 rounded-lg border border-border p-4 space-y-3">
+    <div
+      className={cn(
+        'bg-surface-1 rounded-xl border p-4 space-y-3',
+        esDios && diosConfig ? 'border-amber/20 bg-surface-1' : 'border-border'
+      )}
+    >
       <div className="flex items-start gap-3">
-        <span className="text-lg mt-0.5 flex-shrink-0">{icono}</span>
+        {esDios && diosNombre ? (
+          <DiosAvatar diosNombre={diosNombre} size="md" />
+        ) : (
+          <span className="text-lg mt-0.5 flex-shrink-0">{icono}</span>
+        )}
+
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-body text-foreground leading-snug">
+          {esDios && diosConfig && (
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span
+                className={cn(
+                  'text-xs font-display font-bold',
+                  diosConfig.color
+                )}
+              >
+                {diosConfig.nombre}
+              </span>
+              {esOraculo && (
+                <span className="text-xs text-amber font-body">
+                  · El Oráculo
+                </span>
+              )}
+              {tipoDios === 'voz_olimpo' && (
+                <span className="text-xs text-muted-foreground font-body">
+                  · La Voz del Olimpo
+                </span>
+              )}
+            </div>
+          )}
+
+          <p
+            className={cn(
+              'text-sm font-body leading-snug',
+              esDios ? 'text-foreground italic' : 'text-foreground'
+            )}
+          >
             {evento.contenido}
           </p>
           <p className="text-xs text-muted-foreground font-body mt-1">
@@ -125,44 +217,89 @@ export function AgoraEventoCard({
         />
       )}
 
-      <div className="flex items-center justify-between pt-1 border-t border-border">
-        {aclamacion ? (
-          <div className="flex items-center gap-1.5">
-            <span className="text-base">
-              {ACLAMACIONES_CONFIG.find((a) => a.tipo === aclamacion)?.emoji}
-            </span>
-            <span className="text-xs text-muted-foreground font-body">
-              {ACLAMACIONES_CONFIG.find((a) => a.tipo === aclamacion)?.label}
-            </span>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setMostrarAcciones(!mostrarAcciones)}
-            disabled={usadas >= 5 || cargando}
-            className={cn(
-              'text-xs font-body transition-colors',
-              usadas >= 5
-                ? 'text-muted-foreground/40 cursor-not-allowed'
-                : 'text-muted-foreground hover:text-amber'
+      <div className="flex items-center gap-3 pt-1 border-t border-border flex-wrap">
+        <button
+          type="button"
+          onClick={() => void toggleLike()}
+          disabled={!likesCargados}
+          className={cn(
+            'flex items-center gap-1.5 text-xs font-body transition-colors',
+            miLike ? 'text-amber' : 'text-muted-foreground hover:text-foreground',
+            !likesCargados && 'opacity-50'
+          )}
+        >
+          <span>{miLike ? '♥' : '♡'}</span>
+          <span>{likes > 0 ? likes : ''}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMostrarComentarios(!mostrarComentarios)}
+          className="text-xs font-body text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {esOraculo ? '🔮 Consultar' : '💬 Comentar'}
+        </button>
+
+        {!esDios && (
+          <div className="ml-auto">
+            {aclamacion ? (
+              <span className="text-xs font-body text-muted-foreground">
+                {ACLAMACIONES_CONFIG.find((a) => a.tipo === aclamacion)?.emoji}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMostrarAcciones(!mostrarAcciones)}
+                disabled={usadas >= 5}
+                className={cn(
+                  'text-xs font-body transition-colors',
+                  usadas >= 5
+                    ? 'text-muted-foreground/40'
+                    : 'text-muted-foreground hover:text-amber'
+                )}
+              >
+                + Aclamar
+              </button>
             )}
-          >
-            {usadas >= 5 ? 'Sin aclamaciones' : '+ Aclamar'}
-          </button>
+          </div>
         )}
 
-        <span className="text-xs text-muted-foreground/50 font-body">
-          {5 - usadas} aclamaciones restantes hoy
-        </span>
+        {esDios && tipoDios === 'voz_olimpo' && (
+          <div className="ml-auto flex gap-1.5 flex-wrap justify-end">
+            {ACLAMACIONES_CONFIG.map((a) => (
+              <button
+                key={a.tipo}
+                type="button"
+                onClick={() => void aclamar(a.tipo)}
+                disabled={!!aclamacion || usadas >= 5}
+                className={cn(
+                  'text-base transition-all',
+                  aclamacion === a.tipo
+                    ? 'opacity-100'
+                    : 'opacity-40 hover:opacity-100'
+                )}
+                title={a.label}
+              >
+                {a.emoji}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {mostrarAcciones && !aclamacion && (
+      {!esDios && (
+        <p className="text-xs text-muted-foreground/50 font-body text-right">
+          {5 - usadas} aclamaciones restantes hoy
+        </p>
+      )}
+
+      {mostrarAcciones && !aclamacion && !esDios && (
         <div className="grid grid-cols-2 gap-2 pt-2 sm:flex sm:flex-wrap">
           {ACLAMACIONES_CONFIG.map((a) => (
             <button
               key={a.tipo}
               type="button"
-              onClick={() => aclamar(a.tipo)}
+              onClick={() => void aclamar(a.tipo)}
               disabled={cargando}
               title={a.label}
               className={cn(
@@ -172,10 +309,21 @@ export function AgoraEventoCard({
               )}
             >
               <span className="text-base">{a.emoji}</span>
-              <span className="text-xs text-muted-foreground font-body">{a.label}</span>
+              <span className="text-xs text-muted-foreground font-body">
+                {a.label}
+              </span>
             </button>
           ))}
         </div>
+      )}
+
+      {mostrarComentarios && (
+        <ComentariosPanel
+          eventoId={evento.id}
+          esOraculo={esOraculo}
+          diosNombre={diosNombre}
+          postDiosId={postDiosId}
+        />
       )}
     </div>
   )

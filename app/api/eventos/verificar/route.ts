@@ -4,6 +4,10 @@ import {
   verificarYActivarPruebas,
   activarEventoDestino,
 } from '@/lib/pruebas-extraordinarias/calendario'
+import {
+  verificarYActivarSemanaSagrada,
+  desactivarSemanaSagradaSiTermino,
+} from '@/lib/pruebas-extraordinarias/semana-sagrada'
 import { getDiaDelAgan, isGranAgonActivo } from '@/lib/utils'
 
 export async function GET() {
@@ -11,13 +15,24 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   if (!isGranAgonActivo()) {
-    return NextResponse.json({ tripticoActivado: false, destinoLatente: null })
+    return NextResponse.json({
+      tripticoActivado: false,
+      destinoLatente: null,
+      semanaSagradaActivada: false,
+    })
   }
 
   const diaActual = getDiaDelAgan()
   const resultado = await verificarYActivarPruebas(diaActual)
 
-  return NextResponse.json(resultado)
+  const semanaSagradaActivada = await verificarYActivarSemanaSagrada()
+
+  await desactivarSemanaSagradaSiTermino()
+
+  return NextResponse.json({
+    ...resultado,
+    semanaSagradaActivada,
+  })
 }
 
 export async function POST(req: Request) {

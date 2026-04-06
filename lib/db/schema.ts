@@ -8,6 +8,7 @@ import {
   date,
   jsonb,
   pgEnum,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -294,6 +295,52 @@ export const ekecheiria = pgTable('ekecheiria', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ─── COMENTARIOS DEL ÁGORA ────────────────────────────
+
+export const comentariosAgora = pgTable('comentarios_agora', {
+  id: varchar('id', { length: 256 }).primaryKey(),
+  eventoId: varchar('evento_id', { length: 256 })
+    .notNull()
+    .references(() => agoraEventos.id),
+  autorTipo: varchar('autor_tipo', { length: 32 }).notNull(),
+  autorId: varchar('autor_id', { length: 256 }).notNull(),
+  autorNombre: varchar('autor_nombre', { length: 128 }).notNull(),
+  contenido: text('contenido').notNull(),
+  cerrado: boolean('cerrado').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// ─── LIKES DEL ÁGORA ──────────────────────────────────
+
+export const likesAgora = pgTable(
+  'likes_agora',
+  {
+    id: varchar('id', { length: 256 }).primaryKey(),
+    eventoId: varchar('evento_id', { length: 256 })
+      .notNull()
+      .references(() => agoraEventos.id),
+    autorTipo: varchar('autor_tipo', { length: 32 }).notNull(),
+    autorId: varchar('autor_id', { length: 256 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('likes_agora_evento_autor_uidx').on(t.eventoId, t.autorId),
+  ]
+)
+
+// ─── POSTS DE LOS DIOSES ──────────────────────────────
+
+export const postsDioses = pgTable('posts_dioses', {
+  id: varchar('id', { length: 256 }).primaryKey(),
+  diosNombre: varchar('dios_nombre', { length: 64 }).notNull(),
+  tipo: varchar('tipo', { length: 32 }).notNull(),
+  contenido: text('contenido').notNull(),
+  eventoRelacionadoId: varchar('evento_relacionado_id', { length: 256 }),
+  cerrado: boolean('cerrado').default(false).notNull(),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // ─── RELATIONS ────────────────────────────────────────
 
 export const agonistasRelations = relations(agonistas, ({ many }) => ({
@@ -347,3 +394,6 @@ export type Llama = typeof llamas.$inferSelect
 export type Hegemonia = typeof hegemonias.$inferSelect
 export type Cronica = typeof cronicas.$inferSelect
 export type Ekecheiria = typeof ekecheiria.$inferSelect
+export type ComentarioAgora = typeof comentariosAgora.$inferSelect
+export type LikeAgora = typeof likesAgora.$inferSelect
+export type PostDios = typeof postsDioses.$inferSelect

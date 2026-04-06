@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema'
 import { eq, and, gte } from 'drizzle-orm'
 import { getOrCreateAgonista, actualizarNivel } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import {
   KLEOS_POR_PRUEBA,
   KLEOS_DIA_PERFECTO,
@@ -165,13 +166,22 @@ export async function POST(req: Request) {
       .limit(1)
 
     if (yaPublicado.length === 0) {
-      await db.insert(agoraEventos).values({
-        id: crypto.randomUUID(),
-        agonistId: agonista.id,
-        tipo: 'dia_perfecto',
-        contenido: `${agonista.nombre} completó todas las pruebas del agon de hoy. El agon es suyo.`,
-        metadata: { fecha: hoy, kleos: kleosTotalDia },
-      })
+      const eventoInsertado = await db
+        .insert(agoraEventos)
+        .values({
+          id: crypto.randomUUID(),
+          agonistId: agonista.id,
+          tipo: 'dia_perfecto',
+          contenido: `${agonista.nombre} completó todas las pruebas del agon de hoy. El agon es suyo.`,
+          metadata: { fecha: hoy, kleos: kleosTotalDia },
+        })
+        .returning()
+
+      if (eventoInsertado[0]) {
+        void triggerComentariosDioses(eventoInsertado[0].id).catch((err) =>
+          console.error('triggerComentariosDioses', err)
+        )
+      }
     }
   }
 

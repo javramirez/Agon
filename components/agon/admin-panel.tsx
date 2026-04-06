@@ -22,6 +22,10 @@ interface DiagnosticoCronica {
 
 export function AdminPanel() {
   const [semanaSagradaActiva, setSemanaSagradaActiva] = useState(false)
+  const [semanaSagradaInfo, setSemanaSagradaInfo] = useState<{
+    activa: boolean
+    semanaSorteada: number | null
+  } | null>(null)
   const [generandoCalendario, setGenerandoCalendario] = useState(false)
   const [calendarioGenerado, setCalendarioGenerado] = useState(false)
   const [enviando, setEnviando] = useState(false)
@@ -36,7 +40,14 @@ export function AdminPanel() {
   useEffect(() => {
     fetch('/api/admin/semana-sagrada')
       .then((r) => r.json())
-      .then((d) => setSemanaSagradaActiva(d.activa))
+      .then((d: { activa?: boolean; semanaSorteada?: number | null }) => {
+        setSemanaSagradaActiva(!!d.activa)
+        setSemanaSagradaInfo({
+          activa: !!d.activa,
+          semanaSorteada: d.semanaSorteada ?? null,
+        })
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -135,17 +146,44 @@ export function AdminPanel() {
             La Semana Sagrada
           </h2>
           <p className="text-xs text-muted-foreground font-body mt-1">
-            Activa el multiplicador x2 de kleos para la semana actual. Solo puede
-            usarse una vez en todo el Gran Agon.
+            Con el calendario generado, se activa sola cuando alguien abre el
+            dashboard en la semana sorteada. El botón es solo respaldo de
+            emergencia.
           </p>
         </div>
+        {semanaSagradaInfo && (
+          <div className="bg-surface-2 rounded-lg p-3 text-xs font-body space-y-1">
+            <p className="text-muted-foreground">
+              Semana sorteada:{' '}
+              <span className="text-amber font-medium">
+                Semana {semanaSagradaInfo.semanaSorteada ?? '—'}
+              </span>
+            </p>
+            <p className="text-muted-foreground">
+              Estado:{' '}
+              <span
+                className={
+                  semanaSagradaInfo.activa
+                    ? 'text-amber font-medium'
+                    : 'text-muted-foreground'
+                }
+              >
+                {semanaSagradaInfo.activa ? 'Activa ahora' : 'Pendiente'}
+              </span>
+            </p>
+            <p className="text-muted-foreground/50 italic">
+              Se activará automáticamente cuando cualquiera abra el dashboard
+              durante la semana {semanaSagradaInfo.semanaSorteada ?? '—'}.
+            </p>
+          </div>
+        )}
         <button
           type="button"
           onClick={activarSemanaSagrada}
           disabled={enviando || semanaSagradaActiva}
           className="px-6 py-3 bg-amber text-black font-display font-bold text-sm tracking-widest uppercase rounded-lg hover:bg-amber/90 transition-all disabled:opacity-40"
         >
-          {semanaSagradaActiva ? 'Ya está activa' : 'Activar Semana Sagrada'}
+          {semanaSagradaActiva ? 'Ya está activa' : 'Activar Semana Sagrada (manual)'}
         </button>
       </div>
 

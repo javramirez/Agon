@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
+import { mostrarToast } from '@/components/agon/toast-agon'
 
 interface EventosState {
   destinoLatente: string | null
@@ -23,7 +24,19 @@ export function useEventosDestino() {
     try {
       const res = await fetch('/api/eventos/verificar')
       if (!res.ok) return
-      const data = (await res.json()) as { destinoLatente?: string | null }
+      const data = (await res.json()) as {
+        destinoLatente?: string | null
+        semanaSagradaActivada?: boolean
+      }
+
+      if (data.semanaSagradaActivada) {
+        mostrarToast({
+          tipo: 'exito',
+          icono: '⚡',
+          mensaje:
+            'El Altis proclama La Semana Sagrada. Todo el kleos vale el doble.',
+        })
+      }
 
       if (data.destinoLatente) {
         setEstado((prev) => ({

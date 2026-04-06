@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { semanaSagrada, agoraEventos } from '@/lib/db/schema'
+import { semanaSagrada, agoraEventos, calendarioAgan } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getSemanaActual, getOrCreateAgonista } from '@/lib/db/queries'
 
@@ -15,9 +15,13 @@ export async function GET() {
     .where(eq(semanaSagrada.activa, true))
     .limit(1)
 
+  const calendario = await db.select().from(calendarioAgan).limit(1)
+  const semanaSorteada = calendario[0]?.semanaSagradaSemana ?? null
+
   return NextResponse.json({
     activa: activa.length > 0,
     semanaSagrada: activa[0] ?? null,
+    semanaSorteada,
   })
 }
 
