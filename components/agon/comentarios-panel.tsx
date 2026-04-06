@@ -13,6 +13,8 @@ interface Props {
   esOraculo?: boolean
   diosNombre?: string
   postDiosId?: string
+  /** Tras enviar comentario o recargar, para sincronizar el badge en la card */
+  onComentariosCambiados?: () => void
 }
 
 export function ComentariosPanel({
@@ -20,6 +22,7 @@ export function ComentariosPanel({
   esOraculo = false,
   diosNombre,
   postDiosId,
+  onComentariosCambiados,
 }: Props) {
   const [comentarios, setComentarios] = useState<ComentarioAgora[]>([])
   const [input, setInput] = useState('')
@@ -68,6 +71,7 @@ export function ComentariosPanel({
     if (res.ok) {
       setInput('')
       await cargar()
+      onComentariosCambiados?.()
     }
 
     setEnviando(false)

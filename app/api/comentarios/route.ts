@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { comentariosAgora, postsDioses } from '@/lib/db/schema'
-import { eq, and, asc } from 'drizzle-orm'
+import { eq, and, asc, count } from 'drizzle-orm'
 import { getOrCreateAgonista } from '@/lib/db/queries'
 import { responderOraculo } from '@/lib/dioses/generar-comentario'
 
@@ -13,9 +13,21 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const eventoId = searchParams.get('eventoId')
   const postDiosId = searchParams.get('postDiosId')
+  const countOnly = searchParams.get('countOnly') === 'true'
 
   if (!eventoId) {
     return NextResponse.json({ error: 'Falta eventoId' }, { status: 400 })
+  }
+
+  if (countOnly) {
+    const total = await db
+      .select({ count: count() })
+      .from(comentariosAgora)
+      .where(eq(comentariosAgora.eventoId, eventoId))
+
+    return NextResponse.json({
+      total: Number(total[0]?.count ?? 0),
+    })
   }
 
   const comentarios = await db

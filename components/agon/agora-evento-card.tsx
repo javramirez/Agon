@@ -53,8 +53,13 @@ export function AgoraEventoCard({
   const [likes, setLikes] = useState(0)
   const [miLike, setMiLike] = useState(false)
   const [likesCargados, setLikesCargados] = useState(false)
+  const [comentariosCount, setComentariosCount] = useState(0)
+  const [vistos, setVistos] = useState(0)
 
   const isCronica = evento.tipo === 'cronica_semanal'
+  const noLeidos = mostrarComentarios
+    ? 0
+    : Math.max(0, comentariosCount - vistos)
 
   useEffect(() => {
     setAclamacion(miAclamacion ?? null)
@@ -86,6 +91,33 @@ export function AgoraEventoCard({
     addSuffix: true,
     locale: es,
   })
+
+  useEffect(() => {
+    if (isCronica) return
+    fetch(`/api/comentarios?eventoId=${evento.id}&countOnly=true`)
+      .then((r) => r.json())
+      .then((d: { total?: number }) => {
+        const t = d.total ?? 0
+        setComentariosCount(t)
+        setVistos(t)
+      })
+      .catch(() => {})
+  }, [evento.id, isCronica])
+
+  useEffect(() => {
+    if (isCronica) return
+    const id = setInterval(() => {
+      fetch(`/api/comentarios?eventoId=${evento.id}&countOnly=true`)
+        .then((r) => r.json())
+        .then((d: { total?: number }) => {
+          const t = d.total ?? 0
+          setComentariosCount(t)
+          setVistos((prev) => (mostrarComentarios ? t : prev))
+        })
+        .catch(() => {})
+    }, 30000)
+    return () => clearInterval(id)
+  }, [evento.id, isCronica, mostrarComentarios])
 
   useEffect(() => {
     if (isCronica) return
@@ -133,6 +165,37 @@ export function AgoraEventoCard({
 
     setCargando(false)
     setMostrarAcciones(false)
+  }
+
+  async function abrirComentarios() {
+    const nuevoEstado = !mostrarComentarios
+    setMostrarComentarios(nuevoEstado)
+    if (nuevoEstado) {
+      try {
+        const res = await fetch(
+          `/api/comentarios?eventoId=${evento.id}&countOnly=true`
+        )
+        if (res.ok) {
+          const d = (await res.json()) as { total?: number }
+          const t = d.total ?? 0
+          setComentariosCount(t)
+          setVistos(t)
+        }
+      } catch {
+        /* silencioso */
+      }
+    }
+  }
+
+  function sincronizarContadorComentarios() {
+    void fetch(`/api/comentarios?eventoId=${evento.id}&countOnly=true`)
+      .then((r) => r.json())
+      .then((d: { total?: number }) => {
+        const t = d.total ?? 0
+        setComentariosCount(t)
+        setVistos(t)
+      })
+      .catch(() => {})
   }
 
   if (isCronica) {
@@ -234,10 +297,15 @@ export function AgoraEventoCard({
 
         <button
           type="button"
-          onClick={() => setMostrarComentarios(!mostrarComentarios)}
-          className="text-xs font-body text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => void abrirComentarios()}
+          className="relative text-xs font-body text-muted-foreground hover:text-foreground transition-colors pr-1"
         >
           {esOraculo ? '🔮 Consultar' : '💬 Comentar'}
+          {noLeidos > 0 && (
+            <span className="absolute -top-2 -right-1 min-w-4 h-4 px-1 bg-amber text-black text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+              {noLeidos > 9 ? '9+' : noLeidos}
+            </span>
+          )}
         </button>
 
         {!esDios && (
@@ -323,6 +391,7 @@ export function AgoraEventoCard({
           esOraculo={esOraculo}
           diosNombre={diosNombre}
           postDiosId={postDiosId}
+          onComentariosCambiados={sincronizarContadorComentarios}
         />
       )}
     </div>
