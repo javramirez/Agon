@@ -10,10 +10,17 @@ import {
 } from '@/lib/pruebas-extraordinarias/semana-sagrada'
 import { getDiaDelAgan, isGranAgonActivo } from '@/lib/utils'
 import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
+import { procesarComentariosPendientes } from '@/lib/dioses/procesar-comentarios-pendientes'
 
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  try {
+    await procesarComentariosPendientes()
+  } catch {
+    // No bloquear verificación
+  }
 
   if (!isGranAgonActivo()) {
     return NextResponse.json({

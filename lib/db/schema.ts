@@ -310,6 +310,19 @@ export const comentariosAgora = pgTable('comentarios_agora', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+/** Cola de comentarios de dioses — delays en serverless (Vercel) sin setTimeout. */
+export const comentariosPendientes = pgTable('comentarios_pendientes', {
+  id: varchar('id', { length: 256 }).primaryKey(),
+  eventoId: varchar('evento_id', { length: 256 })
+    .notNull()
+    .references(() => agoraEventos.id),
+  diosNombre: varchar('dios_nombre', { length: 64 }).notNull(),
+  tipoEvento: varchar('tipo_evento', { length: 64 }).notNull(),
+  procesarDespuesDe: timestamp('procesar_despues_de').notNull(),
+  procesado: boolean('procesado').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // ─── LIKES DEL ÁGORA ──────────────────────────────────
 
 export const likesAgora = pgTable(
