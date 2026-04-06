@@ -302,24 +302,18 @@ export const comentariosAgora = pgTable('comentarios_agora', {
   eventoId: varchar('evento_id', { length: 256 })
     .notNull()
     .references(() => agoraEventos.id),
-  autorTipo: varchar('autor_tipo', { length: 32 }).notNull(),
+  autorTipo: varchar('autor_tipo', { length: 32 }).notNull(), // 'agonista' | 'dios'
   autorId: varchar('autor_id', { length: 256 }).notNull(),
   autorNombre: varchar('autor_nombre', { length: 128 }).notNull(),
   contenido: text('contenido').notNull(),
+  /** false = fila de dios pendiente de generar texto (cola unificada). */
+  procesado: boolean('procesado').default(true).notNull(),
+  /** null = inmediato; fecha futura = procesar en verificar. */
+  procesarDespuesDe: timestamp('procesar_despues_de'),
+  /** Tipo lógico para la IA (p. ej. override `prueba_extraordinaria_expirada`). */
+  tipoGeneracion: varchar('tipo_generacion', { length: 64 }),
+  visto: boolean('visto').default(false).notNull(),
   cerrado: boolean('cerrado').default(false).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-})
-
-/** Cola de comentarios de dioses — delays en serverless (Vercel) sin setTimeout. */
-export const comentariosPendientes = pgTable('comentarios_pendientes', {
-  id: varchar('id', { length: 256 }).primaryKey(),
-  eventoId: varchar('evento_id', { length: 256 })
-    .notNull()
-    .references(() => agoraEventos.id),
-  diosNombre: varchar('dios_nombre', { length: 64 }).notNull(),
-  tipoEvento: varchar('tipo_evento', { length: 64 }).notNull(),
-  procesarDespuesDe: timestamp('procesar_despues_de').notNull(),
-  procesado: boolean('procesado').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 

@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { inscripciones, agoraEventos } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
 import { getOrCreateAgonista } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { INSCRIPCIONES } from '@/lib/db/constants'
 
 export async function GET() {
@@ -68,13 +69,18 @@ export async function POST(req: Request) {
     secreto: config.secreto,
   })
 
+  const eventoId = crypto.randomUUID()
   await db.insert(agoraEventos).values({
-    id: crypto.randomUUID(),
+    id: eventoId,
     agonistId: agonista.id,
     tipo: 'inscripcion_desbloqueada',
     contenido: `${agonista.nombre} desbloqueó una inscripción: ${config.nombre}. ${config.descripcion}`,
     metadata: { inscripcionId, secreto: config.secreto },
   })
+
+  void triggerComentariosDioses(eventoId).catch((err) =>
+    console.error('triggerComentariosDioses inscripcion_desbloqueada', err)
+  )
 
   return NextResponse.json({ desbloqueada: true, config })
 }

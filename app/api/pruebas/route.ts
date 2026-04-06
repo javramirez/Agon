@@ -224,13 +224,18 @@ export async function POST(req: Request) {
       secreto: config.secreto,
     })
 
+    const eventoInscripcionId = crypto.randomUUID()
     await db.insert(agoraEventos).values({
-      id: crypto.randomUUID(),
+      id: eventoInscripcionId,
       agonistId: agonistaNuevo.id,
       tipo: 'inscripcion_desbloqueada',
       contenido: `${agonistaNuevo.nombre} desbloqueó: ${config.nombre}. ${config.descripcion}`,
       metadata: { inscripcionId },
     })
+
+    void triggerComentariosDioses(eventoInscripcionId).catch((err) =>
+      console.error('triggerComentariosDioses inscripcion_desbloqueada', err)
+    )
   }
 
   const cambioNivel = await actualizarNivel(

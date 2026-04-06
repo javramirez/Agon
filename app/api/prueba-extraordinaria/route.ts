@@ -11,6 +11,7 @@ import {
 import { eq, and, gte } from 'drizzle-orm'
 import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
 import { getOrCreateAgonista, getSemanaActual } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 
 const MAX_TRIPTICO_SEMANA = 2
 const MAX_DESTINO_SEMANA = 3
@@ -186,13 +187,18 @@ export async function POST(req: Request) {
   })
 
   const tipoLabel = p.tipo === 'triptico' ? 'del Tríptico' : 'del Destino'
+  const eventoId = crypto.randomUUID()
   await db.insert(agoraEventos).values({
-    id: crypto.randomUUID(),
+    id: eventoId,
     agonistId: agonista.id,
     tipo: 'prueba_extraordinaria',
     contenido: `${agonista.nombre} completó la Prueba Extraordinaria ${tipoLabel}: "${p.descripcion}" +${kleosFinales} kleos${multiplicador === 2 ? ' (⚡ Semana Sagrada)' : ''}.`,
     metadata: { pruebaId: p.pruebaId, tipo: p.tipo, kleos: kleosFinales },
   })
+
+  void triggerComentariosDioses(eventoId).catch((err) =>
+    console.error('triggerComentariosDioses prueba_extraordinaria', err)
+  )
 
   return NextResponse.json({ ok: true, kleos: kleosFinales, multiplicador })
 }

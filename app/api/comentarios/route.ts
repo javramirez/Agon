@@ -23,7 +23,12 @@ export async function GET(req: Request) {
     const total = await db
       .select({ count: count() })
       .from(comentariosAgora)
-      .where(eq(comentariosAgora.eventoId, eventoId))
+      .where(
+        and(
+          eq(comentariosAgora.eventoId, eventoId),
+          eq(comentariosAgora.procesado, true)
+        )
+      )
 
     return NextResponse.json({
       total: Number(total[0]?.count ?? 0),
@@ -33,7 +38,12 @@ export async function GET(req: Request) {
   const comentarios = await db
     .select()
     .from(comentariosAgora)
-    .where(eq(comentariosAgora.eventoId, eventoId))
+    .where(
+      and(
+        eq(comentariosAgora.eventoId, eventoId),
+        eq(comentariosAgora.procesado, true)
+      )
+    )
     .orderBy(asc(comentariosAgora.createdAt))
 
   let oraculoCerrado = false
@@ -56,7 +66,8 @@ export async function GET(req: Request) {
         and(
           eq(comentariosAgora.eventoId, eventoId),
           eq(comentariosAgora.autorTipo, 'agonista'),
-          eq(comentariosAgora.autorId, agonista.clerkId)
+          eq(comentariosAgora.autorId, agonista.clerkId),
+          eq(comentariosAgora.procesado, true)
         )
       )
     yaPreguntoOraculo = mios.length > 0
@@ -127,7 +138,8 @@ export async function POST(req: Request) {
         and(
           eq(comentariosAgora.eventoId, eventoId),
           eq(comentariosAgora.autorTipo, 'agonista'),
-          eq(comentariosAgora.autorId, agonista.clerkId)
+          eq(comentariosAgora.autorId, agonista.clerkId),
+          eq(comentariosAgora.procesado, true)
         )
       )
       .limit(1)
@@ -147,6 +159,10 @@ export async function POST(req: Request) {
       autorId: agonista.clerkId,
       autorNombre: agonista.nombre,
       contenido: texto,
+      procesado: true,
+      procesarDespuesDe: null,
+      tipoGeneracion: null,
+      visto: true,
     })
 
     const respuesta = await responderOraculo(
@@ -175,6 +191,10 @@ export async function POST(req: Request) {
     autorId: agonista.clerkId,
     autorNombre: agonista.nombre,
     contenido: texto,
+    procesado: true,
+    procesarDespuesDe: null,
+    tipoGeneracion: null,
+    visto: true,
   })
 
   return NextResponse.json({ ok: true })

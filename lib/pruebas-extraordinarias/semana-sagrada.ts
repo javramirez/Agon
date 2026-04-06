@@ -2,6 +2,7 @@ import { db } from '@/lib/db'
 import { semanaSagrada, agoraEventos, calendarioAgan } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getAmbosAgonistas, getSemanaActual } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { format, addDays, parseISO } from 'date-fns'
 
 export async function verificarYActivarSemanaSagrada(): Promise<boolean> {
@@ -39,13 +40,18 @@ export async function verificarYActivarSemanaSagrada(): Promise<boolean> {
 
   const ambos = await getAmbosAgonistas()
   if (ambos.length > 0) {
+    const eventoId = crypto.randomUUID()
     await db.insert(agoraEventos).values({
-      id: crypto.randomUUID(),
+      id: eventoId,
       agonistId: ambos[0].id,
       tipo: 'semana_sagrada',
       contenido: `⚡ El Altis proclama La Semana Sagrada. Todo el kleos ganado esta semana vale el doble. El Gran Agon entra en su momento más épico. Que el mejor agonista prevalezca.`,
       metadata: { semana: semanaActual },
     })
+
+    void triggerComentariosDioses(eventoId).catch((err) =>
+      console.error('triggerComentariosDioses semana_sagrada', err)
+    )
   }
 
   console.log(`Semana Sagrada activada — semana ${semanaActual}`)

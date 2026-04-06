@@ -31,13 +31,37 @@ export function AgoraConTrigger({
     cerrarOverlay,
   } = useEventosDestino()
 
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const comentariosDiosVistos = useRef<Set<string>>(new Set())
-  const primeraPasadaPolling = useRef(true)
+  const pollingRecientesRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  )
+  const primeraPasadaRecientes = useRef(true)
 
   useEffect(() => {
     void verificar()
   }, [verificar])
+
+  /** Tras procesar comentarios pendientes en el servidor, refrescar el feed. */
+  useEffect(() => {
+    async function checkComentariosProcesados() {
+      try {
+        const res = await fetch('/api/eventos/verificar')
+        if (!res.ok) return
+        const data = (await res.json()) as { comentariosNuevos?: boolean }
+        if (data.comentariosNuevos) {
+          router.refresh()
+        }
+      } catch {
+        /* silencioso */
+      }
+    }
+
+    void checkComentariosProcesados()
+    const interval = setInterval(() => {
+      void checkComentariosProcesados()
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [router])
 
   useEffect(() => {
     if (!destinoLatente || eventoActivado) return
@@ -52,45 +76,67 @@ export function AgoraConTrigger({
   useEffect(() => {
     async function tick() {
       try {
+        const esPrimera = primeraPasadaRecientes.current
+
+        if (esPrimera) {
+          // Tras añadir `visto`, marcar históricos sin toasts (varios lotes de 10)
+          for (;;) {
+            const res = await fetch('/api/comentarios/recientes')
+            if (!res.ok) break
+            const data = (await res.json()) as {
+              comentariosDioses?: ComentarioAgora[]
+            }
+            const lista = data.comentariosDioses ?? []
+            if (lista.length === 0) break
+            await fetch('/api/comentarios/recientes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ids: lista.map((c) => c.id) }),
+            })
+          }
+          primeraPasadaRecientes.current = false
+          return
+        }
+
         const res = await fetch('/api/comentarios/recientes')
         if (!res.ok) return
         const data = (await res.json()) as {
           comentariosDioses?: ComentarioAgora[]
         }
         const lista = data.comentariosDioses ?? []
-        const esPrimera = primeraPasadaPolling.current
 
-        for (const c of lista) {
-          if (comentariosDiosVistos.current.has(c.id)) continue
-          comentariosDiosVistos.current.add(c.id)
-          if (esPrimera) continue
-
-          const dios = DIOSES[c.autorId]
-          if (dios) {
-            mostrarToast({
-              tipo: 'info',
-              icono: dios.avatar,
-              mensaje: `${dios.nombre} ha hablado en El Ágora.`,
-            })
+        if (lista.length > 0) {
+          for (const c of lista) {
+            const dios = DIOSES[c.autorId]
+            if (dios) {
+              mostrarToast({
+                tipo: 'info',
+                icono: dios.avatar,
+                mensaje: `${dios.nombre} ha hablado en El Ágora.`,
+              })
+            }
           }
+          await fetch('/api/comentarios/recientes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: lista.map((c) => c.id) }),
+          })
+          router.refresh()
         }
-
-        primeraPasadaPolling.current = false
       } catch {
         /* silencioso */
       }
     }
 
     void tick()
-    // Toasts de dioses — no saturar: cada 2 min (ver ventana en /api/comentarios/recientes)
-    pollingRef.current = setInterval(() => {
+    pollingRecientesRef.current = setInterval(() => {
       void tick()
-    }, 120000)
+    }, 30000)
 
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current)
+      if (pollingRecientesRef.current) clearInterval(pollingRecientesRef.current)
     }
-  }, [])
+  }, [router])
 
   function handleCerrarOverlay() {
     cerrarOverlay()

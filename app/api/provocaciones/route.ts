@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { agoraEventos } from '@/lib/db/schema'
 import { getOrCreateAgonista, getAgonistaByClerkId } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { PROVOCACIONES } from '@/lib/db/constants'
 import { AGONISTAS } from '@/lib/auth/agonistas'
 
@@ -66,8 +67,9 @@ export async function POST(req: Request) {
 
   const contenido = `${agonista.nombre} envió La Voz del Agon a ${antagonista?.nombre ?? 'el antagonista'}: "${trimmed}"`
 
+  const eventoId = crypto.randomUUID()
   await db.insert(agoraEventos).values({
-    id: crypto.randomUUID(),
+    id: eventoId,
     agonistId: agonista.id,
     tipo: 'provocacion',
     contenido,
@@ -76,6 +78,10 @@ export async function POST(req: Request) {
       dirigidoA: antagonista?.id ?? null,
     },
   })
+
+  void triggerComentariosDioses(eventoId).catch((err) =>
+    console.error('triggerComentariosDioses provocacion', err)
+  )
 
   return NextResponse.json({ ok: true })
 }

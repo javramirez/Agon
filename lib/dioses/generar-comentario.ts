@@ -25,9 +25,9 @@ function extractText(
     .trim()
 }
 
-export async function generarComentarioDios(
+/** Solo genera el texto — sin insertar en DB. */
+export async function generarTextoComentario(
   diosNombre: string,
-  eventoId: string,
   contextoEvento: string,
   otrosComentarios: string[] = [],
   tipoEvento: string = 'prueba_completada'
@@ -74,33 +74,57 @@ No uses hashtags ni emojis. Habla en primera persona como dios.`
       messages: [{ role: 'user', content: prompt }],
     })
 
-    const texto = extractText(response)
-    if (!texto) return null
+    return extractText(response) || null
+  } catch (error) {
+    console.error(`Error generando texto de ${diosNombre}:`, error)
+    return null
+  }
+}
 
-    await db.insert(comentariosAgora).values({
+/** Genera texto e inserta inmediatamente (sin cola). */
+export async function generarComentarioDios(
+  diosNombre: string,
+  eventoId: string,
+  contextoEvento: string,
+  otrosComentarios: string[] = [],
+  tipoEvento: string = 'prueba_completada'
+): Promise<string | null> {
+  const dios = DIOSES[diosNombre]
+  if (!dios) return null
+
+  const texto = await generarTextoComentario(
+    diosNombre,
+    contextoEvento,
+    otrosComentarios,
+    tipoEvento
+  )
+
+  if (!texto) return null
+
+  await db.insert(comentariosAgora).values({
+    id: crypto.randomUUID(),
+    eventoId,
+    autorTipo: 'dios',
+    autorId: diosNombre,
+    autorNombre: dios.nombre,
+    contenido: texto,
+    procesado: true,
+    procesarDespuesDe: null,
+    tipoGeneracion: null,
+    visto: false,
+  })
+
+  await db
+    .insert(likesAgora)
+    .values({
       id: crypto.randomUUID(),
       eventoId,
       autorTipo: 'dios',
       autorId: diosNombre,
-      autorNombre: dios.nombre,
-      contenido: texto,
     })
+    .onConflictDoNothing({ target: [likesAgora.eventoId, likesAgora.autorId] })
 
-    await db
-      .insert(likesAgora)
-      .values({
-        id: crypto.randomUUID(),
-        eventoId,
-        autorTipo: 'dios',
-        autorId: diosNombre,
-      })
-      .onConflictDoNothing({ target: [likesAgora.eventoId, likesAgora.autorId] })
-
-    return texto
-  } catch (error) {
-    console.error(`Error generando comentario de ${diosNombre}:`, error)
-    return null
-  }
+  return texto
 }
 
 export async function generarPostDios(
@@ -223,6 +247,10 @@ Después de tu respuesta, el Oráculo se cierra — no habrá más preguntas.`
       autorId: diosNombre,
       autorNombre: dios.nombre,
       contenido: texto,
+      procesado: true,
+      procesarDespuesDe: null,
+      tipoGeneracion: null,
+      visto: false,
     })
 
     await db

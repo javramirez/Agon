@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { senalamiento, agoraEventos, agonistas } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getOrCreateAgonista, getAgonistaByClerkId } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { AGONISTAS } from '@/lib/auth/agonistas'
 
 const NIVELES_SENALAMIENTO = [
@@ -101,8 +102,9 @@ export async function POST() {
     .set({ senalamiento_recibido: true, updatedAt: new Date() })
     .where(eq(agonistas.id, antagonista.id))
 
+  const eventoId = crypto.randomUUID()
   await db.insert(agoraEventos).values({
-    id: crypto.randomUUID(),
+    id: eventoId,
     agonistId: agonista.id,
     tipo: 'senalamiento',
     contenido: `${agonista.nombre} ha señalado a ${antagonista.nombre} e injuriado sus capacidades. El Ágora lo presenció. El agon espera su respuesta.`,
@@ -111,6 +113,10 @@ export async function POST() {
       senaladoId: antagonista.id,
     },
   })
+
+  void triggerComentariosDioses(eventoId).catch((err) =>
+    console.error('triggerComentariosDioses senalamiento', err)
+  )
 
   return NextResponse.json({ ok: true })
 }

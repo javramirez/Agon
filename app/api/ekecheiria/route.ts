@@ -5,6 +5,7 @@ import { ekecheiria, agoraEventos, inscripciones } from '@/lib/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
 import { getOrCreateAgonista } from '@/lib/db/queries'
 import { INSCRIPCIONES } from '@/lib/db/constants'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 
 export async function GET() {
   const { userId } = await auth()
@@ -77,13 +78,18 @@ export async function POST(req: Request) {
     activa: true,
   })
 
+  const eventoEkecheiriaId = crypto.randomUUID()
   await db.insert(agoraEventos).values({
-    id: crypto.randomUUID(),
+    id: eventoEkecheiriaId,
     agonistId: agonista.id,
     tipo: 'senalamiento',
     contenido: `${agonista.nombre} invocó La Ekecheiria. La tregua sagrada del agon fue declarada. El motivo: "${motivoTrim}"`,
     metadata: { motivo: motivoTrim, tipo: 'ekecheiria' },
   })
+
+  void triggerComentariosDioses(eventoEkecheiriaId).catch((err) =>
+    console.error('triggerComentariosDioses ekecheiria', err)
+  )
 
   const config = INSCRIPCIONES.find((i) => i.id === 'la_ekecheiria')
   if (config) {
@@ -106,13 +112,18 @@ export async function POST(req: Request) {
         secreto: true,
       })
 
+      const eventoInscripcionId = crypto.randomUUID()
       await db.insert(agoraEventos).values({
-        id: crypto.randomUUID(),
+        id: eventoInscripcionId,
         agonistId: agonista.id,
         tipo: 'inscripcion_desbloqueada',
         contenido: `${agonista.nombre} desbloqueó: ${config.nombre}.`,
         metadata: { inscripcionId: 'la_ekecheiria' },
       })
+
+      void triggerComentariosDioses(eventoInscripcionId).catch((err) =>
+        console.error('triggerComentariosDioses inscripcion ekecheiria', err)
+      )
     }
   }
 

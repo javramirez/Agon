@@ -5,6 +5,7 @@ import { db } from '@/lib/db'
 import { pruebasDiarias, agoraEventos } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getOrCreateAgonista, getOrCreatePruebaDiariaHoy } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 
 export async function POST(req: Request) {
   const { userId } = await auth()
@@ -54,14 +55,19 @@ export async function POST(req: Request) {
     }
 
     const tipoLabel = tipo === 'gym' ? 'gimnasio' : 'cardio'
+    const eventoId = crypto.randomUUID()
     await db.insert(agoraEventos).values({
-      id: crypto.randomUUID(),
+      id: eventoId,
       agonistId: agonista.id,
       tipo: 'foto_subida',
       contenido: `${agonista.nombre} publicó comprobante de ${tipoLabel}.`,
       fotoUrl: blob.url,
       metadata: { tipo, fecha: hoy },
     })
+
+    void triggerComentariosDioses(eventoId).catch((err) =>
+      console.error('triggerComentariosDioses foto_subida', err)
+    )
 
     return NextResponse.json({ url: blob.url })
   } catch (error) {

@@ -9,6 +9,7 @@ import {
 } from '@/lib/db/schema'
 import { eq, and, gte, lte, asc } from 'drizzle-orm'
 import { getAmbosAgonistas, getSemanaActual, getSemanaRango } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { NIVEL_LABELS } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
 
@@ -73,8 +74,9 @@ export async function generarCronica(semana?: number): Promise<string> {
 
   const ambos = await getAmbosAgonistas()
   if (ambos.length > 0) {
+    const eventoId = crypto.randomUUID()
     await db.insert(agoraEventos).values({
-      id: crypto.randomUUID(),
+      id: eventoId,
       agonistId: ambos[0].id,
       tipo: 'cronica_semanal',
       contenido: relato,
@@ -85,6 +87,10 @@ export async function generarCronica(semana?: number): Promise<string> {
         fechaFin: datos.fechaFin,
       },
     })
+
+    void triggerComentariosDioses(eventoId).catch((err) =>
+      console.error('triggerComentariosDioses cronica_semanal', err)
+    )
   }
 
   return relato
@@ -297,8 +303,9 @@ export async function generarCronicaConFecha(
 
   const ambos = await getAmbosAgonistas()
   if (ambos.length > 0) {
+    const eventoId = crypto.randomUUID()
     await db.insert(agoraEventos).values({
-      id: crypto.randomUUID(),
+      id: eventoId,
       agonistId: ambos[0].id,
       tipo: 'cronica_semanal',
       contenido: relato,
@@ -309,6 +316,10 @@ export async function generarCronicaConFecha(
         fechaFin: datos.fechaFin,
       },
     })
+
+    void triggerComentariosDioses(eventoId).catch((err) =>
+      console.error('triggerComentariosDioses cronica_semanal prueba', err)
+    )
   }
 
   return relato

@@ -8,6 +8,7 @@ import { PRUEBAS_TRIPTICO, PRUEBAS_DESTINO } from '@/lib/db/constants'
 import { eq, and } from 'drizzle-orm'
 import { addDays, endOfDay, format, parseISO } from 'date-fns'
 import { getAmbosAgonistas } from '@/lib/db/queries'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 
 type CalendarioRow = typeof calendarioAgan.$inferSelect
 
@@ -280,11 +281,16 @@ async function publicarEnAgora(
   const ambos = await getAmbosAgonistas()
   if (ambos.length === 0) return
 
+  const eventoId = crypto.randomUUID()
   await db.insert(agoraEventos).values({
-    id: crypto.randomUUID(),
+    id: eventoId,
     agonistId: ambos[0].id,
     tipo: 'prueba_extraordinaria',
     contenido,
     metadata,
   })
+
+  void triggerComentariosDioses(eventoId).catch((err) =>
+    console.error('triggerComentariosDioses publicarEnAgora', err)
+  )
 }

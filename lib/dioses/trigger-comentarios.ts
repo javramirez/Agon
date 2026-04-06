@@ -1,12 +1,11 @@
 import { db } from '@/lib/db'
-import { agoraEventos, comentariosPendientes } from '@/lib/db/schema'
+import { agoraEventos, comentariosAgora } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getDiosesParaEvento, getDelayDios } from './config'
+import { DIOSES, getDiosesParaEvento, getDelayDios } from './config'
 
 /**
- * Encola comentarios de dioses para un evento del Ágora (procesados en
- * `/api/eventos/verificar` — compatible con serverless sin setTimeout).
- * `tipoOverride` permite p. ej. `prueba_extraordinaria_expirada` cuando el `tipo` en DB es otro.
+ * Encola comentarios de dioses en `comentarios_agora` (procesado=false).
+ * `tipoOverride` p. ej. `prueba_extraordinaria_expirada` cuando el tipo del evento en DB es otro.
  */
 export async function triggerComentariosDioses(
   eventoId: string,
@@ -33,14 +32,19 @@ export async function triggerComentariosDioses(
   for (const diosNombre of dioses) {
     const delay = getDelayDios(tipoEvento)
     const procesarDespuesDe = new Date(Date.now() + delay)
+    const dios = DIOSES[diosNombre]
 
-    await db.insert(comentariosPendientes).values({
+    await db.insert(comentariosAgora).values({
       id: crypto.randomUUID(),
       eventoId,
-      diosNombre,
-      tipoEvento,
-      procesarDespuesDe,
+      autorTipo: 'dios',
+      autorId: diosNombre,
+      autorNombre: dios?.nombre ?? diosNombre,
+      contenido: '',
       procesado: false,
+      procesarDespuesDe,
+      tipoGeneracion: tipoEvento,
+      visto: false,
     })
 
     diosesNotificados.push(diosNombre)

@@ -16,6 +16,7 @@ import {
   NIVEL_LABELS,
 } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
+import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 
 // ─── AGONISTAS ────────────────────────────────────────
 
@@ -317,13 +318,17 @@ export async function calcularYGuardarHegemonia(semana: number) {
   if (!empate && ganadorId) {
     const ganador = ambos.find((a) => a.id === ganadorId)
     if (ganador) {
+      const eventoId = crypto.randomUUID()
       await db.insert(agoraEventos).values({
-        id: crypto.randomUUID(),
+        id: eventoId,
         agonistId: ganadorId,
         tipo: 'hegemonia_ganada',
         contenido: `${ganador.nombre} conquistó La Hegemonía de la semana ${semana}. El Altis lo registra.`,
         metadata: { semana, kleos: Math.max(kleos1, kleos2) },
       })
+      void triggerComentariosDioses(eventoId).catch((err) =>
+        console.error('triggerComentariosDioses hegemonia_ganada', err)
+      )
     }
   }
 
@@ -389,13 +394,18 @@ export async function actualizarNivel(
       .set({ nivel: nivelNuevo, updatedAt: new Date() })
       .where(eq(agonistas.id, agonistId))
 
+    const eventoId = crypto.randomUUID()
     await db.insert(agoraEventos).values({
-      id: crypto.randomUUID(),
+      id: eventoId,
       agonistId,
       tipo: 'nivel_subido',
       contenido: `${agonista[0].nombre} alcanzó el nivel ${NIVEL_LABELS[nivelNuevo]}. El Altis lo reconoce.`,
       metadata: { nivelAnterior, nivelNuevo },
     })
+
+    void triggerComentariosDioses(eventoId).catch((err) =>
+      console.error('triggerComentariosDioses nivel_subido', err)
+    )
 
     return { nivelAnterior, nivelNuevo }
   }

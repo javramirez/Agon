@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { comentariosAgora } from '@/lib/db/schema'
-import { inArray, count } from 'drizzle-orm'
+import { and, eq, inArray, count } from 'drizzle-orm'
 
 const MAX_IDS = 100
 
@@ -44,7 +44,12 @@ export async function POST(req: Request) {
       total: count(),
     })
     .from(comentariosAgora)
-    .where(inArray(comentariosAgora.eventoId, ids))
+    .where(
+      and(
+        inArray(comentariosAgora.eventoId, ids),
+        eq(comentariosAgora.procesado, true)
+      )
+    )
     .groupBy(comentariosAgora.eventoId)
 
   const counts: Record<string, number> = {}
