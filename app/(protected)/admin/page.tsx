@@ -1,14 +1,18 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { AdminPanel } from '@/components/agon/admin-panel'
+import { sleep } from '@/lib/utils/sleep'
 
 export default async function AdminPage() {
+  const __pageLoadT0 = Date.now()
   const { userId } = await auth()
   if (!userId) redirect('/sign-in')
 
   if (userId !== process.env.CLERK_JAVIER_USER_ID) {
     redirect('/dashboard')
   }
+
+  await sleep(Math.max(0, 3000 - (Date.now() - __pageLoadT0)))
 
   return (
     <div className="space-y-6 animate-fade-in">

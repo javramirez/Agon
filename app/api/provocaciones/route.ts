@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { agoraEventos } from '@/lib/db/schema'
 import { getOrCreateAgonista, getAgonistaByClerkId } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
+import { notificarProvocacion } from '@/lib/notificaciones/crear'
 import { PROVOCACIONES } from '@/lib/db/constants'
 import { AGONISTAS } from '@/lib/auth/agonistas'
 
@@ -82,6 +83,14 @@ export async function POST(req: Request) {
   void triggerComentariosDioses(eventoId).catch((err) =>
     console.error('triggerComentariosDioses provocacion', err)
   )
+
+  if (antagonista) {
+    void notificarProvocacion(
+      antagonista.id,
+      agonista.nombre,
+      trimmed
+    ).catch(() => {})
+  }
 
   return NextResponse.json({ ok: true })
 }

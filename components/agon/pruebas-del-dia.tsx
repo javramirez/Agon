@@ -17,13 +17,13 @@ import { NIVEL_LABELS, type NivelKey } from '@/lib/db/constants'
 import type { PruebaDiaria, Llama } from '@/lib/db/schema'
 
 const PRUEBAS_CONFIG = [
-  { id: 'agua', nombre: 'Solo agua', tipo: 'toggle' as const, kleos: 10, icono: '💧', unidad: 'sin bebidas azucaradas' },
-  { id: 'comida', nombre: 'Sin comida rápida', tipo: 'toggle' as const, kleos: 10, icono: '🥗', unidad: 'disciplina alimentaria' },
-  { id: 'pasos', nombre: 'Pasos', tipo: 'contador' as const, kleos: 20, icono: '🚶', unidad: 'pasos', meta: 10000 },
-  { id: 'sueno', nombre: 'Horas de sueño', tipo: 'contador' as const, kleos: 15, icono: '😴', unidad: 'horas', meta: 7 },
-  { id: 'lectura', nombre: 'Páginas leídas', tipo: 'contador' as const, kleos: 15, icono: '📖', unidad: 'páginas', meta: 10 },
-  { id: 'gym', nombre: 'Gym', tipo: 'contador_semanal' as const, kleos: 30, icono: '🏋️', unidad: 'sesiones esta semana', meta: 4 },
-  { id: 'cardio', nombre: 'Cardio', tipo: 'contador_semanal' as const, kleos: 25, icono: '🏃', unidad: 'sesiones esta semana', meta: 3 },
+  { id: 'agua', nombre: 'Solo agua', tipo: 'toggle' as const, kleos: 10, unidad: 'sin bebidas azucaradas' },
+  { id: 'comida', nombre: 'Sin comida rápida', tipo: 'toggle' as const, kleos: 10, unidad: 'disciplina alimentaria' },
+  { id: 'pasos', nombre: 'Pasos', tipo: 'contador' as const, kleos: 20, unidad: 'pasos', meta: 10000 },
+  { id: 'sueno', nombre: 'Horas de sueño', tipo: 'contador' as const, kleos: 15, unidad: 'horas', meta: 7 },
+  { id: 'lectura', nombre: 'Páginas leídas', tipo: 'contador' as const, kleos: 15, unidad: 'páginas', meta: 10 },
+  { id: 'gym', nombre: 'Gym', tipo: 'contador_semanal' as const, kleos: 30, unidad: 'sesiones esta semana', meta: 4 },
+  { id: 'cardio', nombre: 'Cardio', tipo: 'contador_semanal' as const, kleos: 25, unidad: 'sesiones esta semana', meta: 3 },
 ]
 
 function estadoDesdePrueba(prueba: PruebaDiaria): EstadoPruebas {
@@ -43,7 +43,7 @@ interface Props {
   llamas: Llama[]
   nivel: string
   nombreAntagonista?: string
-  pruebasAntagonista?: number
+  pruebasAntagonista?: Record<string, boolean>
 }
 
 export function PruebasDelDia({
@@ -51,7 +51,7 @@ export function PruebasDelDia({
   llamas,
   nivel,
   nombreAntagonista = 'El Antagonista',
-  pruebasAntagonista = 0,
+  pruebasAntagonista = {},
 }: Props) {
   const router = useRouter()
 
@@ -59,7 +59,7 @@ export function PruebasDelDia({
   const estadoRef = useRef(estado)
   estadoRef.current = estado
 
-  const [inscripcionNueva, setInscripcionNueva] = useState<string | null>(null)
+  const [colaInscripciones, setColaInscripciones] = useState<string[]>([])
   const [guardando, setGuardando] = useState(false)
 
   const pendingRef = useRef<AbortController | null>(null)
@@ -121,13 +121,57 @@ export function PruebasDelDia({
           if (mySeq !== seqRef.current) return
           if (!res.ok) throw new Error('Error del servidor')
           const data = (await res.json()) as {
+            inscripcionesDesbloqueadas?: string[]
             inscripcionDesbloqueada?: string | null
             nivelSubido: { nivelAnterior: string; nivelNuevo: string } | null
+            estadoReal?: {
+              soloAgua: boolean
+              sinComidaRapida: boolean
+              pasos: number
+              horasSueno: number
+              paginasLeidas: number
+              sesionesGym: number
+              sesionesCardio: number
+              kleosGanado: number
+              diaPerfecto: boolean
+            } | null
+            kleosTotal?: number
           }
 
-          if (data.inscripcionDesbloqueada) {
-            setInscripcionNueva(data.inscripcionDesbloqueada)
+          if (data.inscripcionesDesbloqueadas && data.inscripcionesDesbloqueadas.length > 0) {
+            setColaInscripciones(data.inscripcionesDesbloqueadas)
+          } else if (data.inscripcionDesbloqueada) {
+            setColaInscripciones([data.inscripcionDesbloqueada])
           }
+
+          if (data.estadoReal) {
+            const estadoAuth: EstadoPruebas = {
+              soloAgua: data.estadoReal.soloAgua,
+              sinComidaRapida: data.estadoReal.sinComidaRapida,
+              pasos: data.estadoReal.pasos,
+              horasSueno: data.estadoReal.horasSueno,
+              paginasLeidas: data.estadoReal.paginasLeidas,
+              sesionesGym: data.estadoReal.sesionesGym,
+              sesionesCardio: data.estadoReal.sesionesCardio,
+            }
+            const actual = estadoRef.current
+            const difiere =
+              actual.soloAgua !== estadoAuth.soloAgua ||
+              actual.sinComidaRapida !== estadoAuth.sinComidaRapida ||
+              actual.pasos !== estadoAuth.pasos ||
+              actual.horasSueno !== estadoAuth.horasSueno ||
+              actual.paginasLeidas !== estadoAuth.paginasLeidas ||
+              actual.sesionesGym !== estadoAuth.sesionesGym ||
+              actual.sesionesCardio !== estadoAuth.sesionesCardio
+
+            if (difiere) {
+              estadoRef.current = estadoAuth
+              setEstado(estadoAuth)
+            }
+          }
+
+          // Dispara refresh inmediato del pulso
+          window.dispatchEvent(new CustomEvent('agon:prueba-completada'))
 
           if (data.nivelSubido) {
             const nk = data.nivelSubido.nivelNuevo as NivelKey
@@ -232,6 +276,7 @@ export function PruebasDelDia({
             }
             onFotoSubida={() => router.refresh()}
             onChange={handleChange}
+            antagonistaCompletó={pruebasAntagonista[p.id] ?? false}
           />
         ))}
       </div>
@@ -240,13 +285,13 @@ export function PruebasDelDia({
         diaPerfecto={diaPerfecto}
         pruebasCompletadas={pruebasCompletadas}
         nombreAntagonista={nombreAntagonista}
-        pruebasAntagonista={pruebasAntagonista}
+        pruebasAntagonista={Object.values(pruebasAntagonista).filter(Boolean).length}
         onCerrar={() => {}}
       />
 
       <InscripcionOverlay
-        inscripcionId={inscripcionNueva}
-        onCerrar={() => setInscripcionNueva(null)}
+        inscripcionIds={colaInscripciones}
+        onCerrar={() => setColaInscripciones([])}
       />
     </div>
   )

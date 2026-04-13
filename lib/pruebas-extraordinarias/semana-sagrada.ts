@@ -54,7 +54,6 @@ export async function verificarYActivarSemanaSagrada(): Promise<boolean> {
     )
   }
 
-  console.log(`Semana Sagrada activada — semana ${semanaActual}`)
   return true
 }
 
@@ -83,7 +82,5 @@ export async function desactivarSemanaSagradaSiTermino(): Promise<void> {
       .update(semanaSagrada)
       .set({ activa: false })
       .where(eq(semanaSagrada.activa, true))
-
-    console.log('Semana Sagrada desactivada — terminó el período')
   }
 }

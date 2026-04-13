@@ -5,6 +5,7 @@ import { senalamiento, agoraEventos, agonistas } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getOrCreateAgonista, getAgonistaByClerkId } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
+import { notificarSenalamiento } from '@/lib/notificaciones/crear'
 import { AGONISTAS } from '@/lib/auth/agonistas'
 
 const NIVELES_SENALAMIENTO = [
@@ -117,6 +118,8 @@ export async function POST() {
   void triggerComentariosDioses(eventoId).catch((err) =>
     console.error('triggerComentariosDioses senalamiento', err)
   )
+
+  void notificarSenalamiento(antagonista.id, agonista.nombre).catch(() => {})
 
   return NextResponse.json({ ok: true })
 }

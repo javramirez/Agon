@@ -6,18 +6,26 @@ import {
   getTiposAclamacionHoyPorEvento,
 } from '@/lib/db/queries'
 import { AgoraConTriggerClient } from '@/components/agon/agora-con-trigger-client'
+import { sleep } from '@/lib/utils/sleep'
 
 export const revalidate = 30
 
 export default async function AgoraPage() {
+  const __pageLoadT0 = Date.now()
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
-  const [eventos, aclamacionesHoy, tiposPorEvento] = await Promise.all([
+  const [eventos, aclamacionesHoy, tiposPorEvento] = (await Promise.all([
     getAgoraEventos(50),
     getAclamacionesHoy(agonista.id),
     getTiposAclamacionHoyPorEvento(agonista.id),
-  ])
+    sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0))),
+  ])) as [
+    Awaited<ReturnType<typeof getAgoraEventos>>,
+    number,
+    Awaited<ReturnType<typeof getTiposAclamacionHoyPorEvento>>,
+    void,
+  ]
 
   const usadas = aclamacionesHoy
 

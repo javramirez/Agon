@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#080808" rx="80"/>
+  <rect width="512" height="512" fill="none" rx="80" stroke="rgba(245,158,11,0.15)" stroke-width="8"/>
+  <text
+    x="256" y="340"
+    text-anchor="middle"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="320"
+    font-weight="700"
+    fill="rgba(245,158,11,1)"
+    letter-spacing="-8"
+  >Α</text>
+  <line x1="140" y1="400" x2="372" y2="400"
+    stroke="rgba(245,158,11,0.4)" stroke-width="3"
+    stroke-linecap="round"/>
+</svg>

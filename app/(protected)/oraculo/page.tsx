@@ -1,14 +1,18 @@
 import { getCurrentAgonista } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { isVeredictoDay } from '@/lib/utils'
+import { sleep } from '@/lib/utils/sleep'
 
 export default async function OraculoPage() {
+  const __pageLoadT0 = Date.now()
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
   const veredicto = isVeredictoDay()
   const sellado = agonista.oraculoSellado
   const mensaje = agonista.oraculoMensaje
+
+  await sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0)))
 
   return (
     <div className="space-y-6 animate-fade-in">

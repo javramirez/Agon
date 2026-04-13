@@ -5,10 +5,12 @@ import { cronicas } from '@/lib/db/schema'
 import { desc } from 'drizzle-orm'
 import { CronicaCard } from '@/components/agon/cronica-card'
 import { EmptyState } from '@/components/agon/empty-state'
+import { sleep } from '@/lib/utils/sleep'
 
 export const revalidate = 300
 
 export default async function CronicasPage() {
+  const __pageLoadT0 = Date.now()
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
@@ -16,6 +18,8 @@ export default async function CronicasPage() {
     .select()
     .from(cronicas)
     .orderBy(desc(cronicas.semana))
+
+  await sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0)))
 
   return (
     <div className="space-y-6 animate-fade-in">

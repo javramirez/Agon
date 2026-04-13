@@ -6,8 +6,10 @@ import { EkecheiriaPanel } from '@/components/agon/ekecheiria-panel'
 import { SectionHeader } from '@/components/agon/section-header'
 import { getAgonistaByClerkId } from '@/lib/db/queries'
 import { AGONISTAS } from '@/lib/auth/agonistas'
+import { sleep } from '@/lib/utils/sleep'
 
 export default async function PoderesPage() {
+  const __pageLoadT0 = Date.now()
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
@@ -17,6 +19,8 @@ export default async function PoderesPage() {
   const antagonista = antagonistaConfig
     ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
     : null
+
+  await sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0)))
 
   return (
     <div className="space-y-8 animate-fade-in">

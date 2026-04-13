@@ -11,8 +11,10 @@ import {
 } from './comentarios-panel'
 import { DiosAvatar } from './dios-avatar'
 import { DIOSES } from '@/lib/dioses/config'
+import { getDiosVisual } from '@/lib/dioses/imagen-config'
 import type { AgoraEvento, ComentarioAgora, Cronica } from '@/lib/db/schema'
 import { CronicaCard } from './cronica-card'
+import { PostVozOlimpo, type LinkPostVozOlimpo } from './post-voz-olimpo'
 
 const ACLAMACIONES_CONFIG = [
   { tipo: 'fuego', emoji: '🔥', label: 'Fuego del agon' },
@@ -77,6 +79,11 @@ export function AgoraEventoCard({
     diosNombre?: string
     tipoDios?: 'oraculo' | 'voz_olimpo'
     postDiosId?: string
+    titular?: string
+    descripcion?: string
+    links?: unknown
+    esSobreexigencia?: boolean
+    intensidad?: 'leve' | 'media' | 'fuerte'
   } | null
 
   const esDios = metadata?.esDios === true
@@ -84,6 +91,42 @@ export function AgoraEventoCard({
   const tipoDios = metadata?.tipoDios
   const postDiosId = metadata?.postDiosId
   const esOraculo = tipoDios === 'oraculo'
+  const esVozOlimpo = esDios && tipoDios === 'voz_olimpo'
+
+  function normalizarTipoLink(t: string): LinkPostVozOlimpo['tipo'] {
+    if (t === 'libro' || t === 'video' || t === 'articulo' || t === 'herramienta') return t
+    return 'articulo'
+  }
+
+  const vozOlimpoPayload = (() => {
+    if (!esVozOlimpo || !diosNombre || !metadata) return null
+    const titular = metadata.titular
+    const descripcion = metadata.descripcion
+    if (typeof titular !== 'string' || typeof descripcion !== 'string') return null
+    if (!Array.isArray(metadata.links)) return null
+    const links: LinkPostVozOlimpo[] = metadata.links
+      .filter((x): x is Record<string, unknown> => x != null && typeof x === 'object')
+      .map((x) => ({
+        titulo: String(x.titulo ?? ''),
+        url: String(x.url ?? ''),
+        tipo: normalizarTipoLink(String(x.tipo ?? 'articulo')),
+      }))
+      .filter((l) => l.titulo.length > 0 && l.url.length > 0)
+    if (links.length === 0) return null
+    const intensidad =
+      metadata.intensidad === 'fuerte' ||
+      metadata.intensidad === 'media' ||
+      metadata.intensidad === 'leve'
+        ? metadata.intensidad
+        : 'leve'
+    return {
+      titular,
+      descripcion,
+      links,
+      esSobreexigencia: metadata.esSobreexigencia === true,
+      intensidad,
+    }
+  })()
 
   const esperandoOraculo = Boolean(
     esOraculo &&
@@ -299,54 +342,77 @@ export function AgoraEventoCard({
   return (
     <div
       className={cn(
-        'bg-surface-1 rounded-xl border p-4 space-y-3',
-        esDios && diosConfig ? 'border-amber/20 bg-surface-1' : 'border-border'
+        'rounded-xl border p-4 space-y-3 transition-all duration-300',
+        esDios && diosConfig ? '' : 'bg-surface-1 border-border'
       )}
+      style={
+        esDios && diosNombre
+          ? {
+              background: `linear-gradient(135deg, rgba(12,12,12,0.95) 0%, ${getDiosVisual(diosNombre)?.colorFondo ?? 'rgba(12,12,12,0.95)'} 100%)`,
+              borderColor:
+                getDiosVisual(diosNombre)?.colorBorde ?? 'rgba(255,255,255,0.1)',
+            }
+          : undefined
+      }
     >
-      <div className="flex items-start gap-3">
-        {esDios && diosNombre ? (
-          <DiosAvatar diosNombre={diosNombre} size="md" />
-        ) : (
-          <span className="text-lg mt-0.5 flex-shrink-0">{icono}</span>
-        )}
-
-        <div className="flex-1 min-w-0">
-          {esDios && diosConfig && (
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span
-                className={cn(
-                  'text-xs font-display font-bold',
-                  diosConfig.color
-                )}
-              >
-                {diosConfig.nombre}
-              </span>
-              {esOraculo && (
-                <span className="text-xs text-amber font-body">
-                  · El Oráculo
-                </span>
-              )}
-              {tipoDios === 'voz_olimpo' && (
-                <span className="text-xs text-muted-foreground font-body">
-                  · La Voz del Olimpo
-                </span>
-              )}
-            </div>
+      {esVozOlimpo && vozOlimpoPayload && diosNombre ? (
+        <div className="space-y-3 min-w-0">
+          <PostVozOlimpo
+            diosNombre={diosNombre}
+            titular={vozOlimpoPayload.titular}
+            descripcion={vozOlimpoPayload.descripcion}
+            links={vozOlimpoPayload.links}
+            esSobreexigencia={vozOlimpoPayload.esSobreexigencia}
+            intensidad={vozOlimpoPayload.intensidad}
+          />
+          <p className="text-xs text-muted-foreground font-body">{tiempoAtras}</p>
+        </div>
+      ) : (
+        <div className="flex items-start gap-3">
+          {esDios && diosNombre ? (
+            <DiosAvatar diosNombre={diosNombre} size="md" />
+          ) : (
+            <span className="text-lg mt-0.5 flex-shrink-0">{icono}</span>
           )}
 
-          <p
-            className={cn(
-              'text-sm font-body leading-snug',
-              esDios ? 'text-foreground italic' : 'text-foreground'
+          <div className="flex-1 min-w-0">
+            {esDios && diosConfig && (
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span
+                  className={cn(
+                    'text-xs font-display font-bold',
+                    diosConfig.color
+                  )}
+                >
+                  {diosConfig.nombre}
+                </span>
+                {esOraculo && (
+                  <span className="text-xs text-amber font-body">
+                    · El Oráculo
+                  </span>
+                )}
+                {tipoDios === 'voz_olimpo' && (
+                  <span className="text-xs text-muted-foreground font-body">
+                    · La Voz del Olimpo
+                  </span>
+                )}
+              </div>
             )}
-          >
-            {evento.contenido}
-          </p>
-          <p className="text-xs text-muted-foreground font-body mt-1">
-            {tiempoAtras}
-          </p>
+
+            <p
+              className={cn(
+                'text-sm font-body leading-snug',
+                esDios ? 'text-foreground italic' : 'text-foreground'
+              )}
+            >
+              {evento.contenido}
+            </p>
+            <p className="text-xs text-muted-foreground font-body mt-1">
+              {tiempoAtras}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {evento.fotoUrl && (
         <img

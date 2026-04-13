@@ -47,10 +47,12 @@ export function NivelDetalle({
         )
       : 100
 
+  const HeroIcon = NIVEL_ICONOS[nivelKey]
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-3 py-4">
-        <span className="text-6xl block">{NIVEL_ICONOS[nivelKey]}</span>
+        <HeroIcon size={56} className="text-amber mx-auto" />
         <div>
           <p className="text-xs text-amber tracking-widest uppercase font-body">
             Nivel {indice + 1}
@@ -98,6 +100,7 @@ export function NivelDetalle({
             const esActual = n === nivelKey
             const esSuperado = i < indice
             const esFuturo = i > indice
+            const RowIcon = NIVEL_ICONOS[n]
 
             return (
               <div
@@ -109,14 +112,12 @@ export function NivelDetalle({
                   esFuturo && 'opacity-30'
                 )}
               >
-                <span
+                <RowIcon
+                  size={16}
                   className={cn(
-                    'text-base',
-                    esActual ? 'opacity-100' : 'opacity-70'
+                    esActual ? 'text-amber' : 'text-muted-foreground'
                   )}
-                >
-                  {NIVEL_ICONOS[n]}
-                </span>
+                />
                 <div className="flex-1 min-w-0">
                   <p
                     className={cn(

@@ -19,33 +19,21 @@ const LINKS = [
     desc: 'Provocaciones, Señalamiento y Ekecheiria',
   },
   {
-    href: '/inscripciones',
-    label: 'Las Inscripciones',
-    icon: '📜',
-    desc: 'Tu legado en el Altis',
-  },
-  {
-    href: '/cronicas',
-    label: 'Las Crónicas',
-    icon: '📰',
-    desc: 'La memoria del Gran Agon',
-  },
-  {
     href: '/oraculo',
     label: 'El Oráculo',
     icon: '⚖️',
     desc: 'Tu mensaje sellado del día 1',
   },
   {
-    href: '/contrato',
-    label: 'El Contrato',
-    icon: '📋',
-    desc: 'El documento que lo inició todo',
+    href: '/mentor',
+    label: 'El Mentor',
+    icon: '🏛️',
+    desc: 'Conversación con tu guía asignado',
   },
   {
     href: '/veredicto',
     label: 'El Veredicto',
-    icon: '🏛️',
+    icon: '🏆',
     desc: 'La Ceremonia del Gran Agon',
   },
   {
@@ -97,7 +85,12 @@ export function NavAgonistaDropdown({ isAdmin }: { isAdmin: boolean }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 w-72 rounded-lg border border-border bg-background shadow-lg py-1 z-[60] animate-fade-in"
+          className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-border/60 py-1 z-[60] animate-fade-in overflow-hidden"
+          style={{
+            background: 'rgba(10,10,10,0.98)',
+            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,158,11,0.06)',
+          }}
         >
           {visible.map((link) => (
             <Link

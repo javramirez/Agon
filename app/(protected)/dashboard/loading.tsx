@@ -1,5 +1,5 @@
-import { LoadingAltis } from '@/components/agon/loading-altis'
+import { LoadingDashboard } from '@/components/agon/loadings/loading-dashboard'
 
 export default function Loading() {
-  return <LoadingAltis size="lg" frase="El agon de hoy te espera..." />
+  return <LoadingDashboard />
 }

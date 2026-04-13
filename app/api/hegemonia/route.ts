@@ -5,6 +5,7 @@ import {
   getHegemonias,
   getSemanaActual,
 } from '@/lib/db/queries'
+import { notificarHegemoniaGanada } from '@/lib/notificaciones/crear'
 
 export async function GET() {
   const { userId } = await auth()
@@ -23,6 +24,20 @@ export async function POST() {
 
   const semanaActual = getSemanaActual()
   const hegemonia = await calcularYGuardarHegemonia(semanaActual)
+
+  if (hegemonia && hegemonia.ganadorId && !hegemonia.empate) {
+    void (async () => {
+      try {
+        await notificarHegemoniaGanada(
+          hegemonia.ganadorId!,
+          hegemonia.semana,
+          hegemonia.kleosGanador
+        )
+      } catch {
+        // Silencioso
+      }
+    })()
+  }
 
   return NextResponse.json({ hegemonia })
 }

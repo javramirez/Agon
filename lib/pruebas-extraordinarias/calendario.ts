@@ -9,13 +9,13 @@ import { eq, and } from 'drizzle-orm'
 import { addDays, endOfDay, format, parseISO } from 'date-fns'
 import { getAmbosAgonistas } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
+import { notificarPruebaExtraordinaria } from '@/lib/notificaciones/crear'
 
 type CalendarioRow = typeof calendarioAgan.$inferSelect
 
 export async function generarCalendarioAgan(): Promise<void> {
   const existente = await db.select().from(calendarioAgan).limit(1)
   if (existente.length > 0) {
-    console.log('Calendario ya generado — saltando')
     return
   }
 
@@ -66,10 +66,6 @@ export async function generarCalendarioAgan(): Promise<void> {
     destinoOrden,
     destinoHorarios,
   })
-
-  console.log(
-    `Calendario generado — Semana Sagrada: semana ${semanaSagradaSemana}`
-  )
 }
 
 export async function getCalendario() {
@@ -179,6 +175,8 @@ async function insertarTripticoSiCorresponde(
     { tipo: 'triptico', pruebaId, semana }
   )
 
+  void notificarAmbosPruebaExtra(config.descripcion, config.kleos)
+
   return true
 }
 
@@ -271,7 +269,25 @@ export async function activarEventoDestino(
     { tipo: 'destino', pruebaId, semana }
   )
 
+  void notificarAmbosPruebaExtra(config.descripcion, config.kleos)
+
   return true
+}
+
+async function notificarAmbosPruebaExtra(
+  descripcion: string,
+  kleosBonus: number
+) {
+  try {
+    const ambos = await getAmbosAgonistas()
+    await Promise.all(
+      ambos.map((a) =>
+        notificarPruebaExtraordinaria(a.id, descripcion, kleosBonus)
+      )
+    )
+  } catch {
+    // Silencioso
+  }
 }
 
 async function publicarEnAgora(

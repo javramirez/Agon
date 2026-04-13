@@ -19,10 +19,12 @@ export function NivelBadge({ nivel, kleosTotal, showProgress = false }: Props) {
     ? Math.min(((kleosTotal - kleosActual) / (kleosSiguiente - kleosActual)) * 100, 100)
     : 100
 
+  const Icon = NIVEL_ICONOS[nivelKey]
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
-        <span className="text-lg">{NIVEL_ICONOS[nivelKey]}</span>
+        <Icon size={18} className="text-amber shrink-0" />
         <span className="font-display text-sm font-semibold text-foreground">
           {NIVEL_LABELS[nivelKey]}
         </span>

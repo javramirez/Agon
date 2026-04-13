@@ -223,6 +223,26 @@ const PROBABILIDADES_EVENTO: Record<string, Partial<Record<string, number>>> = {
     nike: 0.2,
     eris: 0.15,
   },
+  rivalidad_kleos: {
+    eris: 0.9,
+    nike: 0.6,
+    ares: 0.4,
+  },
+  rivalidad_igualados: {
+    eris: 0.85,
+    ares: 0.5,
+    hermes: 0.3,
+  },
+  rivalidad_dia_perfecto_ambos: {
+    nike: 0.9,
+    eris: 0.7,
+    ares: 0.5,
+  },
+  rivalidad_hegemonia_cambio: {
+    nike: 0.95,
+    eris: 0.7,
+    ares: 0.4,
+  },
 }
 
 // Determinar qué dioses comentan según el tipo de evento
@@ -262,7 +282,13 @@ export function getDiosesParaEvento(tipoEvento: string): string[] {
   }
 
   // Máximo 2 dioses para eventos normales, 3 para épicos
-  const eventosEpicos = ['dia_perfecto', 'hegemonia_ganada', 'semana_sagrada']
+  const eventosEpicos = [
+    'dia_perfecto',
+    'hegemonia_ganada',
+    'semana_sagrada',
+    'rivalidad_dia_perfecto_ambos',
+    'rivalidad_hegemonia_cambio',
+  ]
   const max = eventosEpicos.includes(tipoEvento) ? 3 : 2
 
   // Priorizar dioses con mayor probabilidad en el evento
@@ -282,11 +308,15 @@ export function getDelayDios(tipoEvento: string): number {
     'hegemonia_ganada',
     'semana_sagrada',
     'prueba_extraordinaria_expirada',
+    'rivalidad_dia_perfecto_ambos',
+    'rivalidad_hegemonia_cambio',
   ]
   const eventosRapidos = [
     'inscripcion_desbloqueada',
     'nivel_subido',
     'senalamiento',
+    'rivalidad_kleos',
+    'rivalidad_igualados',
   ]
 
   if (eventosInmediatos.includes(tipoEvento)) {

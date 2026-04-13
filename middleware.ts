@@ -7,12 +7,16 @@ const isProtectedRoute = createRouteMatcher([
   '/altis(.*)',
   '/agora(.*)',
   '/poderes(.*)',
-  '/inscripciones(.*)',
+  '/codex(.*)',
   '/cronicas(.*)',
   '/oraculo(.*)',
   '/correspondencia(.*)',
+  '/mentor(.*)',
   '/contrato(.*)',
   '/veredicto(.*)',
+  '/ekecheiria-activa(.*)',
+  '/ekecheiria-expirada(.*)',
+  '/consulta-mediodia(.*)',
   '/admin(.*)',
   '/api/(.*)',
 ])
@@ -36,6 +40,10 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(new URL('/unauthorized', req.url))
     }
   }
+
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set('x-pathname', req.nextUrl.pathname)
+  return NextResponse.next({ request: { headers: requestHeaders } })
 })
 
 export const config = {

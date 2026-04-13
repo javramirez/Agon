@@ -1,14 +1,15 @@
 import type { Llama } from '@/lib/db/schema'
 import { cn } from '@/lib/utils'
+import { ICONOS_PRUEBAS } from './iconos-pruebas'
 
-const HABITOS_CONFIG: Record<string, { nombre: string; icono: string }> = {
-  agua: { nombre: 'Solo agua', icono: '💧' },
-  comida: { nombre: 'Sin comida rápida', icono: '🥗' },
-  pasos: { nombre: 'Pasos', icono: '🚶' },
-  sueno: { nombre: 'Sueño', icono: '😴' },
-  lectura: { nombre: 'Lectura', icono: '📖' },
-  gym: { nombre: 'Gym', icono: '🏋️' },
-  cardio: { nombre: 'Cardio', icono: '🏃' },
+const HABITOS_CONFIG: Record<string, { nombre: string }> = {
+  agua: { nombre: 'Solo agua' },
+  comida: { nombre: 'Sin comida rápida' },
+  pasos: { nombre: 'Pasos' },
+  sueno: { nombre: 'Sueño' },
+  lectura: { nombre: 'Lectura' },
+  gym: { nombre: 'Gym' },
+  cardio: { nombre: 'Cardio' },
 }
 
 interface Props {
@@ -33,9 +34,19 @@ export function LlamasPanel({ llamas }: Props) {
           key={h.habitoId}
           className="flex items-center gap-3 py-2 border-b border-border last:border-0"
         >
-          <span className="text-base w-6 text-center flex-shrink-0">
-            {h.icono}
-          </span>
+          {(() => {
+            const Icono = ICONOS_PRUEBAS[h.habitoId]
+            return Icono ? (
+              <Icono
+                size={18}
+                className={
+                  h.rachaActual > 0
+                    ? 'text-amber flex-shrink-0'
+                    : 'text-muted-foreground/40 flex-shrink-0'
+                }
+              />
+            ) : null
+          })()}
           <span className="text-sm font-body text-muted-foreground flex-1 truncate">
             {h.nombre}
           </span>

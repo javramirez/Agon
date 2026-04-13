@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { CorrespondenciaChat } from '@/components/agon/correspondencia-chat'
 import { getAgonistaByClerkId } from '@/lib/db/queries'
+import { sleep } from '@/lib/utils/sleep'
 
 export default async function CorrespondenciaPage() {
+  const __pageLoadT0 = Date.now()
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
@@ -14,6 +16,8 @@ export default async function CorrespondenciaPage() {
   const antagonista = antagonistaConfig
     ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
     : null
+
+  await sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0)))
 
   return (
     <div className="space-y-4 animate-fade-in">

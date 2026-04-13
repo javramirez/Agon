@@ -1,3 +1,17 @@
+import {
+  Sprout,
+  Footprints,
+  Zap,
+  Shield,
+  Swords,
+  Flame,
+  Star,
+  Crown,
+  Trophy,
+  Landmark,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+
 // Thresholds de kleos para cada nivel
 export const NIVEL_THRESHOLDS = {
   aspirante: 0,
@@ -27,17 +41,17 @@ export const NIVEL_LABELS: Record<NivelKey, string> = {
   inmortal: 'Inmortal',
 }
 
-export const NIVEL_ICONOS: Record<NivelKey, string> = {
-  aspirante: '🌱',
-  atleta: '🏃',
-  agonista: '⚡',
-  luchador: '🛡️',
-  campeon: '⚔️',
-  heroe: '🔥',
-  semidios: '🦅',
-  olimpico: '⭐',
-  leyenda_del_agon: '👑',
-  inmortal: '🏛️',
+export const NIVEL_ICONOS: Record<NivelKey, LucideIcon> = {
+  aspirante: Sprout,
+  atleta: Footprints,
+  agonista: Zap,
+  luchador: Shield,
+  campeon: Swords,
+  heroe: Flame,
+  semidios: Star,
+  olimpico: Crown,
+  leyenda_del_agon: Trophy,
+  inmortal: Landmark,
 }
 
 // Kleos base por prueba
@@ -57,145 +71,12 @@ export const KLEOS_SENALAMIENTO_PENALIDAD = 50
 export const ACLAMACIONES_POR_DIA = 5
 export const MAX_NIVEL_POR_DIA = 1
 
-// Inscripciones del Agon
-export const INSCRIPCIONES = [
-  {
-    id: 'la_llama_viva',
-    nombre: 'La Llama Viva',
-    descripcion: '3 agonías completas seguidas. El fuego del agon no conoce la extinción.',
-    icono: '🔥',
-    secreto: false,
-  },
-  {
-    id: 'agua_sagrada',
-    nombre: 'El Agua Sagrada',
-    descripcion: '7 días de pureza. El cuerpo del agonista no acepta lo que lo debilita.',
-    icono: '💧',
-    secreto: false,
-  },
-  {
-    id: 'semana_olimpica',
-    nombre: 'La Semana Olímpica',
-    descripcion: 'Todas las pruebas, todos los días, durante 7 días. El Altis lo inscribe en dorado.',
-    icono: '👑',
-    secreto: false,
-  },
-  {
-    id: 'furia_del_agon',
-    nombre: 'La Furia del Agon',
-    descripcion: 'Cinco sesiones de gimnasio en una semana. Más allá de lo que el contrato exige.',
-    icono: '⚡',
-    secreto: false,
-  },
-  {
-    id: 'el_heraldo',
-    nombre: 'El Heraldo',
-    descripcion: 'El agonista que inicia antes que el sol no teme al día que viene.',
-    icono: '🌅',
-    secreto: false,
-  },
-  {
-    id: 'filosofo_del_agon',
-    nombre: 'El Filósofo del Agon',
-    descripcion: 'Cien páginas leídas. El agonista que solo entrena el cuerpo es a medias.',
-    icono: '📜',
-    secreto: false,
-  },
-  {
-    id: 'ayuno_de_hierro',
-    nombre: 'El Ayuno de Hierro',
-    descripcion: '14 días sin comida rápida. La disciplina del cuerpo empieza en la boca.',
-    icono: '💀',
-    secreto: false,
-  },
-  {
-    id: 'imparable',
-    nombre: 'Imparable',
-    descripcion: '14 agonías completas. El agonista que llega a la mitad ya no puede ser detenido.',
-    icono: '🚀',
-    secreto: false,
-  },
-  {
-    id: 'gemelos_del_agon',
-    nombre: 'Los Gemelos del Agon',
-    descripcion: 'Ambos agonistas completan el mismo día perfecto. El agon los igualó.',
-    icono: '🤝',
-    secreto: false,
-  },
-  {
-    id: 'la_remontada',
-    nombre: 'La Remontada',
-    descripcion: '300 kleos de desventaja. Recuperados. El agon no termina hasta que termina.',
-    icono: '📉',
-    secreto: false,
-  },
-  {
-    id: 'el_gran_agon',
-    nombre: 'El Gran Agon',
-    descripcion: '29 días. Todas las pruebas. El Altis te inscribe para siempre.',
-    icono: '🏛️',
-    secreto: false,
-  },
-  // Inscripciones secretas
-  {
-    id: 'guardian_de_la_noche',
-    nombre: 'El Guardián de la Noche',
-    descripcion: 'El agonista que el agon encuentra despierto a las 3am. Su llama nunca duerme.',
-    icono: '🌙',
-    secreto: true,
-  },
-  {
-    id: 'precision_del_sabio',
-    nombre: 'La Precisión del Sabio',
-    descripcion: 'Exactamente 8 horas de sueño, tres días seguidos. El agonista que domina hasta el descanso.',
-    icono: '😴',
-    secreto: true,
-  },
-  {
-    id: 'sinfonia_del_fracaso',
-    nombre: 'La Sinfonía del Fracaso',
-    descripcion: 'Ambos fallan la misma prueba el mismo día. El agon los quebró igual.',
-    icono: '🪨',
-    secreto: true,
-  },
-  {
-    id: 'la_ekecheiria',
-    nombre: 'La Ekecheiria',
-    descripcion: 'La tregua sagrada fue invocada. Hasta los dioses se detienen ante la lesión.',
-    icono: '⚖️',
-    secreto: true,
-  },
-  {
-    id: 'agonista_invisible',
-    nombre: 'El Agonista Invisible',
-    descripcion: 'Tres días completos sin una sola palabra en el Ágora. El kleos se acumula en silencio.',
-    icono: '👻',
-    secreto: true,
-  },
-  {
-    id: 'senalamiento_perfecto',
-    nombre: 'El Señalamiento Perfecto',
-    descripcion: 'Señalaste al antagonista el día que ya iba a caer. El agon tiene sentido del humor.',
-    icono: '🎯',
-    secreto: true,
-  },
-  {
-    id: 'mas_alla_del_contrato',
-    nombre: 'Más Allá del Contrato',
-    descripcion: 'Cardio siete días seguidos. El contrato pedía tres por semana. El agon pide más.',
-    icono: '🏃',
-    secreto: true,
-  },
-  {
-    id: 'lengua_del_agon',
-    nombre: 'La Lengua del Agon',
-    descripcion: 'Diez provocaciones en un día. El agonista que no puede callarse merece su propia inscripción.',
-    icono: '🧂',
-    secreto: true,
-  },
-] as const
-
-export type InscripcionId = (typeof INSCRIPCIONES)[number]['id']
+// Inscripciones del Agon (40 públicas + 20 secretas + 25 easter eggs)
+export {
+  INSCRIPCIONES,
+  type InscripcionId,
+  type InscripcionTipo,
+} from './inscripciones.catalog'
 
 // Provocaciones de La Voz del Agon
 export const PROVOCACIONES = [

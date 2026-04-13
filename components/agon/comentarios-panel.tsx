@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { motion, AnimatePresence } from 'framer-motion'
 import { DIOSES } from '@/lib/dioses/config'
+import { getDiosVisual } from '@/lib/dioses/imagen-config'
 import { DiosAvatar } from './dios-avatar'
 import { cn } from '@/lib/utils'
 import type { ComentarioAgora } from '@/lib/db/schema'
@@ -19,12 +21,116 @@ interface Props {
   esOraculo?: boolean
   diosNombre?: string
   postDiosId?: string
-  /** Tras enviar comentario o recargar, para sincronizar el badge en la card */
   onComentariosCambiados?: () => void
-  /** Tras cada carga (incl. polling): sincronizar badge y estado del Oráculo */
   onComentariosMeta?: (meta: ComentariosMeta) => void
-  /** Polling solo con panel abierto: 30000 normal, 10000 esperando Oráculo */
   pollIntervalMs?: number
+}
+
+function ComentarioDios({ comentario }: { comentario: ComentarioAgora }) {
+  const diosConfig = DIOSES[comentario.autorId]
+  const visual = getDiosVisual(comentario.autorId)
+  const [tiempo, setTiempo] = useState('')
+
+  useEffect(() => {
+    setTiempo(
+      formatDistanceToNow(new Date(comentario.createdAt), {
+        addSuffix: true,
+        locale: es,
+      })
+    )
+  }, [comentario.createdAt])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -12, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="rounded-xl p-3 space-y-2.5"
+      style={{
+        background: visual?.colorFondo ?? 'rgba(255,255,255,0.03)',
+        border: `1px solid ${visual?.colorBorde ?? 'rgba(255,255,255,0.08)'}`,
+      }}
+    >
+      <div className="flex items-center gap-2.5">
+        <DiosAvatar diosNombre={comentario.autorId} size="sm" showGlow />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="text-xs font-display font-bold tracking-wide"
+              style={{ color: visual?.colorTexto ?? '#f5f5f5' }}
+            >
+              {diosConfig?.nombre ?? comentario.autorNombre}
+            </span>
+            <span
+              className="text-xs font-body px-1.5 py-0.5 rounded-full"
+              style={{
+                background: visual?.colorFondo ?? 'rgba(255,255,255,0.05)',
+                color: visual?.colorTexto ?? '#888',
+                border: `1px solid ${visual?.colorBorde ?? 'rgba(255,255,255,0.08)'}`,
+              }}
+            >
+              Del Olimpo
+            </span>
+            {tiempo && (
+              <span className="text-xs text-muted-foreground/40 font-body">{tiempo}</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className="h-px w-full"
+        style={{
+          background: `linear-gradient(to right, ${visual?.colorBorde ?? 'rgba(255,255,255,0.06)'}, transparent)`,
+        }}
+      />
+
+      <p className="text-sm font-body leading-relaxed italic text-foreground/90 pl-1">
+        &ldquo;{comentario.contenido}&rdquo;
+      </p>
+    </motion.div>
+  )
+}
+
+function ComentarioHumano({ comentario }: { comentario: ComentarioAgora }) {
+  const [tiempo, setTiempo] = useState('')
+
+  useEffect(() => {
+    setTiempo(
+      formatDistanceToNow(new Date(comentario.createdAt), {
+        addSuffix: true,
+        locale: es,
+      })
+    )
+  }, [comentario.createdAt])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex gap-2.5"
+    >
+      <div className="w-6 h-6 rounded-full bg-surface-2 border border-border flex items-center justify-center flex-shrink-0 mt-0.5">
+        <span className="text-xs text-muted-foreground font-display font-bold">
+          {comentario.autorNombre[0]}
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-xs font-body font-semibold text-foreground">
+            {comentario.autorNombre}
+          </span>
+          {tiempo && (
+            <span className="text-xs text-muted-foreground/40 font-body">{tiempo}</span>
+          )}
+        </div>
+        <p className="text-sm font-body leading-relaxed mt-0.5 text-muted-foreground">
+          {comentario.contenido}
+        </p>
+      </div>
+    </motion.div>
+  )
 }
 
 export function ComentariosPanel({
@@ -71,9 +177,7 @@ export function ComentariosPanel({
         if (markRes.ok) {
           const idSet = new Set(idsNoVistos)
           list = list.map((c) =>
-            c.autorTipo === 'dios' && idSet.has(c.id)
-              ? { ...c, visto: true }
-              : c
+            c.autorTipo === 'dios' && idSet.has(c.id) ? { ...c, visto: true } : c
           )
         }
       }
@@ -96,16 +200,13 @@ export function ComentariosPanel({
 
   useEffect(() => {
     if (!pollIntervalMs || pollIntervalMs <= 0) return
-    const id = setInterval(() => {
-      void cargar()
-    }, pollIntervalMs)
+    const id = setInterval(() => void cargar(), pollIntervalMs)
     return () => clearInterval(id)
   }, [pollIntervalMs, cargar])
 
   async function enviar() {
     if (!input.trim() || enviando) return
     setEnviando(true)
-
     const res = await fetch('/api/comentarios', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -117,19 +218,18 @@ export function ComentariosPanel({
         postDiosId,
       }),
     })
-
     if (res.ok) {
       setInput('')
       await cargar()
       onComentariosCambiados?.()
     }
-
     setEnviando(false)
   }
 
-  const puedeComentar = esOraculo
-    ? !yaPreguntoOraculo && !oraculoCerrado
-    : true
+  const puedeComentar = esOraculo ? !yaPreguntoOraculo && !oraculoCerrado : true
+
+  const comentariosDioses = comentarios.filter((c) => c.autorTipo === 'dios')
+  const comentariosHumanos = comentarios.filter((c) => c.autorTipo !== 'dios')
 
   return (
     <div className="space-y-3 pt-3 border-t border-border">
@@ -139,56 +239,29 @@ export function ComentariosPanel({
         </p>
       ) : comentarios.length === 0 ? (
         <p className="text-xs text-muted-foreground/50 font-body italic">
-          {esOraculo
-            ? 'El Oráculo espera tu pregunta.'
-            : 'Sin comentarios aún.'}
+          {esOraculo ? 'El Oráculo espera tu pregunta.' : 'Sin comentarios aún.'}
         </p>
       ) : (
         <div className="space-y-3">
-          {comentarios.map((c) => {
-            const esDios = c.autorTipo === 'dios'
-            const diosConfig = esDios ? DIOSES[c.autorId] : null
+          <AnimatePresence>
+            {comentariosDioses.map((c) => (
+              <ComentarioDios key={c.id} comentario={c} />
+            ))}
+          </AnimatePresence>
 
-            return (
-              <div key={c.id} className="flex gap-2.5">
-                {esDios ? (
-                  <DiosAvatar diosNombre={c.autorId} size="sm" />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-surface-2 border border-border flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs text-muted-foreground font-display font-bold">
-                      {c.autorNombre[0]}
-                    </span>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span
-                      className={cn(
-                        'text-xs font-body font-semibold',
-                        esDios && diosConfig ? diosConfig.color : 'text-foreground'
-                      )}
-                    >
-                      {c.autorNombre}
-                    </span>
-                    <span className="text-xs text-muted-foreground/40 font-body">
-                      {formatDistanceToNow(new Date(c.createdAt), {
-                        addSuffix: true,
-                        locale: es,
-                      })}
-                    </span>
-                  </div>
-                  <p
-                    className={cn(
-                      'text-sm font-body leading-relaxed mt-0.5',
-                      esDios ? 'text-foreground italic' : 'text-muted-foreground'
-                    )}
-                  >
-                    {c.contenido}
-                  </p>
-                </div>
-              </div>
-            )
-          })}
+          {comentariosDioses.length > 0 && comentariosHumanos.length > 0 && (
+            <div className="flex items-center gap-2 py-1">
+              <div className="h-px bg-border flex-1" />
+              <span className="text-xs text-muted-foreground/40 font-body">El Ágora</span>
+              <div className="h-px bg-border flex-1" />
+            </div>
+          )}
+
+          <AnimatePresence>
+            {comentariosHumanos.map((c) => (
+              <ComentarioHumano key={c.id} comentario={c} />
+            ))}
+          </AnimatePresence>
         </div>
       )}
 
@@ -229,8 +302,8 @@ export function ComentariosPanel({
       )}
 
       {esOraculo && yaPreguntoOraculo && !oraculoCerrado && (
-        <p className="text-xs text-muted-foreground/50 font-body italic text-center">
-          Ya consultaste al Oráculo. El dios responderá.
+        <p className="text-xs text-muted-foreground/50 font-body italic text-center animate-pulse">
+          Ya consultaste al Oráculo. El dios responderá cuando el Olimpo lo decida.
         </p>
       )}
     </div>

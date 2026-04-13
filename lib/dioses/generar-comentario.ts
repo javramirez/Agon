@@ -8,6 +8,7 @@ import {
   agoraEventos,
 } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
+import { notificarComentarioDios } from '@/lib/notificaciones/crear'
 
 function getAnthropicClient() {
   const key = process.env.ANTHROPIC_API_KEY
@@ -113,6 +114,25 @@ export async function generarComentarioDios(
     tipoGeneracion: null,
     visto: false,
   })
+
+  // Notificar al dueño del evento
+  try {
+    const evento = await db
+      .select({ agonistId: agoraEventos.agonistId })
+      .from(agoraEventos)
+      .where(eq(agoraEventos.id, eventoId))
+      .limit(1)
+
+    if (evento[0]) {
+      void notificarComentarioDios(
+        evento[0].agonistId,
+        dios.nombre,
+        texto
+      ).catch(() => {})
+    }
+  } catch {
+    // Silencioso
+  }
 
   await db
     .insert(likesAgora)
@@ -253,6 +273,24 @@ Después de tu respuesta, el Oráculo se cierra — no habrá más preguntas.`
       visto: false,
     })
 
+    try {
+      const evento = await db
+        .select({ agonistId: agoraEventos.agonistId })
+        .from(agoraEventos)
+        .where(eq(agoraEventos.id, agoraEventoId))
+        .limit(1)
+
+      if (evento[0]) {
+        void notificarComentarioDios(
+          evento[0].agonistId,
+          dios.nombre,
+          texto
+        ).catch(() => {})
+      }
+    } catch {
+      // Silencioso
+    }
+
     await db
       .update(postsDioses)
       .set({ cerrado: true })
@@ -261,6 +299,46 @@ Después de tu respuesta, el Oráculo se cierra — no habrá más preguntas.`
     return texto
   } catch (error) {
     console.error('Error en respuesta del Oráculo:', error)
+    return null
+  }
+}
+
+/** Genera texto para eventos de rivalidad — recibe contexto de ambos agonistas. */
+export async function generarTextoRivalidad(
+  diosNombre: string,
+  tipoEvento: string,
+  contextoRivalidad: string
+): Promise<string | null> {
+  const dios = DIOSES[diosNombre]
+  if (!dios) return null
+
+  const anthropic = getAnthropicClient()
+  if (!anthropic) {
+    console.warn('ANTHROPIC_API_KEY no configurada — sin comentario de rivalidad')
+    return null
+  }
+
+  const prompt = `${dios.personalidad}
+
+El Gran Agon enfrenta a dos agonistas en una batalla épica por la gloria.
+
+Evento de rivalidad (${tipoEvento}):
+"${contextoRivalidad}"
+
+Escribe un comentario de 2-3 oraciones sobre esta rivalidad.
+Habla de AMBOS contendientes, no de uno solo.
+Sin hashtags ni emojis. Habla en primera persona como dios.`
+
+  try {
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 150,
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    return extractText(response) || null
+  } catch (error) {
+    console.error(`Error generando texto de rivalidad de ${diosNombre}:`, error)
     return null
   }
 }

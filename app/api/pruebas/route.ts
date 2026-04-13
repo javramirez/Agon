@@ -7,19 +7,41 @@ import {
   kleosLog,
   llamas,
   agoraEventos,
-  inscripciones,
   semanaSagrada,
+  notificaciones,
 } from '@/lib/db/schema'
-import { eq, and, gte } from 'drizzle-orm'
-import { getOrCreateAgonista, actualizarNivel } from '@/lib/db/queries'
+import { eq, and, gte, sql } from 'drizzle-orm'
+import {
+  getOrCreateAgonista,
+  getAgonistaByClerkId,
+  actualizarNivel,
+  getAmbosAgonistas,
+} from '@/lib/db/queries'
+import {
+  crearNotificacion,
+  notificarNivelSubido,
+  notificarAntagonistaActivo,
+} from '@/lib/notificaciones/crear'
+import { AGONISTAS } from '@/lib/auth/agonistas'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import {
   KLEOS_POR_PRUEBA,
   KLEOS_DIA_PERFECTO,
   KLEOS_DIA_PERFECTO_NIVEL_9,
-  INSCRIPCIONES,
+  NIVEL_LABELS,
 } from '@/lib/db/constants'
-import { verificarInscripciones } from '@/lib/inscripciones/triggers'
+import type { NivelKey } from '@/lib/db/constants'
+import { actualizarAfinidadHabitos } from '@/lib/facciones/afinidad'
+import {
+  verificarInscripciones,
+  verificarGemelosDelAgan,
+  verificarPiedraDelAgan,
+  verificarEasterEggsDuales,
+  verificarRemontada,
+  verificarAtrapalosATodos,
+  verificarEspejoDelAgan,
+  verificarEspeciaDebeFluir,
+} from '@/lib/inscripciones/triggers'
 import type { PruebaDiaria } from '@/lib/db/schema'
 
 export async function POST(req: Request) {
@@ -136,7 +158,7 @@ export async function POST(req: Request) {
     await db
       .update(agonistas)
       .set({
-        kleosTotal: agonista.kleosTotal + diferencia,
+        kleosTotal: sql`kleos_total + ${diferencia}`,
         updatedAt: new Date(),
       })
       .where(eq(agonistas.id, agonista.id))
@@ -182,6 +204,30 @@ export async function POST(req: Request) {
           console.error('triggerComentariosDioses', err)
         )
       }
+
+      // Notificación de día perfecto — solo una por día (por título, no confunde con hegemonía)
+      const yaNotificado = await db
+        .select()
+        .from(notificaciones)
+        .where(
+          and(
+            eq(notificaciones.agonistId, agonista.id),
+            eq(notificaciones.titulo, '¡Día Perfecto!'),
+            gte(notificaciones.createdAt, new Date(`${hoy}T00:00:00`))
+          )
+        )
+        .limit(1)
+
+      if (yaNotificado.length === 0) {
+        void crearNotificacion({
+          agonistId: agonista.id,
+          tipo: 'hegemonia_ganada',
+          titulo: '¡Día Perfecto!',
+          descripcion:
+            'Completaste todas las pruebas del agon de hoy. El Altis lo inscribe.',
+          metadata: { fecha: hoy },
+        }).catch(() => {})
+      }
     }
   }
 
@@ -201,54 +247,124 @@ export async function POST(req: Request) {
     pruebaFinal
   )
 
-  for (const inscripcionId of nuevasInscripciones) {
-    const config = INSCRIPCIONES.find((i) => i.id === inscripcionId)
-    if (!config) continue
+  const llamaRachas = await db
+    .select({ rachaActual: llamas.rachaActual })
+    .from(llamas)
+    .where(eq(llamas.agonistId, agonistaNuevo.id))
+  const rachaMaxAgonista =
+    llamaRachas.length > 0
+      ? Math.max(...llamaRachas.map((l) => l.rachaActual))
+      : 0
 
-    const already = await db
-      .select()
-      .from(inscripciones)
-      .where(
-        and(
-          eq(inscripciones.agonistId, agonistaNuevo.id),
-          eq(inscripciones.inscripcionId, inscripcionId)
-        )
-      )
-      .limit(1)
-    if (already.length > 0) continue
-
-    await db.insert(inscripciones).values({
-      id: crypto.randomUUID(),
-      agonistId: agonistaNuevo.id,
-      inscripcionId,
-      secreto: config.secreto,
-    })
-
-    const eventoInscripcionId = crypto.randomUUID()
-    await db.insert(agoraEventos).values({
-      id: eventoInscripcionId,
-      agonistId: agonistaNuevo.id,
-      tipo: 'inscripcion_desbloqueada',
-      contenido: `${agonistaNuevo.nombre} desbloqueó: ${config.nombre}. ${config.descripcion}`,
-      metadata: { inscripcionId },
-    })
-
-    void triggerComentariosDioses(eventoInscripcionId).catch((err) =>
-      console.error('triggerComentariosDioses inscripcion_desbloqueada', err)
-    )
-  }
+  // Sistema de afinidad de facciones
+  void actualizarAfinidadHabitos(
+    agonistaNuevo.id,
+    {
+      soloAgua: pruebaFinal.soloAgua,
+      sinComidaRapida: pruebaFinal.sinComidaRapida,
+      pasos: pruebaFinal.pasos,
+      horasSueno: pruebaFinal.horasSueno,
+      paginasLeidas: pruebaFinal.paginasLeidas,
+      sesionesGym: pruebaFinal.sesionesGym,
+      sesionesCardio: pruebaFinal.sesionesCardio,
+    },
+    existente.length > 0
+      ? {
+          sesionesGym: prueba.sesionesGym,
+          sesionesCardio: prueba.sesionesCardio,
+        }
+      : null,
+    {
+      diaPerfecto: pruebaFinal.diaPerfecto,
+      rachaActual: rachaMaxAgonista,
+    }
+  ).catch(() => {})
 
   const cambioNivel = await actualizarNivel(
     agonistaNuevo.id,
     agonistaNuevo.kleosTotal
   )
 
+  if (cambioNivel) {
+    const nk = cambioNivel.nivelNuevo as NivelKey
+    void notificarNivelSubido(
+      agonistaNuevo.id,
+      cambioNivel.nivelNuevo,
+      NIVEL_LABELS[nk] ?? cambioNivel.nivelNuevo
+    ).catch(() => {})
+    void verificarEspejoDelAgan(agonistaNuevo.id, cambioNivel.nivelNuevo).catch(() => {})
+  }
+
+  // Notificar al antagonista que completaste una prueba
+  if (esCompletado(campo, valor)) {
+    const antagonistaConfig = Object.values(AGONISTAS).find(
+      (a) => a.clerkId !== userId
+    )
+    if (antagonistaConfig) {
+      const antagonista = await getAgonistaByClerkId(antagonistaConfig.clerkId)
+      if (antagonista) {
+        const pruebasHoy = contarPruebasCompletadas(pruebaFinal)
+        void notificarAntagonistaActivo(
+          antagonista.id,
+          agonista.nombre,
+          pruebasHoy
+        ).catch(() => {})
+      }
+    }
+  }
+
+  const agonistaDef = await getOrCreateAgonista(userId)
+  const pruebaDefRows = await db
+    .select()
+    .from(pruebasDiarias)
+    .where(eq(pruebasDiarias.id, prueba.id))
+    .limit(1)
+  const pruebaDef = pruebaDefRows[0]
+
+  void getAmbosAgonistas()
+    .then((ambos) => {
+      const antagonistaOtro = ambos.find((a) => a.id !== agonistaNuevo.id)
+      return Promise.all([
+        verificarGemelosDelAgan(hoy),
+        verificarPiedraDelAgan(hoy),
+        verificarEasterEggsDuales(agonistaNuevo.id, hoy),
+        verificarRemontada(
+          agonistaNuevo.id,
+          agonistaNuevo.nombre,
+          agonistaNuevo.kleosTotal,
+          antagonistaOtro?.kleosTotal ?? 0
+        ),
+        verificarAtrapalosATodos(agonistaNuevo.id, agonistaNuevo.nombre),
+        verificarEspeciaDebeFluir(
+          agonistaNuevo.id,
+          cambioNivel?.nivelNuevo ?? '',
+          agonistaNuevo.nombre
+        ),
+      ])
+    })
+    .catch(() => {})
+
   return NextResponse.json({
     ok: true,
     kleos: kleosTotalDia,
     diaPerfecto: esDiaPerfecto(p),
+    inscripcionesDesbloqueadas: nuevasInscripciones,
     inscripcionDesbloqueada: nuevasInscripciones[0] ?? null,
     nivelSubido: cambioNivel,
+    estadoReal: pruebaDef
+      ? {
+          soloAgua: pruebaDef.soloAgua,
+          sinComidaRapida: pruebaDef.sinComidaRapida,
+          pasos: pruebaDef.pasos,
+          horasSueno: pruebaDef.horasSueno,
+          paginasLeidas: pruebaDef.paginasLeidas,
+          sesionesGym: pruebaDef.sesionesGym,
+          sesionesCardio: pruebaDef.sesionesCardio,
+          kleosGanado: pruebaDef.kleosGanado,
+          diaPerfecto: pruebaDef.diaPerfecto,
+        }
+      : null,
+    kleosTotal: agonistaDef.kleosTotal,
   })
 }
 
@@ -360,6 +476,18 @@ function esDiaPerfecto(p: PruebaDiaria): boolean {
     p.sesionesGym >= 4 &&
     p.sesionesCardio >= 3
   )
+}
+
+function contarPruebasCompletadas(p: PruebaDiaria): number {
+  let count = 0
+  if (p.soloAgua) count++
+  if (p.sinComidaRapida) count++
+  if (p.pasos >= 10000) count++
+  if (p.horasSueno >= 7) count++
+  if (p.paginasLeidas >= 10) count++
+  if (p.sesionesGym >= 4) count++
+  if (p.sesionesCardio >= 3) count++
+  return count
 }
 
 async function actualizarLlama(

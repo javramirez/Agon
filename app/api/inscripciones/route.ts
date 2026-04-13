@@ -67,6 +67,7 @@ export async function POST(req: Request) {
     agonistId: agonista.id,
     inscripcionId,
     secreto: config.secreto,
+    tipo: config.tipo,
   })
 
   const eventoId = crypto.randomUUID()

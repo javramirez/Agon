@@ -9,6 +9,8 @@ import {
   jsonb,
   pgEnum,
   uniqueIndex,
+  uuid,
+  index,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -49,6 +51,34 @@ export const aclamacionTipoEnum = pgEnum('aclamacion_tipo', [
   'el_agon_te_juzga',
 ])
 
+export const notificacionTipoEnum = pgEnum('notificacion_tipo', [
+  'inscripcion_desbloqueada',
+  'nivel_subido',
+  'comentario_dios',
+  'hegemonia_ganada',
+  'prueba_extraordinaria',
+  'senalamiento',
+  'provocacion',
+  'antagonista_activo',
+  'mentor',
+])
+
+export const inscripcionTipoEnum = pgEnum('inscripcion_tipo', [
+  'publica',
+  'secreta',
+  'easter_egg',
+])
+
+export const faccionIdEnum = pgEnum('faccion_id', [
+  'guardia_hierro',
+  'escuela_logos',
+  'gremio_tierra',
+  'hermandad_caos',
+  'corredores_alba',
+  'concilio_sombras',
+  'tribunal_kleos',
+])
+
 // ─── AGONISTAS ────────────────────────────────────────
 // Los dos participantes del Gran Agon
 
@@ -63,8 +93,10 @@ export const agonistas = pgTable('agonistas', {
   oraculoSellado: boolean('oraculo_sellado').default(false).notNull(),
   senalamiento_usado: boolean('senalamiento_usado').default(false).notNull(),
   senalamiento_recibido: boolean('senalamiento_recibido').default(false).notNull(),
+  consultaMediaCompleta: boolean('consulta_media_completa').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  mentorAsignado: varchar('mentor_asignado', { length: 64 }),
 })
 
 // ─── PRUEBAS DIARIAS ──────────────────────────────────
@@ -146,6 +178,7 @@ export const inscripciones = pgTable('inscripciones', {
     .references(() => agonistas.id),
   inscripcionId: varchar('inscripcion_id', { length: 64 }).notNull(),
   secreto: boolean('secreto').default(false).notNull(),
+  tipo: inscripcionTipoEnum('tipo').default('publica').notNull(),
   desbloqueadoEn: timestamp('desbloqueado_en').defaultNow().notNull(),
 })
 
@@ -292,6 +325,91 @@ export const ekecheiria = pgTable('ekecheiria', {
   fechaInicio: date('fecha_inicio').notNull(),
   fechaFin: date('fecha_fin'),
   activa: boolean('activa').default(true).notNull(),
+  confirmacion_levantar_1: varchar('confirmacion_levantar_1', { length: 256 }),
+  confirmacion_levantar_2: varchar('confirmacion_levantar_2', { length: 256 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// ─── La Consulta del Mediodía ─────────────────────────────────────────────
+
+export const consultaMediodia = pgTable(
+  'consulta_mediodia',
+  {
+    id: varchar('id', { length: 256 }).primaryKey(),
+    agonistId: varchar('agonista_id', { length: 256 })
+      .notNull()
+      .references(() => agonistas.id, { onDelete: 'cascade' }),
+    elSacrificio: text('el_sacrificio').notNull(),
+    elMomento: text('el_momento').notNull(),
+    queHaCambiado: text('que_ha_cambiado').notNull(),
+    mentorAnterior: varchar('mentor_anterior', { length: 64 }).notNull(),
+    mentorNuevo: varchar('mentor_nuevo', { length: 64 }),
+    aceptoCambioMentor: boolean('acepto_cambio_mentor').default(false),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('consulta_mediodia_agonist_id_idx').on(t.agonistId)]
+)
+
+// ─── PACTO INICIAL ────────────────────────────────────
+// Declaraciones selladas al inicio del reto (Acto 1) y al mediodía (Acto 2)
+
+export const arquetipoEnum = pgEnum('arquetipo', [
+  'constante',
+  'explosivo',
+  'metodico',
+  'caotico',
+])
+
+export const pactoInicial = pgTable('pacto_inicial', {
+  id: varchar('id', { length: 256 }).primaryKey(),
+  agonistId: varchar('agonista_id', { length: 256 })
+    .notNull()
+    .references(() => agonistas.id),
+  acto: integer('acto').notNull().default(1),
+
+  // Bloque 1 — Tú
+  objetivo: text('objetivo').notNull(),
+  arquetipo: arquetipoEnum('arquetipo').notNull(),
+  puntoPartida: varchar('punto_partida', { length: 64 }).notNull(),
+  compromisoEscala: integer('compromiso_escala').notNull(),
+
+  // Línea base declarada — para detección de sobreexigencia
+  lineaBaseGym: integer('linea_base_gym').notNull().default(0),
+  lineaBaseCardio: integer('linea_base_cardio').notNull().default(0),
+  lineaBasePaginas: integer('linea_base_paginas').notNull().default(0),
+
+  // Bloque 2 — Tu sombra
+  sombraTipo: text('sombra_tipo').notNull(),
+  apuestaGanas: text('apuesta_ganas').notNull(),
+  apuestaPierdes: text('apuesta_pierdes').notNull(),
+
+  // Bloque 3 — El rival
+  rivalFortalezas: jsonb('rival_fortalezas').notNull().$type<string[]>(),
+  rivalDebilidad: text('rival_debilidad').notNull(),
+  preocupacionEscala: jsonb('preocupacion_escala')
+    .notNull()
+    .$type<{
+      tiempo: number
+      constancia: number
+      rival: number
+    }>(),
+
+  // Mentor asignado por lógica arquetipo + puntoPartida
+  mentorAsignado: varchar('mentor_asignado', { length: 64 }).notNull(),
+
+  completadoEn: timestamp('completado_en').defaultNow().notNull(),
+})
+
+// ─── MENTOR CONVERSACIONES ────────────────────────────
+// Historial completo de conversaciones con el Mentor asignado
+
+export const mentorConversaciones = pgTable('mentor_conversaciones', {
+  id: varchar('id', { length: 256 }).primaryKey(),
+  agonistId: varchar('agonista_id', { length: 256 })
+    .notNull()
+    .references(() => agonistas.id),
+  rol: varchar('rol', { length: 16 }).notNull(), // 'user' | 'mentor'
+  contenido: text('contenido').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
@@ -348,6 +466,41 @@ export const postsDioses = pgTable('posts_dioses', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// ─── NOTIFICACIONES ───────────────────────────────────
+
+export const notificaciones = pgTable('notificaciones', {
+  id: varchar('id', { length: 256 }).primaryKey(),
+  agonistId: varchar('agonista_id', { length: 256 })
+    .notNull()
+    .references(() => agonistas.id),
+  tipo: notificacionTipoEnum('tipo').notNull(),
+  titulo: varchar('titulo', { length: 256 }).notNull(),
+  descripcion: text('descripcion').notNull(),
+  metadata: jsonb('metadata'),
+  leida: boolean('leida').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// ─── Ciudad de Olimpia — Sistema de Afinidad ─────────────────────────────────
+
+export const faccionesAfinidad = pgTable(
+  'facciones_afinidad',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    agonistId: varchar('agonista_id', { length: 256 })
+      .notNull()
+      .references(() => agonistas.id, { onDelete: 'cascade' }),
+    faccionId: faccionIdEnum('faccion_id').notNull(),
+    puntosAfinidad: integer('puntos_afinidad').notNull().default(0),
+    rango: integer('rango').notNull().default(1),
+    rachaMilestoneMaximo: integer('racha_milestone_maximo').notNull().default(0),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('facciones_afinidad_unique_idx').on(t.agonistId, t.faccionId),
+  ]
+)
+
 // ─── RELATIONS ────────────────────────────────────────
 
 export const agonistasRelations = relations(agonistas, ({ many }) => ({
@@ -359,6 +512,9 @@ export const agonistasRelations = relations(agonistas, ({ many }) => ({
   aclamaciones: many(aclamaciones),
   correspondenciaEnviada: many(correspondencia),
   ekecheiria: many(ekecheiria),
+  pactosIniciales: many(pactoInicial),
+  mentorConversaciones: many(mentorConversaciones),
+  notificaciones: many(notificaciones),
 }))
 
 export const pruebasDiariasRelations = relations(pruebasDiarias, ({ one }) => ({
@@ -387,6 +543,27 @@ export const aclamacionesRelations = relations(aclamaciones, ({ one }) => ({
   }),
 }))
 
+export const notificacionesRelations = relations(notificaciones, ({ one }) => ({
+  agonista: one(agonistas, {
+    fields: [notificaciones.agonistId],
+    references: [agonistas.id],
+  }),
+}))
+
+export const pactoInicialRelations = relations(pactoInicial, ({ one }) => ({
+  agonista: one(agonistas, {
+    fields: [pactoInicial.agonistId],
+    references: [agonistas.id],
+  }),
+}))
+
+export const mentorConversacionesRelations = relations(mentorConversaciones, ({ one }) => ({
+  agonista: one(agonistas, {
+    fields: [mentorConversaciones.agonistId],
+    references: [agonistas.id],
+  }),
+}))
+
 // ─── TIPOS INFERIDOS ──────────────────────────────────
 
 export type Agonista = typeof agonistas.$inferSelect
@@ -401,6 +578,18 @@ export type Llama = typeof llamas.$inferSelect
 export type Hegemonia = typeof hegemonias.$inferSelect
 export type Cronica = typeof cronicas.$inferSelect
 export type Ekecheiria = typeof ekecheiria.$inferSelect
+export type ConsultaMediodia = typeof consultaMediodia.$inferSelect
+export type PactoInicial = typeof pactoInicial.$inferSelect
+export type NuevoPactoInicial = typeof pactoInicial.$inferInsert
+export type ArquetipoKey = 'constante' | 'explosivo' | 'metodico' | 'caotico'
+export type PuntoPartidaKey =
+  | 'fecha_limite'
+  | 'reconstruccion'
+  | 'interno'
+  | 'transformacion'
+export type MentorConversacion = typeof mentorConversaciones.$inferSelect
 export type ComentarioAgora = typeof comentariosAgora.$inferSelect
 export type LikeAgora = typeof likesAgora.$inferSelect
 export type PostDios = typeof postsDioses.$inferSelect
+export type Notificacion = typeof notificaciones.$inferSelect
+export type NuevaNotificacion = typeof notificaciones.$inferInsert

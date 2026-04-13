@@ -13,6 +13,7 @@ import { SectionHeader } from '@/components/agon/section-header'
 import { LoadingAltis } from '@/components/agon/loading-altis'
 import { ErrorAltis } from '@/components/agon/error-altis'
 import { cn } from '@/lib/utils'
+import { sleep } from '@/lib/utils/sleep'
 import { useEventosDestino } from '@/hooks/use-eventos-destino'
 import { EventoDestinoOverlay } from '@/components/agon/evento-destino-overlay'
 import type { Agonista, Hegemonia } from '@/lib/db/schema'
@@ -74,14 +75,16 @@ export default function AltisPage() {
   }, [destinoLatente, eventoActivado, activarDestino, tab])
 
   const cargar = useCallback(async () => {
+    const __pageLoadT0 = Date.now()
     setCargando(true)
     setError(null)
     try {
-      const [statsRes, pulsoRes, hegRes] = await Promise.all([
+      const [statsRes, pulsoRes, hegRes] = (await Promise.all([
         fetch('/api/altis/stats'),
         fetch('/api/pulso'),
         fetch('/api/hegemonia'),
-      ])
+        sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0))),
+      ])) as [Response, Response, Response, void]
 
       if (!statsRes.ok || !pulsoRes.ok || !hegRes.ok) {
         setError('No se pudieron cargar los datos del Altis.')

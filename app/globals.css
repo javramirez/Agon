@@ -155,10 +155,6 @@
     animation: fade-in 0.4s ease forwards;
   }
 
-  .glow-amber {
-    box-shadow: 0 0 20px hsl(43 96% 56% / 0.15);
-  }
-
   ::-webkit-scrollbar {
     width: 4px;
   }
@@ -222,4 +218,79 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ─── GRAIN TEXTURE GLOBAL ─────────────────────────────────────────────── */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  background-repeat: repeat;
+}
+
+/* ─── SHIMMER GRADIENT ──────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  from {
+    background-position: -200% center;
+  }
+  to {
+    background-position: 200% center;
+  }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--amber)) 0%,
+    #fff8e7 40%,
+    hsl(var(--amber)) 60%,
+    #ffe299 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ─── GLOW UTILITIES ────────────────────────────────────────────────────── */
+
+.glow-amber {
+  box-shadow: 0 0 12px 3px rgba(245, 158, 11, 0.35);
+}
+
+.glow-amber-lg {
+  box-shadow: 0 0 24px 6px rgba(245, 158, 11, 0.4);
+}
+
+/* ─── GLASS SURFACE ─────────────────────────────────────────────────────── */
+
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ─── SCROLLBAR ─────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.2);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 158, 11, 0.4);
 }

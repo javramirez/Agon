@@ -3,12 +3,16 @@ import { redirect } from 'next/navigation'
 import { isVeredictoDay } from '@/lib/utils'
 import { VeredictoCeremonia } from '@/components/agon/veredicto-ceremonia'
 import { AgonCard } from '@/components/agon/agon-card'
+import { sleep } from '@/lib/utils/sleep'
 
 export default async function VeredictPage() {
+  const __pageLoadT0 = Date.now()
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
   const esVeredicto = isVeredictoDay()
+
+  await sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0)))
 
   if (!esVeredicto) {
     return (

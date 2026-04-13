@@ -1,5 +1,5 @@
-import { LoadingAltis } from '@/components/agon/loading-altis'
+import { LoadingAgora } from '@/components/agon/loadings/loading-agora'
 
 export default function Loading() {
-  return <LoadingAltis size="lg" frase="El Ágora recibe las hazañas..." />
+  return <LoadingAgora />
 }

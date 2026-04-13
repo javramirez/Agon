@@ -13,7 +13,10 @@ import {
 } from '@/lib/pruebas-extraordinarias/semana-sagrada'
 import { getDiaDelAgan, isGranAgonActivo } from '@/lib/utils'
 import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
-import { generarTextoComentario } from '@/lib/dioses/generar-comentario'
+import {
+  generarTextoComentario,
+  generarTextoRivalidad,
+} from '@/lib/dioses/generar-comentario'
 import { DIOSES } from '@/lib/dioses/config'
 
 const MAX_COMENTARIOS_POR_REQUEST = 3
@@ -72,12 +75,29 @@ async function procesarComentariosPendientes(): Promise<number> {
       const tipoEvento =
         pendiente.tipoGeneracion ?? String(evento[0].tipo)
 
-      const texto = await generarTextoComentario(
-        pendiente.autorId,
-        evento[0].contenido,
-        textosPrevios,
-        tipoEvento
-      )
+      let texto: string | null = null
+
+      if (tipoEvento.startsWith('rivalidad_')) {
+        let contextoRivalidad = pendiente.contenido
+        try {
+          const parsed = JSON.parse(pendiente.contenido) as { contexto?: string }
+          contextoRivalidad = parsed.contexto ?? pendiente.contenido
+        } catch {
+          // usar contenido tal cual si no es JSON
+        }
+        texto = await generarTextoRivalidad(
+          pendiente.autorId,
+          tipoEvento,
+          contextoRivalidad
+        )
+      } else {
+        texto = await generarTextoComentario(
+          pendiente.autorId,
+          evento[0].contenido,
+          textosPrevios,
+          tipoEvento
+        )
+      }
 
       if (!texto) {
         await db

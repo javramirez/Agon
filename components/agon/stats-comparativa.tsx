@@ -64,6 +64,9 @@ export function StatsComparativa({
   const nivelPropio = agonista.nivel as NivelKey
   const nivelAntagonista = antagonista?.nivel as NivelKey | undefined
 
+  const IconPropio = NIVEL_ICONOS[nivelPropio]
+  const IconAntagonista = nivelAntagonista ? NIVEL_ICONOS[nivelAntagonista] : null
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-3">
@@ -81,15 +84,18 @@ export function StatsComparativa({
       </div>
 
       <div className="flex items-center gap-3 py-2 border-b border-border">
-        <span className="text-sm w-12 text-right">
-          {NIVEL_ICONOS[nivelPropio]}
-        </span>
+        <div className="w-12 flex justify-end">
+          <IconPropio size={16} className="text-amber" />
+        </div>
         <span className="text-xs text-muted-foreground font-body flex-1 text-center">
           Nivel
         </span>
-        <span className="text-sm w-12">
-          {nivelAntagonista ? NIVEL_ICONOS[nivelAntagonista] : '—'}
-        </span>
+        <div className="w-12">
+          {IconAntagonista
+            ? <IconAntagonista size={16} className="text-muted-foreground" />
+            : <span className="text-sm text-muted-foreground">—</span>
+          }
+        </div>
       </div>
 
       <StatRow

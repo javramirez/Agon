@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ICONOS_PRUEBAS } from './iconos-pruebas'
 import { LlamaIndicator } from './llama-indicator'
 import { FotoUpload } from './foto-upload'
 import type { Llama } from '@/lib/db/schema'
@@ -13,7 +16,6 @@ interface PruebaConfig {
   kleos: number
   unidad?: string
   meta?: number
-  icono: string
 }
 
 interface Props {
@@ -24,6 +26,7 @@ interface Props {
   onFotoSubida?: () => void
   onChange: (campo: string, valor: boolean | number) => void
   disabled?: boolean
+  antagonistaCompletó?: boolean
 }
 
 const campoMap: Record<string, string> = {
@@ -44,6 +47,7 @@ export function PruebaCard({
   onFotoSubida,
   onChange,
   disabled = false,
+  antagonistaCompletó = false,
 }: Props) {
   const campo = campoMap[prueba.id]
 
@@ -79,9 +83,10 @@ export function PruebaCard({
   )
 
   return (
-    <div
+    <motion.div
+      layout
       className={cn(
-        'rounded-xl border p-4 transition-all duration-200',
+        'rounded-xl border p-4 transition-colors duration-300',
         completado
           ? 'bg-surface-2 border-amber/20'
           : 'bg-surface-1 border-border',
@@ -90,19 +95,56 @@ export function PruebaCard({
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <span
-            className={cn(
-              'text-2xl flex-shrink-0 transition-all duration-200',
-              completado ? 'opacity-100' : 'opacity-40'
+          {/* Ícono con micro-animación al completar */}
+          {(() => {
+            const Icono = ICONOS_PRUEBAS[prueba.id]
+            return Icono ? (
+              <motion.div
+                className="flex-shrink-0"
+                animate={{
+                  opacity: completado ? 1 : 0.35,
+                  scale: completado ? [1, 1.15, 1] : 1,
+                }}
+                transition={{ duration: 0.3 }}
+              >
+                <Icono
+                  size={22}
+                  className={completado ? 'text-amber' : 'text-muted-foreground'}
+                />
+              </motion.div>
+            ) : null
+          })()}
+
+          {/* Marca del antagonista */}
+          <AnimatePresence>
+            {antagonistaCompletó && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.7 }}
+                transition={{ duration: 0.2 }}
+                className="flex-shrink-0 relative group"
+                title="Tu antagonista ya superó esta prueba"
+              >
+                <Shield
+                  size={13}
+                  className="text-amber/50"
+                />
+                {/* Tooltip */}
+                <div className="absolute left-1/2 -translate-x-1/2 -top-8 hidden group-hover:flex px-2 py-1 bg-surface-2 border border-border rounded-lg whitespace-nowrap z-10">
+                  <span className="text-xs text-muted-foreground font-body">
+                    Tu antagonista ya superó esta prueba
+                  </span>
+                </div>
+              </motion.div>
             )}
-          >
-            {prueba.icono}
-          </span>
+          </AnimatePresence>
+
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <p
                 className={cn(
-                  'text-sm font-body font-medium',
+                  'text-sm font-body font-medium transition-colors duration-200',
                   completado ? 'text-foreground' : 'text-muted-foreground'
                 )}
               >
@@ -127,20 +169,41 @@ export function PruebaCard({
         </div>
 
         {prueba.tipo === 'toggle' ? (
-          <button
+          <motion.button
             type="button"
             onClick={handleToggle}
             disabled={disabled}
+            whileTap={{ scale: 0.88 }}
             className={cn(
               'w-12 h-12 rounded-full border-2 flex items-center justify-center',
-              'transition-all duration-200 flex-shrink-0 active:scale-95',
+              'transition-colors duration-200 flex-shrink-0',
               completado
                 ? 'bg-amber border-amber text-black'
                 : 'bg-transparent border-border-strong text-muted-foreground hover:border-amber/40'
             )}
           >
-            {completado && <span className="text-base font-bold">✓</span>}
-          </button>
+            <AnimatePresence mode="wait">
+              {completado ? (
+                <motion.span
+                  key="check"
+                  initial={{ scale: 0, rotate: -20 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  exit={{ scale: 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                  className="text-base font-bold"
+                >
+                  ✓
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                />
+              )}
+            </AnimatePresence>
+          </motion.button>
         ) : prueba.tipo === 'contador' ? (
           <input
             type="number"
@@ -161,54 +224,60 @@ export function PruebaCard({
           />
         ) : (
           <div className="flex items-center gap-2 flex-shrink-0">
-            <button
+            <motion.button
               type="button"
               onClick={() => handleContador(-1)}
               disabled={disabled || valor === 0}
+              whileTap={{ scale: 0.88 }}
               className={cn(
                 'w-10 h-10 rounded-full bg-surface-2 border border-border',
                 'text-muted-foreground flex items-center justify-center text-lg',
-                'transition-all active:scale-95 disabled:opacity-30',
+                'transition-all disabled:opacity-30',
                 'hover:border-border-strong hover:text-foreground'
               )}
             >
               −
-            </button>
-            <span
+            </motion.button>
+            <motion.span
+              key={typeof valor === 'number' ? valor : 0}
+              initial={{ scale: 1.3, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
               className={cn(
                 'w-8 text-center font-body font-semibold text-sm tabular-nums',
                 completado ? 'text-amber' : 'text-foreground'
               )}
             >
               {typeof valor === 'number' ? valor : 0}
-            </span>
-            <button
+            </motion.span>
+            <motion.button
               type="button"
               onClick={() => handleContador(1)}
               disabled={disabled}
+              whileTap={{ scale: 0.88 }}
               className={cn(
                 'w-10 h-10 rounded-full bg-surface-2 border border-border',
                 'text-muted-foreground flex items-center justify-center text-lg',
-                'transition-all active:scale-95 disabled:opacity-30',
+                'transition-all disabled:opacity-30',
                 'hover:border-border-strong hover:text-foreground'
               )}
             >
               +
-            </button>
+            </motion.button>
           </div>
         )}
       </div>
 
       {prueba.tipo !== 'toggle' && prueba.meta && typeof valor === 'number' && (
-        <div className="mt-3 h-0.5 bg-surface-3 rounded-full overflow-hidden">
-          <div
+        <div className="mt-3 h-0.5 bg-surface-2 rounded-full overflow-hidden">
+          <motion.div
             className={cn(
-              'h-full rounded-full transition-all duration-300',
+              'h-full rounded-full',
               completado ? 'bg-amber' : 'bg-border-strong'
             )}
-            style={{
-              width: `${Math.min((valor / prueba.meta) * 100, 100)}%`,
-            }}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min((valor / prueba.meta) * 100, 100)}%` }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
           />
         </div>
       )}
@@ -217,11 +286,9 @@ export function PruebaCard({
         <FotoUpload
           tipo={prueba.id as 'gym' | 'cardio'}
           urlActual={fotoUrl}
-          onSubida={() => {
-            onFotoSubida?.()
-          }}
+          onSubida={() => { onFotoSubida?.() }}
         />
       )}
-    </div>
+    </motion.div>
   )
 }

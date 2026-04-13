@@ -11,7 +11,7 @@ interface PulsoData {
   antagonista: AgonistaPulso | null
 }
 
-export function usePulso(intervaloMs = 15000) {
+export function usePulso(intervaloMs = 8000) {
   const [data, setData] = useState<PulsoData | null>(null)
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(
     null
@@ -45,8 +45,18 @@ export function usePulso(intervaloMs = 15000) {
 
   useEffect(() => {
     fetchPulso()
+
+    const handlePruebaCompletada = () => void fetchPulso()
+    window.addEventListener('agon:prueba-completada', handlePruebaCompletada)
+
     const intervalo = setInterval(fetchPulso, intervaloMs)
-    return () => clearInterval(intervalo)
+    return () => {
+      clearInterval(intervalo)
+      window.removeEventListener(
+        'agon:prueba-completada',
+        handlePruebaCompletada
+      )
+    }
   }, [fetchPulso, intervaloMs])
 
   return { data, ultimaActualizacion, antagonistaActivo, refetch: fetchPulso }

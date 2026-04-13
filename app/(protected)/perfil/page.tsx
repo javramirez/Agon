@@ -1,15 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AgonCard } from '@/components/agon/agon-card'
 import { SectionHeader } from '@/components/agon/section-header'
 import { KleosChart } from '@/components/agon/kleos-chart'
 import { LlamasPanel } from '@/components/agon/llamas-panel'
 import { NivelDetalle } from '@/components/agon/nivel-detalle'
-import { LoadingAltis } from '@/components/agon/loading-altis'
+import { LoadingPerfil } from '@/components/agon/loadings/loading-perfil'
 import { KleosBadge } from '@/components/agon/kleos-badge'
 import { ErrorAltis } from '@/components/agon/error-altis'
 import { cn } from '@/lib/utils'
+import { sleep } from '@/lib/utils/sleep'
 import type { Agonista, Llama } from '@/lib/db/schema'
 
 interface PerfilData {
@@ -35,18 +36,24 @@ export default function PerfilPage() {
   const [datos, setDatos] = useState<PerfilData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('nivel')
+  const pageEnterAt = useRef(Date.now())
 
   useEffect(() => {
-    fetch('/api/perfil')
-      .then(async (r) => {
+    void (async () => {
+      try {
+        const r = await fetch('/api/perfil')
         const d = await r.json()
         if (!r.ok) {
           setError(typeof d.error === 'string' ? d.error : 'Error al cargar')
           return
         }
+        const elapsed = Date.now() - pageEnterAt.current
+        await sleep(Math.max(0, 4000 - elapsed))
         setDatos(d as PerfilData)
-      })
-      .catch(() => setError('El Altis no pudo cargar tu perfil.'))
+      } catch {
+        setError('El Altis no pudo cargar tu perfil.')
+      }
+    })()
   }, [])
 
   if (error) {
@@ -58,9 +65,7 @@ export default function PerfilPage() {
   }
 
   if (!datos) {
-    return (
-      <LoadingAltis size="lg" frase="El Altis revela tu legado..." />
-    )
+    return <LoadingPerfil />
   }
 
   const {

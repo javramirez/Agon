@@ -110,6 +110,7 @@ export async function POST(req: Request) {
         agonistId: agonista.id,
         inscripcionId: 'la_ekecheiria',
         secreto: true,
+        tipo: 'secreta',
       })
 
       const eventoInscripcionId = crypto.randomUUID()
