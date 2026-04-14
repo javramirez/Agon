@@ -193,6 +193,8 @@ export const agoraEventos = pgTable('agora_eventos', {
   tipo: agoraEventoTipoEnum('tipo').notNull(),
   contenido: text('contenido').notNull(),
   metadata: jsonb('metadata'),
+  narracion: text('narracion'),
+  narracionMentor: text('narracion_mentor'),
   fotoUrl: text('foto_url'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })

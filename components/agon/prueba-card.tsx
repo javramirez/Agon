@@ -16,6 +16,7 @@ interface PruebaConfig {
   kleos: number
   unidad?: string
   meta?: number
+  metaOriginal?: number
 }
 
 interface Props {
@@ -159,9 +160,27 @@ export function PruebaCard({
               )}
             </div>
             <p className="text-xs text-muted-foreground font-body mt-0.5">
-              {prueba.meta
-                ? `Meta: ${prueba.meta.toLocaleString()} ${prueba.unidad}`
-                : prueba.unidad}
+              {prueba.meta ? (
+                <span className="flex items-center gap-1.5 flex-wrap">
+                  <span>
+                    Meta: {prueba.meta.toLocaleString()} {prueba.unidad}
+                  </span>
+                  {prueba.metaOriginal != null &&
+                    prueba.meta < prueba.metaOriginal && (
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                        style={{
+                          backgroundColor: 'rgba(251,191,36,0.12)',
+                          color: '#fbbf24',
+                        }}
+                      >
+                        ★ Campeón
+                      </span>
+                    )}
+                </span>
+              ) : (
+                prueba.unidad
+              )}
               {' · '}
               <span className="text-amber-dim">{prueba.kleos} kleos</span>
             </p>

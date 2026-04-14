@@ -11,6 +11,10 @@ import {
   getLlamasAgonista,
   getPruebaDiariaAntagonista,
 } from '@/lib/db/queries'
+import { db } from '@/lib/db'
+import { faccionesAfinidad } from '@/lib/db/schema'
+import { eq } from 'drizzle-orm'
+import { getMetasEfectivas, getVentajasActivas } from '@/lib/facciones/afinidad'
 import { AGONISTAS } from '@/lib/auth'
 import { SemanaSagradaBanner } from '@/components/agon/semana-sagrada-banner'
 import { DashboardEventos } from '@/components/agon/dashboard-eventos'
@@ -40,19 +44,24 @@ export default async function DashboardPage() {
 
   const antagonista = await getAntagonista(agonista.clerkId)
 
-  const [pruebaHoy, llamas, pruebaAntagonista] = (await Promise.all([
+  const [pruebaHoy, llamas, pruebaAntagonista, afinidades] = (await Promise.all([
     getOrCreatePruebaDiariaHoy(agonista.id),
     getLlamasAgonista(agonista.id),
     antagonista
       ? getPruebaDiariaAntagonista(antagonista.id)
       : Promise.resolve(null),
+    db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, agonista.id)),
     sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0))),
   ])) as [
     Awaited<ReturnType<typeof getOrCreatePruebaDiariaHoy>>,
     Awaited<ReturnType<typeof getLlamasAgonista>>,
     Awaited<ReturnType<typeof getPruebaDiariaAntagonista>> | null,
+    (typeof faccionesAfinidad.$inferSelect)[],
     void,
   ]
+
+  const ventajasActivas = getVentajasActivas(afinidades)
+  const metasEfectivas = getMetasEfectivas(ventajasActivas)
 
   const diaActual = getDiaDelAgan()
   const diasRestantes = getDiasRestantes()
@@ -109,6 +118,7 @@ export default async function DashboardPage() {
         pruebasAntagonista={
           pruebaAntagonista ? pruebasCompletadasAntagonista(pruebaAntagonista) : {}
         }
+        metasEfectivas={metasEfectivas}
       />
 
     </div>

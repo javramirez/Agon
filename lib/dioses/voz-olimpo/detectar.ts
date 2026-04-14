@@ -35,7 +35,10 @@ export type ContextoVozOlimpo = Awaited<ReturnType<typeof recopilarContexto>>
 export async function recopilarContexto(agonistId: string) {
   const hace7Dias = new Date()
   hace7Dias.setDate(hace7Dias.getDate() - 7)
-  const fechaMin = hace7Dias.toISOString().split('T')[0]!
+  const fechaSieteAtras = hace7Dias.toISOString().split('T')[0]!
+
+  const startDate = process.env.NEXT_PUBLIC_AGON_START_DATE ?? fechaSieteAtras
+  const fechaMin = fechaSieteAtras > startDate ? fechaSieteAtras : startDate
 
   const [ultimasPruebas, agonistaRows, pactoRows, ultimosEventos] =
     await Promise.all([

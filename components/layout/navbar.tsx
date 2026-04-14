@@ -4,20 +4,21 @@ import { NIVEL_LABELS, NIVEL_ICONOS } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
 import { UserButton } from '@clerk/nextjs'
 import Link from 'next/link'
-import { Building2, type LucideIcon } from 'lucide-react'
+import { Landmark, MessagesSquare, Swords, type LucideIcon } from 'lucide-react'
 import { NavAgonistaDropdown } from '@/components/layout/nav-agonista-dropdown'
+import { NavCiudadDropdown } from '@/components/layout/nav-ciudad-dropdown'
 import { NavbarClient } from '@/components/layout/navbar-client'
 import { CampanaNotificaciones } from '@/components/agon/campana-notificaciones'
 
-type NavMainLink = { href: string; label: string; Icon?: LucideIcon }
+type NavMainLink = { href: string; label: string; Icon: LucideIcon }
 
 const NAV_MAIN: NavMainLink[] = [
-  { href: '/dashboard', label: 'El Agon' },
-  { href: '/altis', label: 'El Altis' },
-  { href: '/agora', label: 'El Ágora' },
-  { href: '/codex', label: 'El Códex' },
-  { href: '/olimpia', label: 'La Ciudad', Icon: Building2 },
+  { href: '/dashboard', label: 'El Agon', Icon: Swords },
+  { href: '/altis', label: 'El Altis', Icon: Landmark },
+  { href: '/agora', label: 'El Ágora', Icon: MessagesSquare },
 ]
+
+const navMainIconClass = 'shrink-0 opacity-80'
 
 export async function Navbar() {
   const { userId } = await auth()
@@ -49,13 +50,12 @@ export async function Navbar() {
                 href={link.href}
                 className="inline-flex items-center gap-1.5 text-xs tracking-wider text-muted-foreground hover:text-amber transition-colors duration-200 uppercase font-body"
               >
-                {Icon ? (
-                  <Icon size={14} className="shrink-0 opacity-80" aria-hidden />
-                ) : null}
+                <Icon size={14} className={navMainIconClass} aria-hidden />
                 {link.label}
               </Link>
             )
           })}
+          <NavCiudadDropdown />
           <NavAgonistaDropdown isAdmin={Boolean(isAdmin)} />
         </div>
 

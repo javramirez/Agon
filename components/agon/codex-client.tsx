@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -335,57 +336,60 @@ function SeccionInscripciones() {
         </div>
       </div>
 
-      <AnimatePresence>
-        {seleccionada && (
-          <motion.div
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSeleccionada(null)}
-          >
+      {createPortal(
+        <AnimatePresence>
+          {seleccionada && (
             <motion.div
-              className="relative max-w-sm w-full rounded-2xl p-8 text-center space-y-4 border border-amber/20"
-              style={{ background: 'rgba(10,10,10,0.98)' }}
-              initial={{ opacity: 0, scale: 0.92, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSeleccionada(null)}
             >
-              <div className={cn('text-6xl', !ids.has(seleccionada.id) && 'grayscale opacity-30')}>
-                {ids.has(seleccionada.id) ? seleccionada.icono : '🔒'}
-              </div>
-              <h2
-                className={cn(
-                  'font-display text-xl font-bold',
-                  ids.has(seleccionada.id) ? 'text-foreground' : 'text-muted-foreground/50'
+              <motion.div
+                className="relative max-w-sm w-full rounded-2xl p-8 text-center space-y-4 border border-amber/20"
+                style={{ background: 'rgba(10,10,10,0.98)' }}
+                initial={{ opacity: 0, scale: 0.92, y: 16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={cn('text-6xl', !ids.has(seleccionada.id) && 'grayscale opacity-30')}>
+                  {ids.has(seleccionada.id) ? seleccionada.icono : '🔒'}
+                </div>
+                <h2
+                  className={cn(
+                    'font-display text-xl font-bold',
+                    ids.has(seleccionada.id) ? 'text-foreground' : 'text-muted-foreground/50'
+                  )}
+                >
+                  {ids.has(seleccionada.id) ? seleccionada.nombre : 'Inscripción Bloqueada'}
+                </h2>
+                {ids.has(seleccionada.id) ? (
+                  <p className="text-sm text-muted-foreground font-body leading-relaxed">
+                    {seleccionada.descripcion}
+                  </p>
+                ) : seleccionada.tipo === 'publica' ? (
+                  <p className="text-sm text-muted-foreground font-body">{seleccionada.condicion}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground/40 font-body italic">
+                    Esta inscripción se revela al conseguirla.
+                  </p>
                 )}
-              >
-                {ids.has(seleccionada.id) ? seleccionada.nombre : 'Inscripción Bloqueada'}
-              </h2>
-              {ids.has(seleccionada.id) ? (
-                <p className="text-sm text-muted-foreground font-body leading-relaxed">
-                  {seleccionada.descripcion}
-                </p>
-              ) : seleccionada.tipo === 'publica' ? (
-                <p className="text-sm text-muted-foreground font-body">{seleccionada.condicion}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground/40 font-body italic">
-                  Esta inscripción se revela al conseguirla.
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => setSeleccionada(null)}
-                className="w-full py-3 font-display font-bold text-xs tracking-widest uppercase rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Cerrar
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setSeleccionada(null)}
+                  className="w-full py-3 font-display font-bold text-xs tracking-widest uppercase rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cerrar
+                </button>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   )
 }
@@ -767,41 +771,71 @@ function SeccionContrato({
 
 // ─── BITÁCORA CONFIG ──────────────────────────────────
 
-const EVENTO_CONFIG: Record<string, { icono: string; color: string; colorBg: string }> = {
+type EventoBitacoraConfig = {
+  icono: string
+  color: string
+  colorBg: string
+  svgColor: string
+  svgAccent: string
+  lucideIcon: string
+}
+
+const EVENTO_CONFIG: Record<string, EventoBitacoraConfig> = {
   dia_perfecto: {
     icono: '⭐',
     color: 'text-amber',
     colorBg: 'bg-amber/10 border-amber/30',
+    svgColor: '#78350f',
+    svgAccent: '#fbbf24',
+    lucideIcon: 'Star',
   },
   nivel_subido: {
     icono: '🏅',
     color: 'text-blue-400',
     colorBg: 'bg-blue-400/10 border-blue-400/30',
+    svgColor: '#1e3a5f',
+    svgAccent: '#60a5fa',
+    lucideIcon: 'TrendingUp',
   },
   inscripcion_desbloqueada: {
     icono: '📜',
     color: 'text-purple-400',
     colorBg: 'bg-purple-400/10 border-purple-400/30',
+    svgColor: '#3b1f6e',
+    svgAccent: '#a78bfa',
+    lucideIcon: 'Scroll',
   },
   hegemonia_ganada: {
     icono: '👑',
     color: 'text-orange-400',
     colorBg: 'bg-orange-400/10 border-orange-400/30',
+    svgColor: '#7c2d12',
+    svgAccent: '#fb923c',
+    lucideIcon: 'Crown',
   },
   prueba_extraordinaria: {
     icono: '⚡',
     color: 'text-yellow-400',
     colorBg: 'bg-yellow-400/10 border-yellow-400/30',
+    svgColor: '#713f12',
+    svgAccent: '#facc15',
+    lucideIcon: 'Zap',
   },
   senalamiento: {
     icono: '🎯',
     color: 'text-red-400',
     colorBg: 'bg-red-400/10 border-red-400/30',
+    svgColor: '#7f1d1d',
+    svgAccent: '#f87171',
+    lucideIcon: 'Crosshair',
   },
   cronica_semanal: {
     icono: '📰',
     color: 'text-green-400',
     colorBg: 'bg-green-400/10 border-green-400/30',
+    svgColor: '#14532d',
+    svgAccent: '#4ade80',
+    lucideIcon: 'BookOpen',
   },
 }
 
@@ -815,55 +849,316 @@ const EVENTO_LABELS: Record<string, string> = {
   cronica_semanal: 'Crónica semanal',
 }
 
-function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
-  const [narracionActiva, setNarracionActiva] = useState<{
-    eventoId: string
-    texto: string
-    mentorNombre: string
-    cargando: boolean
-  } | null>(null)
-  const [tooltipActivo, setTooltipActivo] = useState<string | null>(null)
+const DEFAULT_EVENTO_CONFIG: EventoBitacoraConfig = {
+  icono: '◆',
+  color: 'text-muted-foreground',
+  colorBg: 'bg-surface-1 border-border',
+  svgColor: '#1a1a1a',
+  svgAccent: '#888888',
+  lucideIcon: 'Circle',
+}
 
-  async function narrarEvento(evento: AgoraEvento) {
-    if (narracionActiva?.eventoId === evento.id && !narracionActiva.cargando) {
-      setNarracionActiva(null)
-      return
-    }
+function PlaceholderEvento({
+  tipo,
+  config,
+}: {
+  tipo: string
+  config: EventoBitacoraConfig
+}) {
+  return (
+    <div
+      className="w-full h-full flex items-center justify-center relative overflow-hidden"
+      style={{ backgroundColor: config.svgColor }}
+    >
+      <svg
+        className="absolute inset-0 w-full h-full opacity-10"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <pattern
+            id={`grid-${tipo}`}
+            width="32"
+            height="32"
+            patternUnits="userSpaceOnUse"
+          >
+            <path d="M 32 0 L 0 0 0 32" fill="none" stroke="white" strokeWidth="0.5" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#grid-${tipo})`} />
+      </svg>
 
-    setNarracionActiva({ eventoId: evento.id, texto: '', mentorNombre: '', cargando: true })
+      <div className="relative z-10 flex flex-col items-center gap-3">
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
+          style={{
+            backgroundColor: `${config.svgAccent}22`,
+            border: `2px solid ${config.svgAccent}44`,
+          }}
+        >
+          {config.icono}
+        </div>
+        <p
+          className="text-xs uppercase tracking-widest font-medium"
+          style={{ color: `${config.svgAccent}99` }}
+        >
+          {EVENTO_LABELS[tipo] ?? tipo}
+        </p>
+      </div>
 
-    try {
-      const res = await fetch('/api/mentor/narrar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipoEvento: EVENTO_LABELS[evento.tipo] ?? evento.tipo,
-          contenidoEvento: evento.contenido,
-          fechaEvento: new Date(evento.createdAt).toLocaleDateString('es-CL', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
+      <div
+        className="absolute bottom-0 left-0 right-0 h-16"
+        style={{
+          background: `linear-gradient(to top, ${config.svgColor}, transparent)`,
+        }}
+      />
+    </div>
+  )
+}
+
+function PanelBitacora({
+  evento,
+  onCerrar,
+}: {
+  evento: AgoraEvento
+  onCerrar: () => void
+}) {
+  const config = EVENTO_CONFIG[evento.tipo] ?? DEFAULT_EVENTO_CONFIG
+
+  const [narracion, setNarracion] = useState<string | null>(null)
+  const [mentorNombre, setMentorNombre] = useState<string | null>(null)
+  const [cargando, setCargando] = useState(false)
+  const fecha = new Date(evento.createdAt)
+
+  useEffect(() => {
+    async function cargar() {
+      if (evento.narracion && evento.narracionMentor) {
+        setNarracion(evento.narracion)
+        setMentorNombre(evento.narracionMentor)
+        return
+      }
+
+      setCargando(true)
+      try {
+        const res = await fetch('/api/mentor/narrar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventoId: evento.id,
+            tipoEvento: EVENTO_LABELS[evento.tipo] ?? evento.tipo,
+            contenidoEvento: evento.contenido,
+            fechaEvento: fecha.toLocaleDateString('es-CL', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            }),
           }),
-        }),
-      })
-
-      if (!res.ok) throw new Error('Error en API')
-      const data = (await res.json()) as { narracion: string; mentorNombre: string }
-      setNarracionActiva({
-        eventoId: evento.id,
-        texto: data.narracion,
-        mentorNombre: data.mentorNombre,
-        cargando: false,
-      })
-    } catch {
-      setNarracionActiva(null)
+        })
+        if (!res.ok) throw new Error('Error en API')
+        const data = (await res.json()) as { narracion: string; mentorNombre: string }
+        setNarracion(data.narracion)
+        setMentorNombre(data.mentorNombre)
+      } catch {
+        setNarracion(null)
+      } finally {
+        setCargando(false)
+      }
     }
-  }
+    void cargar()
+  }, [
+    evento.id,
+    evento.narracion,
+    evento.narracionMentor,
+    evento.tipo,
+    evento.contenido,
+    evento.createdAt,
+  ])
+
+  const startRaw = process.env.NEXT_PUBLIC_AGON_START_DATE ?? ''
+  const diaAgonNum =
+    startRaw.trim().length > 0
+      ? Math.ceil(
+          (fecha.getTime() - new Date(startRaw).getTime()) / (1000 * 60 * 60 * 24)
+        )
+      : null
+  const diaAgonLabel =
+    diaAgonNum != null && Number.isFinite(diaAgonNum) ? `Día ${diaAgonNum} del Agon` : null
+
+  const contenidoPanel = (
+    <div className="flex flex-col h-full relative min-h-0">
+      <button
+        type="button"
+        onClick={onCerrar}
+        className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150"
+        style={{
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          color: 'rgba(255,255,255,0.6)',
+        }}
+      >
+        ✕
+      </button>
+
+      <div className="h-48 relative flex-shrink-0">
+        <PlaceholderEvento tipo={evento.tipo} config={config} />
+      </div>
+
+      <div
+        className="px-5 py-4 flex flex-col gap-2 flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <p
+          className="text-[10px] uppercase tracking-widest"
+          style={{ color: `${config.svgAccent}99` }}
+        >
+          {EVENTO_LABELS[evento.tipo] ?? evento.tipo}
+        </p>
+        <p
+          className="text-lg font-semibold leading-tight"
+          style={{ color: 'rgba(255,255,255,0.9)' }}
+        >
+          {evento.contenido}
+        </p>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            {fecha.toLocaleDateString('es-CL', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+          </span>
+          {diaAgonLabel && (
+            <span className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
+              {diaAgonLabel}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="px-5 py-5 flex-1 min-h-0 overflow-y-auto">
+        {cargando ? (
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1">
+              {[0, 1, 2].map((j) => (
+                <motion.div
+                  key={j}
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: config.svgAccent }}
+                  animate={{ opacity: [0.3, 1, 0.3] }}
+                  transition={{ duration: 1, repeat: Infinity, delay: j * 0.2 }}
+                />
+              ))}
+            </div>
+            <p
+              className="text-xs animate-pulse"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+            >
+              El Mentor recuerda ese momento...
+            </p>
+          </div>
+        ) : narracion ? (
+          <div className="flex flex-col gap-2">
+            <p
+              className="text-[10px] uppercase tracking-widest"
+              style={{ color: 'rgba(255,255,255,0.25)' }}
+            >
+              {mentorNombre} narra
+            </p>
+            <p
+              className="text-sm leading-relaxed italic"
+              style={{ color: 'rgba(255,255,255,0.65)' }}
+            >
+              &ldquo;{narracion}&rdquo;
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
+            No se pudo cargar la narración.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+
+  return createPortal(
+    <>
+      {/* Desktop — Modal centrado */}
+      <div className="hidden sm:flex fixed inset-0 z-[9999] items-center justify-center">
+        <motion.div
+          className="absolute inset-0"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onCerrar}
+        />
+        <motion.div
+          className="relative z-10 w-full max-w-md rounded-2xl overflow-hidden"
+          style={{
+            backgroundColor: '#0f0f0f',
+            border: '1px solid rgba(255,255,255,0.08)',
+            marginTop: '72px', // compensar navbar
+          }}
+          initial={{ opacity: 0, scale: 0.95, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 8 }}
+          transition={{ duration: 0.2 }}
+        >
+          {contenidoPanel}
+        </motion.div>
+      </div>
+
+      {/* Mobile — Drawer desde abajo */}
+      <div className="sm:hidden fixed inset-0 z-[9999] flex items-end">
+        <motion.div
+          className="absolute inset-0"
+          style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onCerrar}
+        />
+        <motion.div
+          className="relative z-10 w-full rounded-t-2xl overflow-hidden"
+          style={{
+            backgroundColor: '#0f0f0f',
+            border: '1px solid rgba(255,255,255,0.08)',
+            maxHeight: '85vh',
+          }}
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        >
+          <div className="flex justify-center pt-3 pb-1">
+            <div
+              className="w-10 h-1 rounded-full"
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)' }}
+            />
+          </div>
+          {contenidoPanel}
+        </motion.div>
+      </div>
+    </>,
+    document.body
+  )
+}
+
+function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
+  const [eventoActivo, setEventoActivo] = useState<AgoraEvento | null>(null)
+  const [tooltipActivo, setTooltipActivo] = useState<string | null>(null)
 
   if (bitacora.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-        <span className="text-5xl opacity-20">📜</span>
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 20 }}>📜</span>
+        </div>
         <p className="text-sm text-muted-foreground/60 font-body max-w-xs leading-relaxed">
           La Bitácora se escribe con el tiempo. Cada hito del Gran Agon quedará inscrito aquí.
         </p>
@@ -874,203 +1169,164 @@ function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
   const eventos = [...bitacora].reverse()
 
   return (
-    <div className="space-y-6">
-      <div className="hidden sm:block">
-        <div className="relative overflow-x-auto pb-4">
-          <div className="absolute top-10 left-0 right-0 h-px bg-border/60" />
+    <>
+      <div className="space-y-6">
+        <div className="hidden sm:block">
+          <div className="relative overflow-x-auto pb-4">
+            <div
+              className="absolute top-10 left-0 right-0 h-px"
+              style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
+            />
+            <div className="flex gap-2 min-w-max px-4">
+              {eventos.map((evento, i) => {
+                const config = EVENTO_CONFIG[evento.tipo] ?? DEFAULT_EVENTO_CONFIG
+                const esActivo = eventoActivo?.id === evento.id
+                const fecha = new Date(evento.createdAt)
 
-          <div className="flex gap-2 min-w-max px-4">
-            {eventos.map((evento, i) => {
-              const config = EVENTO_CONFIG[evento.tipo] ?? {
-                icono: '◆',
-                color: 'text-muted-foreground',
-                colorBg: 'bg-surface-1 border-border',
-              }
-              const esActivo = narracionActiva?.eventoId === evento.id
-              const esTooltipActivo = tooltipActivo === evento.id
-              const fecha = new Date(evento.createdAt)
+                return (
+                  <div key={evento.id} className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
+                    <p className="text-xs text-muted-foreground/50 font-body text-center leading-tight h-8 flex items-end">
+                      {fecha.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
+                    </p>
 
-              return (
-                <div key={evento.id} className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
-                  <p className="text-xs text-muted-foreground/50 font-body text-center leading-tight h-8 flex items-end">
-                    {fecha.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
-                  </p>
+                    <div className="relative">
+                      <motion.button
+                        type="button"
+                        onClick={() => setEventoActivo(evento)}
+                        onMouseEnter={() => setTooltipActivo(evento.id)}
+                        onMouseLeave={() => setTooltipActivo(null)}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.05 }}
+                        whileHover={{ scale: 1.15 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg transition-all duration-200 relative z-10"
+                        style={{
+                          backgroundColor: esActivo
+                            ? `${config.svgAccent}22`
+                            : 'rgba(255,255,255,0.04)',
+                          borderColor: esActivo ? config.svgAccent : 'rgba(255,255,255,0.12)',
+                          boxShadow: esActivo ? `0 0 0 3px ${config.svgAccent}22` : 'none',
+                        }}
+                      >
+                        {config.icono}
+                      </motion.button>
 
-                  <div className="relative">
-                    <motion.button
-                      type="button"
-                      onClick={() => void narrarEvento(evento)}
-                      onMouseEnter={() => setTooltipActivo(evento.id)}
-                      onMouseLeave={() => setTooltipActivo(null)}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.05 }}
-                      whileHover={{ scale: 1.15 }}
-                      whileTap={{ scale: 0.95 }}
+                      <AnimatePresence>
+                        {tooltipActivo === evento.id && !esActivo && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 4 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 pointer-events-none"
+                          >
+                            <div className="bg-surface-2 border border-border rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                              <p className={cn('text-xs font-display font-bold', config.color)}>
+                                {EVENTO_LABELS[evento.tipo] ?? evento.tipo}
+                              </p>
+                              <p className="text-xs text-muted-foreground font-body max-w-[180px] truncate mt-0.5">
+                                {evento.contenido}
+                              </p>
+                            </div>
+                            <div className="w-2 h-2 bg-surface-2 border-b border-r border-border rotate-45 mx-auto -mt-1" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    <p
                       className={cn(
-                        'w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg transition-all duration-200 relative z-10',
-                        esActivo
-                          ? cn(config.colorBg, 'shadow-lg scale-110')
-                          : cn('bg-surface-1 border-border hover:border-border-strong', config.color)
+                        'text-xs font-body text-center leading-tight',
+                        esActivo ? config.color : 'text-muted-foreground/50'
                       )}
                     >
-                      {config.icono}
-                    </motion.button>
-
-                    <AnimatePresence>
-                      {esTooltipActivo && !esActivo && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 4 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 pointer-events-none"
-                        >
-                          <div className="bg-surface-2 border border-border rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
-                            <p className={cn('text-xs font-display font-bold', config.color)}>
-                              {EVENTO_LABELS[evento.tipo] ?? evento.tipo}
-                            </p>
-                            <p className="text-xs text-muted-foreground font-body max-w-[180px] truncate mt-0.5">
-                              {evento.contenido}
-                            </p>
-                            <p className="text-xs text-muted-foreground/40 font-body mt-0.5">
-                              Click para narración del Mentor
-                            </p>
-                          </div>
-                          <div className="w-2 h-2 bg-surface-2 border-b border-r border-border rotate-45 mx-auto -mt-1" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                      {EVENTO_LABELS[evento.tipo]?.split(' ')[0] ?? evento.tipo}
+                    </p>
                   </div>
-
-                  <p
-                    className={cn(
-                      'text-xs font-body text-center leading-tight',
-                      esActivo ? config.color : 'text-muted-foreground/50'
-                    )}
-                  >
-                    {EVENTO_LABELS[evento.tipo]?.split(' ')[0] ?? evento.tipo}
-                  </p>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
+        </div>
+
+        <div className="sm:hidden space-y-0">
+          {eventos.map((evento, i) => {
+            const config = EVENTO_CONFIG[evento.tipo] ?? DEFAULT_EVENTO_CONFIG
+            const esActivo = eventoActivo?.id === evento.id
+            const fecha = new Date(evento.createdAt)
+
+            return (
+              <motion.div
+                key={evento.id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="flex gap-4 items-start"
+              >
+                <div className="flex flex-col items-center flex-shrink-0">
+                  <motion.button
+                    type="button"
+                    onClick={() => setEventoActivo(evento)}
+                    whileTap={{ scale: 0.9 }}
+                    className="w-9 h-9 rounded-full border-2 flex items-center justify-center text-base transition-all duration-200"
+                    style={{
+                      backgroundColor: esActivo
+                        ? `${config.svgAccent}22`
+                        : 'rgba(255,255,255,0.04)',
+                      borderColor: esActivo ? config.svgAccent : 'rgba(255,255,255,0.12)',
+                    }}
+                  >
+                    {config.icono}
+                  </motion.button>
+                  {i < eventos.length - 1 && (
+                    <div
+                      className="w-px flex-1 min-h-[32px]"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
+                    />
+                  )}
+                </div>
+
+                <div className="pb-5 flex-1 min-w-0 pt-1.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p
+                      className={cn(
+                        'text-xs font-body tracking-widest uppercase font-medium',
+                        config.color
+                      )}
+                    >
+                      {EVENTO_LABELS[evento.tipo] ?? evento.tipo}
+                    </p>
+                    <p className="text-xs text-muted-foreground/40 font-body flex-shrink-0">
+                      {fecha.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground font-body leading-relaxed mt-0.5">
+                    {evento.contenido}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setEventoActivo(evento)}
+                    className="text-xs text-muted-foreground/40 font-body mt-1 hover:text-amber/60 transition-colors"
+                  >
+                    Ver detalle →
+                  </button>
+                </div>
+              </motion.div>
+            )
+          })}
         </div>
       </div>
 
-      <div className="sm:hidden space-y-0">
-        {eventos.map((evento, i) => {
-          const config = EVENTO_CONFIG[evento.tipo] ?? {
-            icono: '◆',
-            color: 'text-muted-foreground',
-            colorBg: 'bg-surface-1 border-border',
-          }
-          const esActivo = narracionActiva?.eventoId === evento.id
-          const fecha = new Date(evento.createdAt)
-
-          return (
-            <motion.div
-              key={evento.id}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="flex gap-4 items-start"
-            >
-              <div className="flex flex-col items-center flex-shrink-0">
-                <motion.button
-                  type="button"
-                  onClick={() => void narrarEvento(evento)}
-                  whileTap={{ scale: 0.9 }}
-                  className={cn(
-                    'w-9 h-9 rounded-full border-2 flex items-center justify-center text-base transition-all duration-200',
-                    esActivo ? cn(config.colorBg, 'shadow-md') : 'bg-surface-1 border-border'
-                  )}
-                >
-                  {config.icono}
-                </motion.button>
-                {i < eventos.length - 1 && <div className="w-px bg-border/40 flex-1 min-h-[32px]" />}
-              </div>
-
-              <div className="pb-5 flex-1 min-w-0 pt-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p
-                    className={cn(
-                      'text-xs font-body tracking-widest uppercase font-medium',
-                      config.color
-                    )}
-                  >
-                    {EVENTO_LABELS[evento.tipo] ?? evento.tipo}
-                  </p>
-                  <p className="text-xs text-muted-foreground/40 font-body flex-shrink-0">
-                    {fecha.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
-                  </p>
-                </div>
-                <p className="text-sm text-muted-foreground font-body leading-relaxed mt-0.5">
-                  {evento.contenido}
-                </p>
-                {!esActivo && (
-                  <button
-                    type="button"
-                    onClick={() => void narrarEvento(evento)}
-                    className="text-xs text-muted-foreground/40 font-body mt-1 hover:text-amber/60 transition-colors"
-                  >
-                    Escuchar al Mentor →
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          )
-        })}
-      </div>
-
       <AnimatePresence>
-        {narracionActiva && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.3 }}
-            className="rounded-xl border border-amber/20 bg-surface-1 p-5 space-y-3"
-          >
-            {narracionActiva.cargando ? (
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1">
-                  {[0, 1, 2].map((j) => (
-                    <motion.div
-                      key={j}
-                      className="w-1.5 h-1.5 rounded-full bg-amber/60"
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1, repeat: Infinity, delay: j * 0.2 }}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground font-body animate-pulse">
-                  El Mentor recuerda ese momento...
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-amber/70 font-body tracking-widest uppercase">
-                    {narracionActiva.mentorNombre} narra
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setNarracionActiva(null)}
-                    className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors font-body"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <p className="text-sm text-foreground font-body leading-relaxed italic">
-                  &ldquo;{narracionActiva.texto}&rdquo;
-                </p>
-              </>
-            )}
-          </motion.div>
+        {eventoActivo && (
+          <PanelBitacora
+            evento={eventoActivo}
+            onCerrar={() => setEventoActivo(null)}
+          />
         )}
       </AnimatePresence>
-    </div>
+    </>
   )
 }
 

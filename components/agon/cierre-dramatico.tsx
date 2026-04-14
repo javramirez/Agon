@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import { useCierreDramatico } from '@/hooks/use-cierre-dramatico'
 import { cn } from '@/lib/utils'
 
@@ -30,8 +31,8 @@ export function CierreDramatico({
   const antagonistaYaTermino = pruebasAntagonista === 7
   const pruebasFaltantes = 7 - pruebasCompletadas
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 animate-fade-in">
       <div className="text-6xl mb-6 animate-pulse-amber">⚖️</div>
 
       <div className="text-center mb-8 space-y-2">
@@ -107,6 +108,7 @@ export function CierreDramatico({
           Cerrar el agon así. El Altis registrará el silencio.
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

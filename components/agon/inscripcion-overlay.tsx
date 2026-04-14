@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCinematicReveal, type CinematicPhase } from '@/hooks/use-cinematic-reveal'
@@ -302,11 +303,11 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
   const glowColor = tokens.glowColor
   const flashColor = tokens.flashColor
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <motion.div
         key={`overlay-${indiceActual}`}
-        className="fixed inset-0 z-50 flex items-center justify-center"
+        className="fixed inset-0 z-[9999] flex items-center justify-center"
         style={{ background: 'rgba(0,0,0,0.97)' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -448,6 +449,7 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
           </AnimatePresence>
         </div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

@@ -3,56 +3,49 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Landmark, Settings, User, Zap, type LucideIcon } from 'lucide-react'
+import { BookOpen, Building2, Scale, Trophy, Users, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type AgonistaNavLink = {
+const LINKS: Array<{
   href: string
   label: string
   Icon: LucideIcon
   desc: string
-  adminOnly?: true
-}
-
-const LINKS: AgonistaNavLink[] = [
+}> = [
   {
-    href: '/perfil',
-    label: 'Mi Perfil',
-    Icon: User,
-    desc: 'Tu nivel, stats y llamas',
+    href: '/olimpia',
+    label: 'Facciones',
+    Icon: Users,
+    desc: 'Las facciones de la Ciudad de Olimpia',
   },
   {
-    href: '/poderes',
-    label: 'Poderes',
-    Icon: Zap,
-    desc: 'Provocaciones, Señalamiento y Ekecheiria',
+    href: '/codex',
+    label: 'El Códex',
+    Icon: BookOpen,
+    desc: 'La biblioteca del Gran Agon',
   },
   {
-    href: '/mentor',
-    label: 'El Mentor',
-    Icon: Landmark,
-    desc: 'Conversación con tu guía asignado',
+    href: '/oraculo',
+    label: 'El Oráculo',
+    Icon: Scale,
+    desc: 'Tu mensaje sellado del día 1',
   },
   {
-    href: '/admin',
-    label: 'Altis Admin',
-    Icon: Settings,
-    desc: 'Panel de administración',
-    adminOnly: true as const,
+    href: '/veredicto',
+    label: 'El Veredicto',
+    Icon: Trophy,
+    desc: 'La Ceremonia del Gran Agon',
   },
 ]
 
 const navIconTrigger = 'shrink-0 opacity-80'
 const navIconMenu = 'shrink-0 opacity-80 mt-0.5'
 
-export function NavAgonistaDropdown({ isAdmin }: { isAdmin: boolean }) {
+export function NavCiudadDropdown() {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
-
-  const visible = LINKS.filter((l) => !('adminOnly' in l && l.adminOnly) || isAdmin)
-
-  const active = visible.some((l) => pathname === l.href)
+  const active = LINKS.some((l) => pathname === l.href)
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -71,15 +64,13 @@ export function NavAgonistaDropdown({ isAdmin }: { isAdmin: boolean }) {
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'text-xs tracking-wider uppercase transition-colors flex items-center gap-1.5',
-          open || active
-            ? 'text-amber'
-            : 'text-muted-foreground hover:text-foreground'
+          open || active ? 'text-amber' : 'text-muted-foreground hover:text-foreground'
         )}
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <User size={14} className={navIconTrigger} aria-hidden />
-        <span>El Agonista</span>
+        <Building2 size={14} className={navIconTrigger} aria-hidden />
+        <span>La Ciudad</span>
       </button>
 
       {open && (
@@ -92,7 +83,7 @@ export function NavAgonistaDropdown({ isAdmin }: { isAdmin: boolean }) {
             boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,158,11,0.06)',
           }}
         >
-          {visible.map((link) => {
+          {LINKS.map((link) => {
             const Icon = link.Icon
             return (
               <Link

@@ -1,16 +1,12 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useEventosDestino } from '@/hooks/use-eventos-destino'
 import { EventoDestinoOverlay } from './evento-destino-overlay'
 import { AgoraFeed } from './agora-feed'
 import { EmptyState } from './empty-state'
-import { mostrarToast } from './toast-agon'
-import { DIOSES } from '@/lib/dioses/config'
-import type { AgoraEvento, ComentarioAgora } from '@/lib/db/schema'
-
-const POLL_RECIENTES_MS = 120000
+import type { AgoraEvento } from '@/lib/db/schema'
 
 interface Props {
   eventosIniciales: AgoraEvento[]
@@ -32,13 +28,6 @@ export function AgoraConTrigger({
     activarDestino,
     cerrarOverlay,
   } = useEventosDestino()
-
-  const pollingRecientesRef = useRef<ReturnType<typeof setInterval> | null>(
-    null
-  )
-  /** Evita toasts repetidos para el mismo comentario en la sesión. */
-  const idsToastYaMostrados = useRef<Set<string>>(new Set())
-  const primeraPasadaRecientes = useRef(true)
 
   useEffect(() => {
     void verificar()
@@ -76,55 +65,6 @@ export function AgoraConTrigger({
 
     return () => clearTimeout(timer)
   }, [destinoLatente, eventoActivado, activarDestino])
-
-  useEffect(() => {
-    async function tick() {
-      try {
-        const res = await fetch('/api/comentarios/recientes')
-        if (!res.ok) return
-        const data = (await res.json()) as {
-          comentariosDioses?: ComentarioAgora[]
-        }
-        const lista = data.comentariosDioses ?? []
-
-        if (primeraPasadaRecientes.current) {
-          lista.forEach((c) => idsToastYaMostrados.current.add(c.id))
-          primeraPasadaRecientes.current = false
-          return
-        }
-
-        let huboToastNuevo = false
-        for (const c of lista) {
-          if (idsToastYaMostrados.current.has(c.id)) continue
-          idsToastYaMostrados.current.add(c.id)
-          const dios = DIOSES[c.autorId]
-          if (dios) {
-            mostrarToast({
-              tipo: 'info',
-              icono: dios.avatar,
-              mensaje: `${dios.nombre} ha hablado en El Ágora.`,
-            })
-            huboToastNuevo = true
-          }
-        }
-
-        if (huboToastNuevo) {
-          router.refresh()
-        }
-      } catch {
-        /* silencioso */
-      }
-    }
-
-    void tick()
-    pollingRecientesRef.current = setInterval(() => {
-      void tick()
-    }, POLL_RECIENTES_MS)
-
-    return () => {
-      if (pollingRecientesRef.current) clearInterval(pollingRecientesRef.current)
-    }
-  }, [router])
 
   function handleCerrarOverlay() {
     cerrarOverlay()

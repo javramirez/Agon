@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 import { getCurrentAgonista } from '@/lib/auth'
 import { getMentor } from '@/lib/mentor/config'
 import { db } from '@/lib/db'
-import { agonistas } from '@/lib/db/schema'
+import { agonistas, agoraEventos } from '@/lib/db/schema'
+import { and, eq } from 'drizzle-orm'
 import Anthropic from '@anthropic-ai/sdk'
 
 function getAnthropicClient() {
@@ -31,12 +32,33 @@ export async function POST(req: Request) {
   }
 
   const b = body as Record<string, unknown>
+  const eventoId = b.eventoId as string
   const tipoEvento = b.tipoEvento as string
   const contenidoEvento = b.contenidoEvento as string
   const fechaEvento = b.fechaEvento as string
 
-  if (!tipoEvento || !contenidoEvento) {
+  if (!tipoEvento || !contenidoEvento || !eventoId) {
     return NextResponse.json({ error: 'Faltan datos del evento.' }, { status: 400 })
+  }
+
+  const eventoRows = await db
+    .select()
+    .from(agoraEventos)
+    .where(
+      and(eq(agoraEventos.id, eventoId), eq(agoraEventos.agonistId, agonista.id))
+    )
+    .limit(1)
+
+  const evento = eventoRows[0]
+  if (!evento) {
+    return NextResponse.json({ error: 'Evento no encontrado.' }, { status: 404 })
+  }
+
+  if (evento.narracion && evento.narracionMentor) {
+    return NextResponse.json({
+      narracion: evento.narracion,
+      mentorNombre: evento.narracionMentor,
+    })
   }
 
   const anthropic = getAnthropicClient()
@@ -72,6 +94,16 @@ No uses hashtags ni emojis. Evoca el momento con precisión.`
       .map((block) => (block as { text: string }).text)
       .join('')
       .trim()
+
+    await db
+      .update(agoraEventos)
+      .set({
+        narracion,
+        narracionMentor: mentor.nombre,
+      })
+      .where(
+        and(eq(agoraEventos.id, eventoId), eq(agoraEventos.agonistId, agonista.id))
+      )
 
     return NextResponse.json({ narracion, mentorNombre: mentor.nombre })
   } catch (error) {
