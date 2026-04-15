@@ -7,7 +7,14 @@ import { procesarExpiracionEkecheiria } from '@/lib/ekecheiria/procesar'
 import { procesarSenalamientoPendiente } from '@/lib/senalamiento/procesar'
 import { detectarEventosRivalidad } from '@/lib/dioses/rivalidad'
 import { orquestarVozOlimpo } from '@/lib/dioses/voz-olimpo/orquestar'
+import { resolverDisputasVencidas } from '@/lib/facciones/disputa'
+import { verificarYActivarCrisis } from '@/lib/crisis/calendario'
+import {
+  resolverCrisisVencidas,
+  aplicarConsecuenciasDiferidas,
+} from '@/lib/crisis/resolver'
 import { consultaDisponible } from '@/lib/consulta-mediodia/config'
+import { CrisisTrigger } from '@/components/agon/crisis-trigger'
 import { Navbar } from '@/components/layout/navbar'
 import { MobileNav } from '@/components/layout/mobile-nav'
 
@@ -30,6 +37,12 @@ export default async function ProtectedLayout({
   void detectarEventosRivalidad(agonista.id).catch(() => {})
 
   void orquestarVozOlimpo(agonista.id).catch(() => {})
+
+  void resolverDisputasVencidas().catch(() => {})
+
+  void verificarYActivarCrisis().catch(() => {})
+  void resolverCrisisVencidas().catch(() => {})
+  void aplicarConsecuenciasDiferidas().catch(() => {})
 
   const expiracion = await procesarExpiracionEkecheiria()
 
@@ -64,6 +77,7 @@ export default async function ProtectedLayout({
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <CrisisTrigger />
       <main className="max-w-4xl mx-auto px-4 pt-20 pb-28 sm:pb-10">
         {children}
       </main>

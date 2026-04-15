@@ -10,6 +10,20 @@ export interface PostVozOlimpo {
     url: string
     tipo: 'libro' | 'video' | 'articulo' | 'herramienta'
   }[]
+  linksValidados: boolean
+}
+
+export type ArquetipoVoz = 'constante' | 'explosivo' | 'metodico' | 'caotico'
+
+const TONO_POR_ARQUETIPO: Record<ArquetipoVoz, string> = {
+  constante:
+    'El agonista es del tipo CONSTANTE: valora la consistencia, el largo plazo y los sistemas sostenibles. Adapta tu mensaje para reforzar la identidad de quien construye despacio pero sin parar. Los recursos que recomiendes deben enfocarse en hábitos duraderos, no en picos de rendimiento.',
+  explosivo:
+    'El agonista es del tipo EXPLOSIVO: responde al desafío directo, la confrontación y la intensidad. Adapta tu mensaje para provocar, retar y encender. Los recursos que recomiendes deben ser intensos, directos y orientados a la acción inmediata.',
+  metodico:
+    'El agonista es del tipo METÓDICO: valora los frameworks, los datos y la estructura. Adapta tu mensaje para validar su enfoque sistemático y ofrecerle herramientas concretas. Los recursos que recomiendes deben tener evidencia, métricas o metodologías claras.',
+  caotico:
+    'El agonista es del tipo CAÓTICO: prospera en la variedad, la ruptura de rutinas y la imprevisibilidad. Adapta tu mensaje para sorprender, romper patrones y proponer algo inesperado. Los recursos que recomiendes deben ser poco convencionales o desafiar el pensamiento habitual.',
 }
 
 const INSTRUCCIONES_TIPO: Record<string, string> = {
@@ -83,14 +97,19 @@ Responde SOLO con un JSON con este formato exacto, sin texto adicional:
 function buildPromptGeneracion(
   señal: SeñalDetectada,
   diosPersonalidad: string,
-  diosNombre: string
+  diosNombre: string,
+  arquetipo: ArquetipoVoz | null
 ): string {
   const instruccionBusqueda =
     INSTRUCCIONES_TIPO[señal.tipoContenido] ??
     'Busca 2-3 recursos relevantes y de alta calidad sobre el tema.'
 
-  return `${diosPersonalidad}
+  const instruccionArquetipo = arquetipo
+    ? `\nPERFIL DEL AGONISTA:\n${TONO_POR_ARQUETIPO[arquetipo]}\n`
+    : ''
 
+  return `${diosPersonalidad}
+${instruccionArquetipo}
 El Gran Agon ha revelado esta situación:
 ${señal.contextoNarrativo}
 Datos: ${señal.datosConcretos}
@@ -122,8 +141,84 @@ REGLAS:
 - No inventes URLs — usa web search para encontrar los recursos reales`
 }
 
+// ─── Validación de links ──────────────────────────────────────────────────────
+
+async function validarUrl(url: string): Promise<boolean> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 4000)
+
+  try {
+    const res = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      redirect: 'follow',
+    })
+    return res.ok
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function validarYFiltrarLinks(
+  links: PostVozOlimpo['links']
+): Promise<{ links: PostVozOlimpo['links']; linksValidados: boolean }> {
+  if (links.length === 0) return { links, linksValidados: false }
+
+  const resultados = await Promise.all(
+    links.map(async (link) => ({
+      link,
+      valido: await validarUrl(link.url),
+    }))
+  )
+
+  const validos = resultados.filter((r) => r.valido).map((r) => r.link)
+  const linksValidados = validos.length === links.length
+
+  return { links: validos, linksValidados }
+}
+
+function buildPromptRegenerarLinks(
+  señal: SeñalDetectada,
+  _diosNombre: string,
+  linksFallidos: PostVozOlimpo['links']
+): string {
+  const instruccionBusqueda =
+    INSTRUCCIONES_TIPO[señal.tipoContenido] ??
+    'Busca 2-3 recursos relevantes y de alta calidad sobre el tema.'
+
+  const fallidos = linksFallidos.map((l) => `- ${l.titulo}: ${l.url}`).join('\n')
+
+  return `Los siguientes links que generaste para el post de La Voz del Olimpo están caídos o no responden:
+${fallidos}
+
+Contexto del post: ${señal.contextoNarrativo}
+
+INSTRUCCIONES DE BÚSQUEDA:
+${instruccionBusqueda}
+
+Genera links de reemplazo. Responde SOLO con un JSON sin texto adicional:
+{
+  "links": [
+    {
+      "titulo": "Título legible del recurso",
+      "url": "URL real y verificada",
+      "tipo": "libro" | "video" | "articulo" | "herramienta"
+    }
+  ]
+}
+
+REGLAS:
+- Los links deben ser reales y accesibles ahora mismo
+- Máximo 3 links, mínimo 1
+- Usa web search para verificar que existen antes de incluirlos
+- No repitas los links fallidos`
+}
+
 export async function generarPostVozOlimpo(
-  señal: SeñalDetectada
+  señal: SeñalDetectada,
+  arquetipo: ArquetipoVoz | null = null
 ): Promise<PostVozOlimpo | null> {
   const dios = DIOSES[señal.dios]
   if (!dios) return null
@@ -166,7 +261,12 @@ export async function generarPostVozOlimpo(
       messages: [
         {
           role: 'user',
-          content: buildPromptGeneracion(señal, dios.personalidad, dios.nombre),
+          content: buildPromptGeneracion(
+            señal,
+            dios.personalidad,
+            dios.nombre,
+            arquetipo
+          ),
         },
       ],
     })
@@ -174,11 +274,47 @@ export async function generarPostVozOlimpo(
     const textoFinal = extractTextFromMessage(generacion)
     if (!textoFinal) return null
 
-    const post = parseJsonFromLlm(textoFinal) as PostVozOlimpo
+    const postRaw = parseJsonFromLlm(textoFinal) as Omit<PostVozOlimpo, 'linksValidados'>
+    if (!postRaw.titular || !postRaw.descripcion || !postRaw.links?.length) return null
 
-    if (!post.titular || !post.descripcion || !post.links?.length) return null
+    const { links: linksValidos, linksValidados } = await validarYFiltrarLinks(
+      postRaw.links
+    )
 
-    return post
+    if (linksValidos.length === 0) {
+      try {
+        const regeneracion = await anthropic.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 400,
+          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+          messages: [
+            {
+              role: 'user',
+              content: buildPromptRegenerarLinks(señal, dios.nombre, postRaw.links),
+            },
+          ],
+        })
+
+        const textoRegen = extractTextFromMessage(regeneracion)
+        if (textoRegen) {
+          const parsed = parseJsonFromLlm(textoRegen) as {
+            links?: PostVozOlimpo['links']
+          }
+          if (parsed.links?.length) {
+            return {
+              ...postRaw,
+              links: parsed.links,
+              linksValidados: false,
+            }
+          }
+        }
+      } catch {
+        // Si la regeneración también falla, publicar sin links
+      }
+      return { ...postRaw, links: [], linksValidados: false }
+    }
+
+    return { ...postRaw, links: linksValidos, linksValidados }
   } catch (e) {
     console.error('generarPostVozOlimpo generacion', e)
     return null

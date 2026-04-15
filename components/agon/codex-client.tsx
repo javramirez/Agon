@@ -215,12 +215,17 @@ function SeccionInscripciones() {
   const [desbloqueadas, setDesbloqueadas] = useState<Inscripcion[]>([])
   const [cargando, setCargando] = useState(true)
   const [seleccionada, setSeleccionada] = useState<CatalogInscripcion | null>(null)
+  const [montado, setMontado] = useState(false)
 
   useEffect(() => {
     fetch('/api/inscripciones')
       .then((r) => r.json())
       .then((d) => setDesbloqueadas((d as { inscripciones: Inscripcion[] }).inscripciones ?? []))
       .finally(() => setCargando(false))
+  }, [])
+
+  useEffect(() => {
+    setMontado(true)
   }, [])
 
   const ids = new Set(desbloqueadas.map((i) => i.inscripcionId))
@@ -336,60 +341,62 @@ function SeccionInscripciones() {
         </div>
       </div>
 
-      {createPortal(
-        <AnimatePresence>
-          {seleccionada && (
-            <motion.div
-              className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSeleccionada(null)}
-            >
-              <motion.div
-                className="relative max-w-sm w-full rounded-2xl p-8 text-center space-y-4 border border-amber/20"
-                style={{ background: 'rgba(10,10,10,0.98)' }}
-                initial={{ opacity: 0, scale: 0.92, y: 16 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className={cn('text-6xl', !ids.has(seleccionada.id) && 'grayscale opacity-30')}>
-                  {ids.has(seleccionada.id) ? seleccionada.icono : '🔒'}
-                </div>
-                <h2
-                  className={cn(
-                    'font-display text-xl font-bold',
-                    ids.has(seleccionada.id) ? 'text-foreground' : 'text-muted-foreground/50'
-                  )}
-                >
-                  {ids.has(seleccionada.id) ? seleccionada.nombre : 'Inscripción Bloqueada'}
-                </h2>
-                {ids.has(seleccionada.id) ? (
-                  <p className="text-sm text-muted-foreground font-body leading-relaxed">
-                    {seleccionada.descripcion}
-                  </p>
-                ) : seleccionada.tipo === 'publica' ? (
-                  <p className="text-sm text-muted-foreground font-body">{seleccionada.condicion}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground/40 font-body italic">
-                    Esta inscripción se revela al conseguirla.
-                  </p>
-                )}
-                <button
-                  type="button"
+      {montado
+        ? createPortal(
+            <AnimatePresence>
+              {seleccionada && (
+                <motion.div
+                  className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                   onClick={() => setSeleccionada(null)}
-                  className="w-full py-3 font-display font-bold text-xs tracking-widest uppercase rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Cerrar
-                </button>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+                  <motion.div
+                    className="relative max-w-sm w-full rounded-2xl p-8 text-center space-y-4 border border-amber/20"
+                    style={{ background: 'rgba(10,10,10,0.98)' }}
+                    initial={{ opacity: 0, scale: 0.92, y: 16 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className={cn('text-6xl', !ids.has(seleccionada.id) && 'grayscale opacity-30')}>
+                      {ids.has(seleccionada.id) ? seleccionada.icono : '🔒'}
+                    </div>
+                    <h2
+                      className={cn(
+                        'font-display text-xl font-bold',
+                        ids.has(seleccionada.id) ? 'text-foreground' : 'text-muted-foreground/50'
+                      )}
+                    >
+                      {ids.has(seleccionada.id) ? seleccionada.nombre : 'Inscripción Bloqueada'}
+                    </h2>
+                    {ids.has(seleccionada.id) ? (
+                      <p className="text-sm text-muted-foreground font-body leading-relaxed">
+                        {seleccionada.descripcion}
+                      </p>
+                    ) : seleccionada.tipo === 'publica' ? (
+                      <p className="text-sm text-muted-foreground font-body">{seleccionada.condicion}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground/40 font-body italic">
+                        Esta inscripción se revela al conseguirla.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSeleccionada(null)}
+                      className="w-full py-3 font-display font-bold text-xs tracking-widest uppercase rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cerrar
+                    </button>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )
+        : null}
     </div>
   )
 }
@@ -927,6 +934,7 @@ function PanelBitacora({
   const [narracion, setNarracion] = useState<string | null>(null)
   const [mentorNombre, setMentorNombre] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
+  const [montado, setMontado] = useState(false)
   const fecha = new Date(evento.createdAt)
 
   useEffect(() => {
@@ -972,6 +980,10 @@ function PanelBitacora({
     evento.contenido,
     evento.createdAt,
   ])
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
 
   const startRaw = process.env.NEXT_PUBLIC_AGON_START_DATE ?? ''
   const diaAgonNum =
@@ -1079,6 +1091,8 @@ function PanelBitacora({
     </div>
   )
 
+  if (!montado) return null
+
   return createPortal(
     <>
       {/* Desktop — Modal centrado */}
@@ -1168,23 +1182,64 @@ function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
 
   const eventos = [...bitacora].reverse()
 
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.06,
+        delayChildren: 0.1,
+      },
+    },
+  }
+
+  const nodoVariants = {
+    hidden: { opacity: 0, scale: 0.6, y: 8 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { type: 'spring' as const, damping: 20, stiffness: 300 },
+    },
+  }
+
+  const nodoMobileVariants = {
+    hidden: { opacity: 0, x: -12 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: { type: 'spring' as const, damping: 22, stiffness: 280 },
+    },
+  }
+
   return (
     <>
       <div className="space-y-6">
         <div className="hidden sm:block">
           <div className="relative overflow-x-auto pb-4">
-            <div
-              className="absolute top-10 left-0 right-0 h-px"
+            <motion.div
+              className="absolute top-10 left-0 right-0 h-px origin-left"
               style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
             />
-            <div className="flex gap-2 min-w-max px-4">
-              {eventos.map((evento, i) => {
+            <motion.div
+              className="flex gap-2 min-w-max px-4"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {eventos.map((evento) => {
                 const config = EVENTO_CONFIG[evento.tipo] ?? DEFAULT_EVENTO_CONFIG
                 const esActivo = eventoActivo?.id === evento.id
                 const fecha = new Date(evento.createdAt)
 
                 return (
-                  <div key={evento.id} className="flex flex-col items-center gap-2 w-20 flex-shrink-0">
+                  <motion.div
+                    key={evento.id}
+                    className="flex flex-col items-center gap-2 w-20 flex-shrink-0"
+                    variants={nodoVariants}
+                  >
                     <p className="text-xs text-muted-foreground/50 font-body text-center leading-tight h-8 flex items-end">
                       {fecha.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
                     </p>
@@ -1195,11 +1250,11 @@ function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
                         onClick={() => setEventoActivo(evento)}
                         onMouseEnter={() => setTooltipActivo(evento.id)}
                         onMouseLeave={() => setTooltipActivo(null)}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.05 }}
-                        whileHover={{ scale: 1.15 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{
+                          scale: 1.18,
+                          transition: { type: 'spring' as const, damping: 15, stiffness: 400 },
+                        }}
+                        whileTap={{ scale: 0.92 }}
                         className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg transition-all duration-200 relative z-10"
                         style={{
                           backgroundColor: esActivo
@@ -1243,14 +1298,19 @@ function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
                     >
                       {EVENTO_LABELS[evento.tipo]?.split(' ')[0] ?? evento.tipo}
                     </p>
-                  </div>
+                  </motion.div>
                 )
               })}
-            </div>
+            </motion.div>
           </div>
         </div>
 
-        <div className="sm:hidden space-y-0">
+        <motion.div
+          className="sm:hidden space-y-0"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {eventos.map((evento, i) => {
             const config = EVENTO_CONFIG[evento.tipo] ?? DEFAULT_EVENTO_CONFIG
             const esActivo = eventoActivo?.id === evento.id
@@ -1259,9 +1319,7 @@ function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
             return (
               <motion.div
                 key={evento.id}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04 }}
+                variants={nodoMobileVariants}
                 className="flex gap-4 items-start"
               >
                 <div className="flex flex-col items-center flex-shrink-0">
@@ -1315,7 +1373,7 @@ function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
               </motion.div>
             )
           })}
-        </div>
+        </motion.div>
       </div>
 
       <AnimatePresence>

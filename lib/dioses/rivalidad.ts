@@ -8,6 +8,7 @@ import {
 } from '@/lib/db/schema'
 import { and, desc, eq, gte, like } from 'drizzle-orm'
 import { DIOSES, getDiosesParaEvento, getDelayDios } from './config'
+import { actualizarPuntosDisputaEvento } from '@/lib/facciones/disputa'
 
 type TipoRivalidad =
   | 'rivalidad_kleos'
@@ -138,6 +139,8 @@ export async function detectarEventosRivalidad(agonistaId: string): Promise<void
           visto: false,
         })
       }
+
+      void actualizarPuntosDisputaEvento(agonistaId, 'eris_rivalidad').catch(() => {})
     }
   } catch (err) {
     console.error('Error detectando eventos de rivalidad:', err)

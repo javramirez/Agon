@@ -17,6 +17,7 @@ import {
   type MetasUmbralHabito,
 } from '@/lib/kleos-client'
 import { NIVEL_LABELS, type NivelKey } from '@/lib/db/constants'
+import { METAS_HABITO } from '@/lib/facciones/config'
 import type { PruebaDiaria, Llama } from '@/lib/db/schema'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -40,8 +41,8 @@ function contarCompletados(estado: EstadoPruebas, metas: MetasUmbralHabito): num
     estado.pasos >= metas.pasos,
     estado.horasSueno >= metas.horasSueno,
     estado.paginasLeidas >= metas.paginasLeidas,
-    estado.sesionesGym >= 4,
-    estado.sesionesCardio >= 3,
+    estado.sesionesGym >= metas.sesionesGym,
+    estado.sesionesCardio >= metas.sesionesCardio,
   ].filter(Boolean).length
 }
 
@@ -99,13 +100,13 @@ function buildResumen(estado: EstadoPruebas, metas: MetasUmbralHabito): ResumenI
     {
       id: 'gym',
       label: 'Gym',
-      completado: estado.sesionesGym >= 4,
+      completado: estado.sesionesGym >= metas.sesionesGym,
       valor: `${estado.sesionesGym} sesiones`,
     },
     {
       id: 'cardio',
       label: 'Cardio',
-      completado: estado.sesionesCardio >= 3,
+      completado: estado.sesionesCardio >= metas.sesionesCardio,
       valor: `${estado.sesionesCardio} sesiones`,
     },
   ]
@@ -136,6 +137,14 @@ function PanelResumen({
   onConfirmar: () => void
   onCancelar: () => void
 }) {
+  const [montado, setMontado] = useState(false)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
+
+  if (!montado) return null
+
   const resumen = buildResumen(estado, metas)
   const completados = contarCompletados(estado, metas)
 
@@ -201,8 +210,8 @@ function PanelResumen({
                       pasos: estadoGuardado.pasos >= metas.pasos,
                       sueno: estadoGuardado.horasSueno >= metas.horasSueno,
                       lectura: estadoGuardado.paginasLeidas >= metas.paginasLeidas,
-                      gym: estadoGuardado.sesionesGym >= 4,
-                      cardio: estadoGuardado.sesionesCardio >= 3,
+                      gym: estadoGuardado.sesionesGym >= metas.sesionesGym,
+                      cardio: estadoGuardado.sesionesCardio >= metas.sesionesCardio,
                     }
                     const cambio = item.completado !== guardadoMap[item.id]
                     return (
@@ -335,6 +344,14 @@ function BotonFlotanteDesktop({
   onVerResumen: () => void
   onConfirmar: () => void
 }) {
+  const [montado, setMontado] = useState(false)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
+
+  if (!montado) return null
+
   return createPortal(
     <AnimatePresence>
       {visible && (
@@ -407,6 +424,14 @@ function BotonFlotanteMobile({
   esEdicion: boolean
   onConfirmar: () => void
 }) {
+  const [montado, setMontado] = useState(false)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
+
+  if (!montado) return null
+
   return createPortal(
     <AnimatePresence>
       {visible && (
@@ -446,6 +471,8 @@ interface Props {
     pasos: number
     horasSueno: number
     paginasLeidas: number
+    sesionesGym: number
+    sesionesCardio: number
   }
 }
 
@@ -461,9 +488,11 @@ export function PruebasDelDia({
 
   const metasUmbral = useMemo<MetasUmbralHabito>(
     () => ({
-      pasos: metasEfectivas?.pasos ?? 10000,
-      horasSueno: metasEfectivas?.horasSueno ?? 7,
-      paginasLeidas: metasEfectivas?.paginasLeidas ?? 10,
+      pasos: metasEfectivas?.pasos ?? METAS_HABITO.pasos,
+      horasSueno: metasEfectivas?.horasSueno ?? METAS_HABITO.horasSueno,
+      paginasLeidas: metasEfectivas?.paginasLeidas ?? METAS_HABITO.paginasLeidas,
+      sesionesGym: metasEfectivas?.sesionesGym ?? METAS_HABITO.sesionesGym,
+      sesionesCardio: metasEfectivas?.sesionesCardio ?? METAS_HABITO.sesionesCardio,
     }),
     [metasEfectivas]
   )
@@ -517,7 +546,8 @@ export function PruebasDelDia({
         tipo: 'contador_semanal' as const,
         kleos: 30,
         unidad: 'sesiones esta semana',
-        meta: 4,
+        meta: metasUmbral.sesionesGym,
+        metaOriginal: METAS_HABITO.sesionesGym,
       },
       {
         id: 'cardio',
@@ -525,7 +555,8 @@ export function PruebasDelDia({
         tipo: 'contador_semanal' as const,
         kleos: 25,
         unidad: 'sesiones esta semana',
-        meta: 3,
+        meta: metasUmbral.sesionesCardio,
+        metaOriginal: METAS_HABITO.sesionesCardio,
       },
     ],
     [metasUmbral]

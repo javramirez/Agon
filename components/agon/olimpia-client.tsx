@@ -9,7 +9,7 @@ import {
   getPoblacionVisible,
   type FaccionId,
 } from '@/lib/facciones/config'
-import { faccionesAfinidad } from '@/lib/db/schema'
+import { faccionesAfinidad, type DisputaCampeon } from '@/lib/db/schema'
 import type { InferSelectModel } from 'drizzle-orm'
 
 type AfinidadRow = InferSelectModel<typeof faccionesAfinidad>
@@ -17,8 +17,10 @@ type AfinidadRow = InferSelectModel<typeof faccionesAfinidad>
 interface Props {
   agonistaNombre: string
   rivalNombre: string
+  miId: string
   miAfinidad: AfinidadRow[]
   rivalAfinidad: AfinidadRow[]
+  disputasActivas: DisputaCampeon[]
 }
 
 function getAfinidad(afinidades: AfinidadRow[], faccionId: FaccionId) {
@@ -74,6 +76,7 @@ function FaccionCard({
   faccionId,
   miAfinidad,
   rivalAfinidad,
+  agonistaNombre: _agonistaNombre,
   rivalNombre,
   seleccionada,
   onClick,
@@ -218,12 +221,16 @@ function PanelDetalle({
   rivalAfinidad,
   agonistaNombre,
   rivalNombre,
+  miId,
+  disputasActivas,
 }: {
   faccionId: FaccionId
   miAfinidad: AfinidadRow[]
   rivalAfinidad: AfinidadRow[]
   agonistaNombre: string
   rivalNombre: string
+  miId: string
+  disputasActivas: DisputaCampeon[]
 }) {
   const faccion = FACCIONES[faccionId]
   const Icono = faccion.icono
@@ -243,6 +250,29 @@ function PanelDetalle({
     100,
     (poblacionVisible / faccion.poblacionBase) * 100
   )
+
+  const disputaActiva = disputasActivas.find((d) => d.faccionId === faccionId)
+  const esRetador = disputaActiva?.agonistIdRetador === miId
+  const misPuntosDisputa = disputaActiva
+    ? esRetador
+      ? disputaActiva.puntosRetador
+      : disputaActiva.puntosDefensor
+    : 0
+  const rivPuntosDisputa = disputaActiva
+    ? esRetador
+      ? disputaActiva.puntosDefensor
+      : disputaActiva.puntosRetador
+    : 0
+  const diasRestantes = disputaActiva
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(disputaActiva.fechaFin).getTime() - Date.now()) /
+            (1000 * 60 * 60 * 24)
+        )
+      )
+    : 0
+  const totalPuntosDisputa = misPuntosDisputa + rivPuntosDisputa
 
   return (
     <motion.div
@@ -357,20 +387,113 @@ function PanelDetalle({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <div
-            className="rounded-xl p-4 text-center"
-            style={{
-              backgroundColor: `${faccion.color}0F`,
-              border: `1px solid ${faccion.color}33`,
-            }}
-          >
-            <p className="text-sm font-semibold" style={{ color: faccion.color }}>
-              ★ Campeón de {faccion.dios}
-            </p>
-            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              El {faccion.dios} reconoce tu dominio sobre esta facción
-            </p>
-          </div>
+          {disputaActiva ? (
+            <div
+              className="rounded-xl p-4"
+              style={{
+                backgroundColor: 'rgba(220,60,40,0.07)',
+                border: '1px solid rgba(220,60,40,0.25)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <p
+                  className="text-[10px] uppercase tracking-widest font-semibold"
+                  style={{ color: 'rgba(240,100,80,0.85)' }}
+                >
+                  ⚔️ Duelo activo
+                </p>
+                <p
+                  className="text-[10px] px-2 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    color: 'rgba(255,255,255,0.3)',
+                  }}
+                >
+                  {diasRestantes === 0
+                    ? 'Termina hoy'
+                    : `${diasRestantes} día${diasRestantes !== 1 ? 's' : ''} restante${diasRestantes !== 1 ? 's' : ''}`}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-center flex-1">
+                  <div
+                    className="text-2xl font-semibold tabular-nums"
+                    style={{ color: faccion.color }}
+                  >
+                    {misPuntosDisputa}
+                  </div>
+                  <div
+                    className="text-[10px] mt-0.5"
+                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                  >
+                    {agonistaNombre.split(' ')[0]}
+                  </div>
+                </div>
+
+                <div
+                  className="text-xs px-3"
+                  style={{ color: 'rgba(255,255,255,0.12)' }}
+                >
+                  vs
+                </div>
+
+                <div className="text-center flex-1">
+                  <div
+                    className="text-2xl font-semibold tabular-nums"
+                    style={{ color: 'rgba(255,255,255,0.35)' }}
+                  >
+                    {rivPuntosDisputa}
+                  </div>
+                  <div
+                    className="text-[10px] mt-0.5"
+                    style={{ color: 'rgba(255,255,255,0.3)' }}
+                  >
+                    {rivalNombre.split(' ')[0]}
+                  </div>
+                </div>
+              </div>
+
+              {totalPuntosDisputa > 0 ? (
+                <div
+                  className="h-1.5 rounded-full overflow-hidden"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.07)' }}
+                >
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: faccion.color }}
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${Math.round((misPuntosDisputa / totalPuntosDisputa) * 100)}%`,
+                    }}
+                    transition={{ duration: 0.7, ease: 'easeOut', delay: 0.1 }}
+                  />
+                </div>
+              ) : (
+                <p
+                  className="text-[10px] text-center"
+                  style={{ color: 'rgba(255,255,255,0.2)' }}
+                >
+                  Ninguno ha puntuado aún — el primero en llegar mantiene
+                </p>
+              )}
+            </div>
+          ) : (
+            <div
+              className="rounded-xl p-4 text-center"
+              style={{
+                backgroundColor: `${faccion.color}0F`,
+                border: `1px solid ${faccion.color}33`,
+              }}
+            >
+              <p className="text-sm font-semibold" style={{ color: faccion.color }}>
+                ★ Campeón de {faccion.dios}
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                El {faccion.dios} reconoce tu dominio sobre esta facción
+              </p>
+            </div>
+          )}
 
           {VENTAJAS_CAMPEON[faccionId] && (
             <div
@@ -406,8 +529,10 @@ function PanelDetalle({
 export function OlimpiaClient({
   agonistaNombre,
   rivalNombre,
+  miId,
   miAfinidad,
   rivalAfinidad,
+  disputasActivas,
 }: Props) {
   const [faccionSeleccionada, setFaccionSeleccionada] =
     useState<FaccionId>('guardia_hierro')
@@ -460,6 +585,8 @@ export function OlimpiaClient({
                 rivalAfinidad={rivalAfinidad}
                 agonistaNombre={agonistaNombre}
                 rivalNombre={rivalNombre}
+                miId={miId}
+                disputasActivas={disputasActivas}
               />
             </AnimatePresence>
           </div>

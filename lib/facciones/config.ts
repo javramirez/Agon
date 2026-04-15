@@ -157,6 +157,8 @@ export const METAS_HABITO = {
   pasos: 10000,
   horasSueno: 7,
   paginasLeidas: 10,
+  sesionesGym: 4,
+  sesionesCardio: 3,
 } as const
 
 export function calcularRango(puntos: number): number {
@@ -221,7 +223,7 @@ export const VENTAJAS_CAMPEON: Partial<Record<FaccionId, VentajaCampeon>> = {
     faccionId: 'guardia_hierro',
     titulo: 'Forja Continua',
     descripcion:
-      'Ares recompensa el esfuerzo del Campeón con mayor reconocimiento por cada sesión.',
-    nota: 'Gym: 9 pts / Cardio: 8 pts en vez de 7 / 6',
+      'Ares recompensa al Campeón con mayor reconocimiento por sesión y exigencia reducida: gym 3 sesiones y cardio 2 bastan.',
+    nota: 'Gym: 9 pts / Cardio: 8 pts. Meta semanal: gym >= 3, cardio >= 2',
   },
 }

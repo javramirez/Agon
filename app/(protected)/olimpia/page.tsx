@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { faccionesAfinidad, agonistas } from '@/lib/db/schema'
+import { faccionesAfinidad, agonistas, disputasCampeon } from '@/lib/db/schema'
 import { getCurrentAgonista, getAntagonista } from '@/lib/auth'
+import { eq } from 'drizzle-orm'
 import { OlimpiaClient } from '@/components/agon/olimpia-client'
 import { LoadingOlimpia } from '@/components/agon/loadings/loading-olimpia'
 import { Suspense } from 'react'
@@ -15,9 +16,10 @@ async function OlimpiaData() {
 
   const start = Date.now()
 
-  const [todasAfinidades, todosAgonistas] = await Promise.all([
+  const [todasAfinidades, todosAgonistas, disputasActivas] = await Promise.all([
     db.select().from(faccionesAfinidad),
     db.select().from(agonistas),
+    db.select().from(disputasCampeon).where(eq(disputasCampeon.resuelta, false)),
     sleep(Math.max(0, 4000 - (Date.now() - start))),
   ])
 
@@ -33,8 +35,10 @@ async function OlimpiaData() {
     <OlimpiaClient
       agonistaNombre={agonista.nombre}
       rivalNombre={rival?.nombre ?? 'Tu rival'}
+      miId={agonista.id}
       miAfinidad={miAfinidad}
       rivalAfinidad={rivalAfinidad}
+      disputasActivas={disputasActivas}
     />
   )
 }

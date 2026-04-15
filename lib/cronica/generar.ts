@@ -85,6 +85,8 @@ export async function generarCronica(semana?: number): Promise<string> {
         tipo: 'cronica',
         fechaInicio: datos.fechaInicio,
         fechaFin: datos.fechaFin,
+        kleosPropio: ambos[0].kleosTotal,
+        kleosRival: ambos[1]?.kleosTotal ?? 0,
       },
     })
 
@@ -314,6 +316,8 @@ export async function generarCronicaConFecha(
         tipo: 'cronica_prueba',
         fechaInicio: datos.fechaInicio,
         fechaFin: datos.fechaFin,
+        kleosPropio: ambos[0].kleosTotal,
+        kleosRival: ambos[1]?.kleosTotal ?? 0,
       },
     })
 

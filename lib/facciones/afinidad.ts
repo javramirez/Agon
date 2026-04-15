@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
-import { faccionesAfinidad } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { disputasCampeon, faccionesAfinidad } from '@/lib/db/schema'
+import { and, eq } from 'drizzle-orm'
 import {
   type FaccionId,
   type VentajaCampeon,
@@ -11,6 +11,7 @@ import {
   VENTAJAS_CAMPEON,
   calcularRango,
 } from './config'
+import { detectarDisputaCampeon } from './disputa'
 
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ async function upsertFaccion(params: {
   campeonCount: number
   rachaMilestoneActual: number
   rachaMilestoneNuevo: number
-}): Promise<void> {
+}): Promise<{ subioACampeon: boolean }> {
   const {
     agonistId,
     faccionId,
@@ -98,6 +99,8 @@ async function upsertFaccion(params: {
         updatedAt: new Date(),
       },
     })
+
+  return { subioACampeon: nuevoRango === 5 && rangoActual < 5 }
 }
 
 // ─── Función principal: llamada desde pruebas/route.ts ────────────────────────
@@ -198,7 +201,7 @@ export async function actualizarAfinidadHabitos(
 
   for (const [faccionId, puntosNuevos] of updatesPorFaccion) {
     const actual = afinidadMap.get(faccionId)
-    await upsertFaccion({
+    const { subioACampeon } = await upsertFaccion({
       agonistId,
       faccionId,
       puntosNuevos,
@@ -211,6 +214,9 @@ export async function actualizarAfinidadHabitos(
           ? nuevoMilestoneMax
           : (actual?.rachaMilestoneMaximo ?? 0),
     })
+    if (subioACampeon) {
+      void detectarDisputaCampeon(agonistId, faccionId)
+    }
   }
 }
 
@@ -249,23 +255,43 @@ export async function actualizarAfinidadEvento(
 
   const { faccionId, puntos } = mapeo[tipo]
 
-  const afinidades = await db
-    .select()
-    .from(faccionesAfinidad)
-    .where(eq(faccionesAfinidad.agonistId, agonistId))
+  const [afinidades, disputasGanadas] = await Promise.all([
+    db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, agonistId)),
+    db
+      .select({ faccionId: disputasCampeon.faccionId })
+      .from(disputasCampeon)
+      .where(
+        and(
+          eq(disputasCampeon.ganadorId, agonistId),
+          eq(disputasCampeon.resuelta, true)
+        )
+      ),
+  ])
+
   const campeonCount = afinidades.filter((a) => a.rango === 5).length
   const actual = afinidades.find((a) => a.faccionId === faccionId)
 
-  await upsertFaccion({
+  const esEris = faccionId === 'hermandad_caos'
+  const erisIndiscutida =
+    esEris &&
+    disputasGanadas.some((d) => d.faccionId === 'hermandad_caos') &&
+    (actual?.rango ?? 0) === 5
+
+  const puntosFinales = erisIndiscutida ? puntos * 2 : puntos
+
+  const { subioACampeon } = await upsertFaccion({
     agonistId,
     faccionId,
-    puntosNuevos: puntos,
+    puntosNuevos: puntosFinales,
     puntosActuales: actual?.puntosAfinidad ?? 0,
     rangoActual: actual?.rango ?? 1,
     campeonCount,
     rachaMilestoneActual: actual?.rachaMilestoneMaximo ?? 0,
     rachaMilestoneNuevo: actual?.rachaMilestoneMaximo ?? 0,
   })
+  if (subioACampeon) {
+    void detectarDisputaCampeon(agonistId, faccionId)
+  }
 }
 
 // ─── Ventajas de Campeón (lectura / metas y puntos efectivos) ─────────────────
@@ -287,8 +313,12 @@ export function getMetasEfectivas(ventajasActivas: VentajaCampeon[]) {
     pasos: ids.includes('corredores_alba') ? 9000 : METAS_HABITO.pasos,
     horasSueno: ids.includes('concilio_sombras') ? 6 : METAS_HABITO.horasSueno,
     paginasLeidas: ids.includes('escuela_logos') ? 5 : METAS_HABITO.paginasLeidas,
+    sesionesGym: ids.includes('guardia_hierro') ? 3 : METAS_HABITO.sesionesGym,
+    sesionesCardio: ids.includes('guardia_hierro') ? 2 : METAS_HABITO.sesionesCardio,
   }
 }
+
+export type MetasEfectivas = ReturnType<typeof getMetasEfectivas>
 
 export function getPuntosEfectivos(ventajasActivas: VentajaCampeon[]) {
   const ids = ventajasActivas.map((v) => v.faccionId)
@@ -298,5 +328,47 @@ export function getPuntosEfectivos(ventajasActivas: VentajaCampeon[]) {
       : PUNTOS_EVENTO.demeter_paquete,
     ares_gym: ids.includes('guardia_hierro') ? 9 : PUNTOS_EVENTO.ares_gym,
     ares_cardio: ids.includes('guardia_hierro') ? 8 : PUNTOS_EVENTO.ares_cardio,
+  }
+}
+
+// ─── Ventajas Fase B — requieren haber ganado una Disputa ─────────────────────
+
+export interface VentajasFaseB {
+  /** Ganó disputa en tribunal_kleos y es Campeón → +20% kleos día perfecto */
+  nikeIndiscutido: boolean
+  /** Ganó disputa en hermandad_caos y es Campeón → doble pts afinidad rivalidad */
+  erisIndiscutido: boolean
+  /** Campeón de guardia_hierro (sin requerir disputa) → metas reducidas */
+  aresCampeon: boolean
+}
+
+export async function getVentajasFaseB(agonistId: string): Promise<VentajasFaseB> {
+  const [afinidades, disputasGanadas] = await Promise.all([
+    db
+      .select({ faccionId: faccionesAfinidad.faccionId, rango: faccionesAfinidad.rango })
+      .from(faccionesAfinidad)
+      .where(eq(faccionesAfinidad.agonistId, agonistId)),
+    db
+      .select({ faccionId: disputasCampeon.faccionId })
+      .from(disputasCampeon)
+      .where(
+        and(
+          eq(disputasCampeon.ganadorId, agonistId),
+          eq(disputasCampeon.resuelta, true)
+        )
+      ),
+  ])
+
+  const faccionesGanadas = new Set(disputasGanadas.map((d) => d.faccionId))
+
+  return {
+    nikeIndiscutido:
+      faccionesGanadas.has('tribunal_kleos') &&
+      (afinidades.find((a) => a.faccionId === 'tribunal_kleos')?.rango ?? 0) === 5,
+    erisIndiscutido:
+      faccionesGanadas.has('hermandad_caos') &&
+      (afinidades.find((a) => a.faccionId === 'hermandad_caos')?.rango ?? 0) === 5,
+    aresCampeon:
+      (afinidades.find((a) => a.faccionId === 'guardia_hierro')?.rango ?? 0) === 5,
   }
 }

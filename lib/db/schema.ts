@@ -61,6 +61,7 @@ export const notificacionTipoEnum = pgEnum('notificacion_tipo', [
   'provocacion',
   'antagonista_activo',
   'mentor',
+  'duelo_campeon',
 ])
 
 export const inscripcionTipoEnum = pgEnum('inscripcion_tipo', [
@@ -77,6 +78,24 @@ export const faccionIdEnum = pgEnum('faccion_id', [
   'corredores_alba',
   'concilio_sombras',
   'tribunal_kleos',
+])
+
+export const crisisMecanicaEnum = pgEnum('crisis_mecanica', [
+  'A',
+  'B',
+  'D',
+  'E',
+  'F',
+  'G',
+  'H',
+  'I',
+])
+
+export const crisisEscenarioEnum = pgEnum('crisis_escenario', [
+  '1',
+  '2',
+  '3',
+  '4',
 ])
 
 // ─── AGONISTAS ────────────────────────────────────────
@@ -503,6 +522,98 @@ export const faccionesAfinidad = pgTable(
   ]
 )
 
+// ─── DISPUTAS DE CAMPEÓN ──────────────────────────────
+// Duelo de 3 días cuando dos agonistas alcanzan rango 5 en la misma facción
+
+export const disputasCampeon = pgTable(
+  'disputas_campeon',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    faccionId: faccionIdEnum('faccion_id').notNull(),
+    agonistIdRetador: varchar('agonist_id_retador', { length: 256 })
+      .notNull()
+      .references(() => agonistas.id),
+    agonistIdDefensor: varchar('agonist_id_defensor', { length: 256 })
+      .notNull()
+      .references(() => agonistas.id),
+    fechaInicio: timestamp('fecha_inicio').defaultNow().notNull(),
+    fechaFin: timestamp('fecha_fin').notNull(),
+    puntosRetador: integer('puntos_retador').default(0).notNull(),
+    puntosDefensor: integer('puntos_defensor').default(0).notNull(),
+    resuelta: boolean('resuelta').default(false).notNull(),
+    ganadorId: varchar('ganador_id', { length: 256 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    index('disputas_campeon_faccion_resuelta_idx').on(t.faccionId, t.resuelta),
+    index('disputas_campeon_retador_idx').on(t.agonistIdRetador),
+    index('disputas_campeon_defensor_idx').on(t.agonistIdDefensor),
+  ]
+)
+
+// ─── CALENDARIO DE CRISIS ─────────────────────────────
+// Generado una sola vez al inicio del reto — 4 crisis sorteadas del pool de 19
+
+export const calendarioCrisis = pgTable('calendario_crisis', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  crisisSeleccionadas: jsonb('crisis_seleccionadas').notNull().$type<string[]>(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// ─── CRISIS DE CIUDAD ─────────────────────────────────
+// Una fila por crisis activada durante el reto
+
+export const crisisCiudad = pgTable(
+  'crisis_ciudad',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    crisisId: varchar('crisis_id', { length: 64 }).notNull(),
+    semana: integer('semana').notNull(),
+    fechaActivacion: timestamp('fecha_activacion').defaultNow().notNull(),
+    fechaExpiracion: timestamp('fecha_expiracion').notNull(),
+
+    // Decisiones de cada agonista — null hasta que deciden
+    decisionAgonista1: varchar('decision_agonista1', { length: 1 }), // 'A' | 'B'
+    decisionAgonista2: varchar('decision_agonista2', { length: 1 }), // 'A' | 'B'
+
+    // Texto libre para crisis Tipo G
+    respuestaTextoAgonista1: text('respuesta_texto_agonista1'),
+    respuestaTextoAgonista2: text('respuesta_texto_agonista2'),
+
+    // Puntuación para crisis Tipo F (trivia/apuesta)
+    puntajeAgonista1: integer('puntaje_agonista1'),
+    puntajeAgonista2: integer('puntaje_agonista2'),
+
+    // Preguntas de trivia seleccionadas — mismas para ambos
+    triviaPreguntas: jsonb('trivia_preguntas').$type<string[]>(),
+
+    // Resolución
+    escenarioResuelto: varchar('escenario_resuelto', { length: 1 }),
+    resuelta: boolean('resuelta').default(false).notNull(),
+
+    // Consecuencia diferida (Tipo I)
+    consecuenciaDiferidaFecha: timestamp('consecuencia_diferida_fecha'),
+    consecuenciaDiferidaAplicada: boolean('consecuencia_diferida_aplicada')
+      .default(false)
+      .notNull(),
+
+    // Cambio de líder en Códex (Crisis 19 — Milcíades)
+    liderModificado: jsonb('lider_modificado').$type<{
+      faccionId: string
+      liderOriginal: string
+      liderNuevo: string
+      descripcionNueva: string
+    } | null>(),
+
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    index('crisis_ciudad_crisis_id_idx').on(t.crisisId),
+    index('crisis_ciudad_semana_idx').on(t.semana),
+    index('crisis_ciudad_resuelta_idx').on(t.resuelta),
+  ]
+)
+
 // ─── RELATIONS ────────────────────────────────────────
 
 export const agonistasRelations = relations(agonistas, ({ many }) => ({
@@ -595,3 +706,8 @@ export type LikeAgora = typeof likesAgora.$inferSelect
 export type PostDios = typeof postsDioses.$inferSelect
 export type Notificacion = typeof notificaciones.$inferSelect
 export type NuevaNotificacion = typeof notificaciones.$inferInsert
+export type DisputaCampeon = typeof disputasCampeon.$inferSelect
+export type NuevaDisputaCampeon = typeof disputasCampeon.$inferInsert
+export type CalendarioCrisis = typeof calendarioCrisis.$inferSelect
+export type CrisisCiudad = typeof crisisCiudad.$inferSelect
+export type NuevaCrisisCiudad = typeof crisisCiudad.$inferInsert

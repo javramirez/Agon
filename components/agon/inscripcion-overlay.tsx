@@ -3,7 +3,11 @@
 import { createPortal } from 'react-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useCinematicReveal, type CinematicPhase } from '@/hooks/use-cinematic-reveal'
+import {
+  useCinematicReveal,
+  type CinematicPhase,
+  type CinematicIntensity,
+} from '@/hooks/use-cinematic-reveal'
 import { useCinematicAudio } from '@/hooks/use-cinematic-audio'
 import { InscripcionCard } from '@/components/agon/inscripcion-card'
 import { getVisualTokens, getNarrativeIntensity } from '@/lib/inscripciones/visual-system'
@@ -258,7 +262,14 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
     [playPhase]
   )
 
+  const intensityKey: CinematicIntensity = isEasterEgg
+    ? 'easter_egg'
+    : isEpica
+      ? 'epica'
+      : 'forjada'
+
   const { phase, start, reset, showButton } = useCinematicReveal({
+    intensity: intensityKey,
     onPhaseChange,
     onComplete: handleComplete,
   })
@@ -390,30 +401,72 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
           <AnimatePresence>
             {(phase === 'reveal' || phase === 'afterglow' || phase === 'control') && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.85, y: 24 }}
+                initial={
+                  isEasterEgg
+                    ? { opacity: 0, scale: 0.7, rotate: -12 + Math.random() * 24, y: 32 }
+                    : isEpica
+                      ? { opacity: 0, scale: 0.75, rotate: -4, y: 28 }
+                      : { opacity: 0, scale: 0.85, y: 24 }
+                }
                 animate={{
                   opacity: 1,
                   scale: tokens.scaleOnReveal,
+                  rotate: 0,
                   y: 0,
                 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 260,
-                  damping: 20,
-                  duration: 0.6,
-                }}
+                transition={
+                  isEasterEgg
+                    ? { type: 'spring' as const, stiffness: 180, damping: 12, duration: 0.8 }
+                    : isEpica
+                      ? { type: 'spring' as const, stiffness: 220, damping: 16, duration: 0.7 }
+                      : { type: 'spring' as const, stiffness: 260, damping: 20, duration: 0.6 }
+                }
               >
+                {/* Opción A — shake reemplazado por entrada diferenciada, mantener solo el glow pulse */}
                 <motion.div
                   animate={
-                    phase === 'reveal' && (isEpica || isEasterEgg)
-                      ? {
-                          x: [0, -tokens.shake * 4, tokens.shake * 4, -tokens.shake * 2, 0],
-                          y: [0, tokens.shake * 2, -tokens.shake * 2, 0],
-                        }
+                    phase === 'afterglow'
+                      ? isEasterEgg
+                        ? {
+                            boxShadow: [
+                              `0 0 0px ${primaryColor}00`,
+                              `0 0 40px ${primaryColor}99`,
+                              `0 0 15px ${primaryColor}44`,
+                              `0 0 55px ${primaryColor}88`,
+                              `0 0 20px ${primaryColor}55`,
+                            ],
+                            scale: [1, 1.03, 0.99, 1.04, 1],
+                          }
+                        : isEpica
+                          ? {
+                              boxShadow: [
+                                `0 0 0px ${primaryColor}00`,
+                                `0 0 50px ${primaryColor}77`,
+                                `0 0 20px ${primaryColor}33`,
+                                `0 0 50px ${primaryColor}66`,
+                              ],
+                              scale: [1, 1.025, 1, 1.025],
+                            }
+                          : {
+                              boxShadow: [
+                                `0 0 0px ${primaryColor}00`,
+                                `0 0 20px ${primaryColor}44`,
+                                `0 0 0px ${primaryColor}00`,
+                              ],
+                            }
                       : {}
                   }
-                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                  transition={
+                    phase === 'afterglow'
+                      ? isEasterEgg
+                        ? { duration: 3.2, ease: 'easeInOut', times: [0, 0.2, 0.4, 0.7, 1] }
+                        : isEpica
+                          ? { duration: 2.6, ease: 'easeInOut', repeat: 1, repeatType: 'reverse' }
+                          : { duration: 1.8, ease: 'easeInOut' }
+                      : {}
+                  }
+                  style={{ borderRadius: 16 }}
                 >
                   <InscripcionCard inscripcionId={inscripcionId} />
                 </motion.div>

@@ -9,6 +9,7 @@ import {
   agoraEventos,
   semanaSagrada,
   notificaciones,
+  faccionesAfinidad,
 } from '@/lib/db/schema'
 import { eq, and, gte, sql } from 'drizzle-orm'
 import {
@@ -31,7 +32,14 @@ import {
   NIVEL_LABELS,
 } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
-import { actualizarAfinidadHabitos } from '@/lib/facciones/afinidad'
+import {
+  actualizarAfinidadHabitos,
+  getVentajasFaseB,
+  getVentajasActivas,
+  getMetasEfectivas,
+  type MetasEfectivas,
+} from '@/lib/facciones/afinidad'
+import { actualizarPuntosDisputaHabitos } from '@/lib/facciones/disputa'
 import {
   verificarInscripciones,
   verificarGemelosDelAgan,
@@ -44,40 +52,44 @@ import {
 } from '@/lib/inscripciones/triggers'
 import type { PruebaDiaria } from '@/lib/db/schema'
 
-function calcularKleosTotal(p: PruebaDiaria, mult: number): number {
+function calcularKleosTotal(
+  p: PruebaDiaria,
+  mult: number,
+  metas: MetasEfectivas
+): number {
   let total = 0
   const k = KLEOS_POR_PRUEBA
   if (p.soloAgua) total += Math.round(k.agua.base * mult)
   if (p.sinComidaRapida) total += Math.round(k.comida.base * mult)
-  if (p.pasos >= 10000) total += Math.round(k.pasos.base * mult)
-  if (p.horasSueno >= 7) total += Math.round(k.sueno.base * mult)
-  if (p.paginasLeidas >= 10) total += Math.round(k.lectura.base * mult)
-  if (p.sesionesGym >= 4) total += Math.round(k.gym.base * mult)
-  if (p.sesionesCardio >= 3) total += Math.round(k.cardio.base * mult)
+  if (p.pasos >= metas.pasos) total += Math.round(k.pasos.base * mult)
+  if (p.horasSueno >= metas.horasSueno) total += Math.round(k.sueno.base * mult)
+  if (p.paginasLeidas >= metas.paginasLeidas) total += Math.round(k.lectura.base * mult)
+  if (p.sesionesGym >= metas.sesionesGym) total += Math.round(k.gym.base * mult)
+  if (p.sesionesCardio >= metas.sesionesCardio) total += Math.round(k.cardio.base * mult)
   return total
 }
 
-function esDiaPerfecto(p: PruebaDiaria): boolean {
+function esDiaPerfecto(p: PruebaDiaria, metas: MetasEfectivas): boolean {
   return (
     p.soloAgua &&
     p.sinComidaRapida &&
-    p.pasos >= 10000 &&
-    p.horasSueno >= 7 &&
-    p.paginasLeidas >= 10 &&
-    p.sesionesGym >= 4 &&
-    p.sesionesCardio >= 3
+    p.pasos >= metas.pasos &&
+    p.horasSueno >= metas.horasSueno &&
+    p.paginasLeidas >= metas.paginasLeidas &&
+    p.sesionesGym >= metas.sesionesGym &&
+    p.sesionesCardio >= metas.sesionesCardio
   )
 }
 
-function contarPruebasCompletadas(p: PruebaDiaria): number {
+function contarPruebasCompletadas(p: PruebaDiaria, metas: MetasEfectivas): number {
   let count = 0
   if (p.soloAgua) count++
   if (p.sinComidaRapida) count++
-  if (p.pasos >= 10000) count++
-  if (p.horasSueno >= 7) count++
-  if (p.paginasLeidas >= 10) count++
-  if (p.sesionesGym >= 4) count++
-  if (p.sesionesCardio >= 3) count++
+  if (p.pasos >= metas.pasos) count++
+  if (p.horasSueno >= metas.horasSueno) count++
+  if (p.paginasLeidas >= metas.paginasLeidas) count++
+  if (p.sesionesGym >= metas.sesionesGym) count++
+  if (p.sesionesCardio >= metas.sesionesCardio) count++
   return count
 }
 
@@ -176,6 +188,13 @@ export async function POST(req: Request) {
     sesionesCardio,
   } = body
 
+  const [afinidadesAgonista, ventajasFaseB] = await Promise.all([
+    db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, agonista.id)),
+    getVentajasFaseB(agonista.id),
+  ])
+  const ventajasActivas = getVentajasActivas(afinidadesAgonista)
+  const metasEfectivas = getMetasEfectivas(ventajasActivas)
+
   const semanaSagradaActiva = await db
     .select()
     .from(semanaSagrada)
@@ -230,11 +249,13 @@ export async function POST(req: Request) {
   const habitosCompletados: Array<{ habitoId: string }> = []
   if (p.soloAgua) habitosCompletados.push({ habitoId: 'agua' })
   if (p.sinComidaRapida) habitosCompletados.push({ habitoId: 'comida' })
-  if (p.pasos >= 10000) habitosCompletados.push({ habitoId: 'pasos' })
-  if (p.horasSueno >= 7) habitosCompletados.push({ habitoId: 'sueno' })
-  if (p.paginasLeidas >= 10) habitosCompletados.push({ habitoId: 'lectura' })
-  if (p.sesionesGym >= 4) habitosCompletados.push({ habitoId: 'gym' })
-  if (p.sesionesCardio >= 3) habitosCompletados.push({ habitoId: 'cardio' })
+  if (p.pasos >= metasEfectivas.pasos) habitosCompletados.push({ habitoId: 'pasos' })
+  if (p.horasSueno >= metasEfectivas.horasSueno) habitosCompletados.push({ habitoId: 'sueno' })
+  if (p.paginasLeidas >= metasEfectivas.paginasLeidas)
+    habitosCompletados.push({ habitoId: 'lectura' })
+  if (p.sesionesGym >= metasEfectivas.sesionesGym) habitosCompletados.push({ habitoId: 'gym' })
+  if (p.sesionesCardio >= metasEfectivas.sesionesCardio)
+    habitosCompletados.push({ habitoId: 'cardio' })
 
   for (const { habitoId } of habitosCompletados) {
     await actualizarLlama(agonista.id, habitoId, hoy)
@@ -258,16 +279,23 @@ export async function POST(req: Request) {
       : 1
   const multiplicador = multiplicadorRacha * multiplicadorSagrado
 
-  const bonusDiaPerfecto = esDiaPerfecto(p)
+  const bonusDiaPerfectoBase = esDiaPerfecto(p, metasEfectivas)
     ? nivel === 'leyenda_del_agon' || nivel === 'inmortal'
       ? KLEOS_DIA_PERFECTO_NIVEL_9
       : KLEOS_DIA_PERFECTO
     : 0
-  const kleosTotalDia = calcularKleosTotal(p, multiplicador) + bonusDiaPerfecto
+
+  const bonusDiaPerfecto =
+    ventajasFaseB.nikeIndiscutido && bonusDiaPerfectoBase > 0
+      ? Math.round(bonusDiaPerfectoBase * 1.2)
+      : bonusDiaPerfectoBase
+
+  const kleosTotalDia =
+    calcularKleosTotal(p, multiplicador, metasEfectivas) + bonusDiaPerfecto
 
   await db
     .update(pruebasDiarias)
-    .set({ kleosGanado: kleosTotalDia, diaPerfecto: esDiaPerfecto(p) })
+    .set({ kleosGanado: kleosTotalDia, diaPerfecto: esDiaPerfecto(p, metasEfectivas) })
     .where(eq(pruebasDiarias.id, prueba.id))
 
   const diferencia = kleosTotalDia - kleosAnterior
@@ -291,7 +319,7 @@ export async function POST(req: Request) {
     }
   }
 
-  if (esDiaPerfecto(p) && !diaPerfectoAnterior) {
+  if (esDiaPerfecto(p, metasEfectivas) && !diaPerfectoAnterior) {
     const yaPublicado = await db
       .select()
       .from(agoraEventos)
@@ -357,7 +385,31 @@ export async function POST(req: Request) {
       sesionesCardio: p.sesionesCardio,
     },
     esNueva ? null : { sesionesGym: gymAnterior, sesionesCardio: cardioAnterior },
-    { diaPerfecto: esDiaPerfecto(p), rachaActual: rachaMax }
+    { diaPerfecto: esDiaPerfecto(p, metasEfectivas), rachaActual: rachaMax }
+  ).catch(() => {})
+
+  void actualizarPuntosDisputaHabitos(
+    agonista.id,
+    {
+      soloAgua: p.soloAgua,
+      sinComidaRapida: p.sinComidaRapida,
+      pasos: p.pasos,
+      horasSueno: p.horasSueno,
+      paginasLeidas: p.paginasLeidas,
+      sesionesGym: p.sesionesGym,
+      sesionesCardio: p.sesionesCardio,
+      diaPerfecto: esDiaPerfecto(p, metasEfectivas),
+    },
+    {
+      soloAgua: prueba.soloAgua,
+      sinComidaRapida: prueba.sinComidaRapida,
+      pasos: prueba.pasos,
+      horasSueno: prueba.horasSueno,
+      paginasLeidas: prueba.paginasLeidas,
+      sesionesGym: gymAnterior,
+      sesionesCardio: cardioAnterior,
+      diaPerfecto: diaPerfectoAnterior,
+    }
   ).catch(() => {})
 
   const agonistaNuevo = await getOrCreateAgonista(userId)
@@ -393,7 +445,7 @@ export async function POST(req: Request) {
         void notificarAntagonistaActivo(
           antagonista.id,
           agonista.nombre,
-          contarPruebasCompletadas(p)
+          contarPruebasCompletadas(p, metasEfectivas)
         ).catch(() => {})
       }
     }
@@ -433,7 +485,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     kleos: kleosTotalDia,
-    diaPerfecto: esDiaPerfecto(p),
+    diaPerfecto: esDiaPerfecto(p, metasEfectivas),
     inscripcionesDesbloqueadas: nuevasInscripciones,
     inscripcionDesbloqueada: nuevasInscripciones[0] ?? null,
     nivelSubido: cambioNivel,

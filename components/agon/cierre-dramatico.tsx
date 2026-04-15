@@ -1,6 +1,7 @@
 'use client'
 
 import { createPortal } from 'react-dom'
+import { useState, useEffect } from 'react'
 import { useCierreDramatico } from '@/hooks/use-cierre-dramatico'
 import { cn } from '@/lib/utils'
 
@@ -20,8 +21,15 @@ export function CierreDramatico({
   onCerrar,
 }: Props) {
   const { mostrar, minutosRestantes, cerrarIgual } = useCierreDramatico(diaPerfecto)
+  const [montado, setMontado] = useState(false)
+
+  useEffect(() => {
+    setMontado(true)
+  }, [])
 
   if (!mostrar) return null
+
+  if (!montado) return null
 
   const horas = Math.floor(minutosRestantes / 60)
   const minutos = minutosRestantes % 60

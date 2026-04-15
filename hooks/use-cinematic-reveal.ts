@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 
 // ─── FASES DEL DIRECTOR ───────────────────────────────────────────────────────
 
@@ -16,38 +16,61 @@ export type CinematicPhase =
 
 // ─── TIMELINE ─────────────────────────────────────────────────────────────────
 
-const TIMELINE: Record<CinematicPhase, number> = {
-  idle: 0,
-  anticipation: 300,
-  build: 900,
-  pre_reveal: 1600,
-  flash: 2000,
-  reveal: 2200,
-  afterglow: 3200,
-  control: 4500,
-}
+export type CinematicIntensity = 'forjada' | 'epica' | 'easter_egg'
 
-function getPhaseFromTime(elapsed: number): CinematicPhase {
-  if (elapsed < TIMELINE.anticipation) return 'idle'
-  if (elapsed < TIMELINE.build) return 'anticipation'
-  if (elapsed < TIMELINE.pre_reveal) return 'build'
-  if (elapsed < TIMELINE.flash) return 'pre_reveal'
-  if (elapsed < TIMELINE.reveal) return 'flash'
-  if (elapsed < TIMELINE.afterglow) return 'reveal'
-  if (elapsed < TIMELINE.control) return 'afterglow'
-  return 'control'
+function buildTimeline(
+  intensity: CinematicIntensity
+): Record<CinematicPhase, number> {
+  switch (intensity) {
+    case 'epica':
+      return {
+        idle: 0,
+        anticipation: 300,
+        build: 900,
+        pre_reveal: 1600,
+        flash: 2000,
+        reveal: 2200,
+        afterglow: 3200,
+        control: 5800, // afterglow más largo — 2.6s en vez de 1.3s
+      }
+    case 'easter_egg':
+      return {
+        idle: 0,
+        anticipation: 200,
+        build: 700,
+        pre_reveal: 1400,
+        flash: 1800,
+        reveal: 2000,
+        afterglow: 3000,
+        control: 6200, // el más largo — easter eggs merecen el momento
+      }
+    default: // forjada
+      return {
+        idle: 0,
+        anticipation: 300,
+        build: 900,
+        pre_reveal: 1600,
+        flash: 2000,
+        reveal: 2200,
+        afterglow: 3200,
+        control: 4500,
+      }
+  }
 }
 
 // ─── HOOK ─────────────────────────────────────────────────────────────────────
 
 interface UseCinematicRevealOptions {
   autoStart?: boolean
+  intensity?: CinematicIntensity
   onPhaseChange?: (phase: CinematicPhase) => void
   onComplete?: () => void
 }
 
 export function useCinematicReveal(options: UseCinematicRevealOptions = {}) {
-  const { autoStart = false, onPhaseChange, onComplete } = options
+  const { autoStart = false, intensity = 'forjada', onPhaseChange, onComplete } =
+    options
+  const timeline = useMemo(() => buildTimeline(intensity), [intensity])
 
   const [phase, setPhase] = useState<CinematicPhase>('idle')
   const [elapsed, setElapsed] = useState(0)
@@ -77,6 +100,17 @@ export function useCinematicReveal(options: UseCinematicRevealOptions = {}) {
     completedRef.current = false
   }, [stop])
 
+  function getPhase(elapsedMs: number): CinematicPhase {
+    if (elapsedMs < timeline.anticipation) return 'idle'
+    if (elapsedMs < timeline.build) return 'anticipation'
+    if (elapsedMs < timeline.pre_reveal) return 'build'
+    if (elapsedMs < timeline.flash) return 'pre_reveal'
+    if (elapsedMs < timeline.reveal) return 'flash'
+    if (elapsedMs < timeline.afterglow) return 'reveal'
+    if (elapsedMs < timeline.control) return 'afterglow'
+    return 'control'
+  }
+
   const tick = useCallback(
     (timestamp: number) => {
       if (startTimeRef.current === null) {
@@ -86,7 +120,7 @@ export function useCinematicReveal(options: UseCinematicRevealOptions = {}) {
       const el = timestamp - startTimeRef.current
       setElapsed(el)
 
-      const currentPhase = getPhaseFromTime(el)
+      const currentPhase = getPhase(el)
 
       const phaseOrder: CinematicPhase[] = [
         'idle',
@@ -101,8 +135,8 @@ export function useCinematicReveal(options: UseCinematicRevealOptions = {}) {
       const phaseIdx = phaseOrder.indexOf(currentPhase)
       const nextPhase = phaseOrder[phaseIdx + 1]
       if (nextPhase) {
-        const phaseStart = TIMELINE[currentPhase]
-        const phaseEnd = TIMELINE[nextPhase]
+        const phaseStart = timeline[currentPhase]
+        const phaseEnd = timeline[nextPhase]
         const phaseProgress = Math.min((el - phaseStart) / (phaseEnd - phaseStart), 1)
         setProgress(phaseProgress)
       } else {
@@ -126,7 +160,7 @@ export function useCinematicReveal(options: UseCinematicRevealOptions = {}) {
 
       rafRef.current = requestAnimationFrame(tick)
     },
-    [onPhaseChange, onComplete]
+    [onPhaseChange, onComplete, timeline]
   )
 
   const start = useCallback(() => {

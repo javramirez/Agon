@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 import { getCurrentAgonista } from '@/lib/auth'
 import { getMentor } from '@/lib/mentor/config'
 import { db } from '@/lib/db'
-import { agonistas, agoraEventos } from '@/lib/db/schema'
-import { and, eq } from 'drizzle-orm'
+import { agonistas, agoraEventos, llamas } from '@/lib/db/schema'
+import { and, eq, desc } from 'drizzle-orm'
 import Anthropic from '@anthropic-ai/sdk'
 
 function getAnthropicClient() {
@@ -64,23 +64,75 @@ export async function POST(req: Request) {
   const anthropic = getAnthropicClient()
   if (!anthropic) return NextResponse.json({ error: 'API no disponible.' }, { status: 503 })
 
-  const ambos = await db.select().from(agonistas).limit(2)
+  const [ambos, llamasRows] = await Promise.all([
+    db.select().from(agonistas).limit(2),
+    db
+      .select({ rachaActual: llamas.rachaActual, habitoId: llamas.habitoId })
+      .from(llamas)
+      .where(eq(llamas.agonistId, agonista.id))
+      .orderBy(desc(llamas.rachaActual)),
+  ])
+
   const rival = ambos.find((a) => a.id !== agonista.id)
+  const rachaMaxActual = llamasRows[0]?.rachaActual ?? 0
+  const habitoRachaMaxima = llamasRows[0]?.habitoId ?? null
+  const diferenciaKleos = rival ? agonista.kleosTotal - rival.kleosTotal : 0
+  const posicion = diferenciaKleos >= 0 ? 'liderando' : 'por debajo'
+
+  const meta = (evento.metadata ?? {}) as Record<string, unknown>
+
+  const kleosHistorico: number | null =
+    (meta.kleos as number | undefined) ??
+    (meta.kleosAlSubir as number | undefined) ??
+    (meta.kleosAlDesbloquear as number | undefined) ??
+    (meta.kleosPropio as number | undefined) ??
+    null
+
+  const tipoEventoDb = evento.tipo
+  const contextoHistorico = (() => {
+    switch (tipoEventoDb) {
+      case 'dia_perfecto':
+        return `Kleos ganado ese día: ${meta.kleos ?? '—'}`
+      case 'nivel_subido':
+        return `Subió de ${meta.nivelAnterior ?? '—'} a ${meta.nivelNuevo ?? '—'} con ${meta.kleosAlSubir ?? '—'} kleos acumulados. Días perfectos al subir: ${meta.diasPerfectosAlSubir ?? '—'}.`
+      case 'inscripcion_desbloqueada':
+        return `Kleos acumulados al desbloquear: ${meta.kleosAlDesbloquear ?? '—'}.`
+      case 'hegemonia_ganada':
+        return `Semana ${meta.semana ?? '—'}. Kleos del ganador esa semana: ${meta.kleos ?? '—'}.`
+      case 'prueba_extraordinaria':
+        return `Tipo: ${meta.tipo ?? '—'}. Kleos bonus obtenido: ${meta.kleos ?? '—'}. Semana ${meta.semana ?? '—'}.`
+      case 'cronica_semanal':
+        return `Semana ${meta.semana ?? '—'} (${meta.fechaInicio ?? ''} → ${meta.fechaFin ?? ''}). Kleos propio: ${meta.kleosPropio ?? '—'}. Kleos del rival: ${meta.kleosRival ?? '—'}.`
+      default:
+        return null
+    }
+  })()
 
   const prompt = `${mentor.personalidad}
 
 Estás narrando un momento específico de la bitácora del agonista ${agonista.nombre}.
 
-Evento: ${tipoEvento}
+EVENTO:
+Tipo: ${tipoEvento}
 Fecha: ${fechaEvento}
 Descripción: ${contenidoEvento}
-Kleos actual del agonista: ${agonista.kleosTotal}
-${rival ? `Kleos del antagonista (${rival.nombre}): ${rival.kleosTotal}` : ''}
 
+DATOS EXACTOS DE ESE MOMENTO:
+${contextoHistorico ?? `Kleos acumulado aproximado: ${kleosHistorico ?? agonista.kleosTotal}`}
+
+CONTEXTO ACTUAL DEL AGONISTA (para dar perspectiva):
+- Nivel actual: ${agonista.nivel}
+- Racha más alta activa: ${rachaMaxActual} días${habitoRachaMaxima ? ` (${habitoRachaMaxima})` : ''}
+${rival ? `- Hoy frente a ${rival.nombre}: ${posicion} por ${Math.abs(diferenciaKleos)} kleos` : ''}
+
+INSTRUCCIONES:
 Escribe una narración de 2-3 oraciones sobre qué estaba ocurriendo en ese momento del Gran Agon.
+Prioriza los DATOS EXACTOS DE ESE MOMENTO — no los actuales.
+Debes mencionar al menos un dato concreto: kleos, nivel, racha o resultado específico.
 Habla en segunda persona, dirigiéndote al agonista directamente.
 Usa tu voz característica como ${mentor.nombre}.
-No uses hashtags ni emojis. Evoca el momento con precisión.`
+Máximo 350 caracteres incluyendo espacios.
+No uses hashtags ni emojis. Evoca el momento con precisión y epicidad.`
 
   try {
     const response = await anthropic.messages.create({

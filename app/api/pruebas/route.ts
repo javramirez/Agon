@@ -9,6 +9,7 @@ import {
   agoraEventos,
   semanaSagrada,
   notificaciones,
+  faccionesAfinidad,
 } from '@/lib/db/schema'
 import { eq, and, gte, sql } from 'drizzle-orm'
 import {
@@ -31,7 +32,13 @@ import {
   NIVEL_LABELS,
 } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
-import { actualizarAfinidadHabitos } from '@/lib/facciones/afinidad'
+import {
+  actualizarAfinidadHabitos,
+  getVentajasFaseB,
+  getVentajasActivas,
+  getMetasEfectivas,
+  type MetasEfectivas,
+} from '@/lib/facciones/afinidad'
 import {
   verificarInscripciones,
   verificarGemelosDelAgan,
@@ -60,6 +67,13 @@ export async function POST(req: Request) {
   const multiplicadorSagrado = semanaSagradaActiva.length > 0 ? 2 : 1
 
   const { campo, valor } = await req.json()
+
+  const [afinidadesAgonista, ventajasFaseB] = await Promise.all([
+    db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, agonista.id)),
+    getVentajasFaseB(agonista.id),
+  ])
+  const ventajasActivas = getVentajasActivas(afinidadesAgonista)
+  const metasEfectivas = getMetasEfectivas(ventajasActivas)
 
   const camposValidos = [
     'soloAgua',
@@ -112,7 +126,7 @@ export async function POST(req: Request) {
   }
 
   const habitoId = campoToHabitoId(campo)
-  if (habitoId && esCompletado(campo, valor)) {
+  if (habitoId && esCompletado(campo, valor, metasEfectivas)) {
     await actualizarLlama(agonista.id, habitoId, hoy)
   }
 
@@ -136,19 +150,27 @@ export async function POST(req: Request) {
         : 1.5
       : 1
 
-  const kleos = calcularKleosTotal(p, multiplicador * multiplicadorSagrado)
-  const bonusDiaPerfecto = esDiaPerfecto(p)
+  const kleos = calcularKleosTotal(
+    p,
+    multiplicador * multiplicadorSagrado,
+    metasEfectivas
+  )
+  const bonusDiaPerfectoBase = esDiaPerfecto(p, metasEfectivas)
     ? nivel === 'leyenda_del_agon' || nivel === 'inmortal'
       ? KLEOS_DIA_PERFECTO_NIVEL_9
       : KLEOS_DIA_PERFECTO
     : 0
+  const bonusDiaPerfecto =
+    ventajasFaseB.nikeIndiscutido && bonusDiaPerfectoBase > 0
+      ? Math.round(bonusDiaPerfectoBase * 1.2)
+      : bonusDiaPerfectoBase
   const kleosTotalDia = kleos + bonusDiaPerfecto
 
   await db
     .update(pruebasDiarias)
     .set({
       kleosGanado: kleosTotalDia,
-      diaPerfecto: esDiaPerfecto(p),
+      diaPerfecto: esDiaPerfecto(p, metasEfectivas),
     })
     .where(eq(pruebasDiarias.id, prueba.id))
 
@@ -174,7 +196,7 @@ export async function POST(req: Request) {
     }
   }
 
-  if (esDiaPerfecto(p) && !diaPerfectoAnterior) {
+  if (esDiaPerfecto(p, metasEfectivas) && !diaPerfectoAnterior) {
     const yaPublicado = await db
       .select()
       .from(agoraEventos)
@@ -296,14 +318,14 @@ export async function POST(req: Request) {
   }
 
   // Notificar al antagonista que completaste una prueba
-  if (esCompletado(campo, valor)) {
+  if (esCompletado(campo, valor, metasEfectivas)) {
     const antagonistaConfig = Object.values(AGONISTAS).find(
       (a) => a.clerkId !== userId
     )
     if (antagonistaConfig) {
       const antagonista = await getAgonistaByClerkId(antagonistaConfig.clerkId)
       if (antagonista) {
-        const pruebasHoy = contarPruebasCompletadas(pruebaFinal)
+        const pruebasHoy = contarPruebasCompletadas(pruebaFinal, metasEfectivas)
         void notificarAntagonistaActivo(
           antagonista.id,
           agonista.nombre,
@@ -347,7 +369,7 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     kleos: kleosTotalDia,
-    diaPerfecto: esDiaPerfecto(p),
+    diaPerfecto: esDiaPerfecto(p, metasEfectivas),
     inscripcionesDesbloqueadas: nuevasInscripciones,
     inscripcionDesbloqueada: nuevasInscripciones[0] ?? null,
     nivelSubido: cambioNivel,
@@ -436,57 +458,65 @@ function campoToHabitoId(campo: string): string | null {
   return map[campo] ?? null
 }
 
-function esCompletado(campo: string, valor: unknown): boolean {
-  const metas: Record<string, number | boolean> = {
+function esCompletado(
+  campo: string,
+  valor: unknown,
+  metas: MetasEfectivas
+): boolean {
+  const metasPorCampo: Record<string, number | boolean> = {
     soloAgua: true,
     sinComidaRapida: true,
-    pasos: 10000,
-    horasSueno: 7,
-    paginasLeidas: 10,
-    sesionesGym: 4,
-    sesionesCardio: 3,
+    pasos: metas.pasos,
+    horasSueno: metas.horasSueno,
+    paginasLeidas: metas.paginasLeidas,
+    sesionesGym: metas.sesionesGym,
+    sesionesCardio: metas.sesionesCardio,
   }
-  const meta = metas[campo]
+  const meta = metasPorCampo[campo]
   if (typeof meta === 'boolean') return valor === true
   return typeof valor === 'number' && valor >= meta
 }
 
-function calcularKleosTotal(p: PruebaDiaria, mult: number): number {
+function calcularKleosTotal(
+  p: PruebaDiaria,
+  mult: number,
+  metas: MetasEfectivas
+): number {
   let total = 0
   const k = KLEOS_POR_PRUEBA
 
   if (p.soloAgua) total += Math.round(k.agua.base * mult)
   if (p.sinComidaRapida) total += Math.round(k.comida.base * mult)
-  if (p.pasos >= 10000) total += Math.round(k.pasos.base * mult)
-  if (p.horasSueno >= 7) total += Math.round(k.sueno.base * mult)
-  if (p.paginasLeidas >= 10) total += Math.round(k.lectura.base * mult)
-  if (p.sesionesGym >= 4) total += Math.round(k.gym.base * mult)
-  if (p.sesionesCardio >= 3) total += Math.round(k.cardio.base * mult)
+  if (p.pasos >= metas.pasos) total += Math.round(k.pasos.base * mult)
+  if (p.horasSueno >= metas.horasSueno) total += Math.round(k.sueno.base * mult)
+  if (p.paginasLeidas >= metas.paginasLeidas) total += Math.round(k.lectura.base * mult)
+  if (p.sesionesGym >= metas.sesionesGym) total += Math.round(k.gym.base * mult)
+  if (p.sesionesCardio >= metas.sesionesCardio) total += Math.round(k.cardio.base * mult)
 
   return total
 }
 
-function esDiaPerfecto(p: PruebaDiaria): boolean {
+function esDiaPerfecto(p: PruebaDiaria, metas: MetasEfectivas): boolean {
   return (
     p.soloAgua &&
     p.sinComidaRapida &&
-    p.pasos >= 10000 &&
-    p.horasSueno >= 7 &&
-    p.paginasLeidas >= 10 &&
-    p.sesionesGym >= 4 &&
-    p.sesionesCardio >= 3
+    p.pasos >= metas.pasos &&
+    p.horasSueno >= metas.horasSueno &&
+    p.paginasLeidas >= metas.paginasLeidas &&
+    p.sesionesGym >= metas.sesionesGym &&
+    p.sesionesCardio >= metas.sesionesCardio
   )
 }
 
-function contarPruebasCompletadas(p: PruebaDiaria): number {
+function contarPruebasCompletadas(p: PruebaDiaria, metas: MetasEfectivas): number {
   let count = 0
   if (p.soloAgua) count++
   if (p.sinComidaRapida) count++
-  if (p.pasos >= 10000) count++
-  if (p.horasSueno >= 7) count++
-  if (p.paginasLeidas >= 10) count++
-  if (p.sesionesGym >= 4) count++
-  if (p.sesionesCardio >= 3) count++
+  if (p.pasos >= metas.pasos) count++
+  if (p.horasSueno >= metas.horasSueno) count++
+  if (p.paginasLeidas >= metas.paginasLeidas) count++
+  if (p.sesionesGym >= metas.sesionesGym) count++
+  if (p.sesionesCardio >= metas.sesionesCardio) count++
   return count
 }
 

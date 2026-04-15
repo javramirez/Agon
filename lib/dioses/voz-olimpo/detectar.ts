@@ -1,9 +1,12 @@
+import Anthropic from '@anthropic-ai/sdk'
 import { db } from '@/lib/db'
 import {
   pruebasDiarias,
   agonistas,
   pactoInicial,
   agoraEventos,
+  mentorConversaciones,
+  consultaMediodia,
 } from '@/lib/db/schema'
 import { eq, desc, and, gte } from 'drizzle-orm'
 
@@ -40,8 +43,14 @@ export async function recopilarContexto(agonistId: string) {
   const startDate = process.env.NEXT_PUBLIC_AGON_START_DATE ?? fechaSieteAtras
   const fechaMin = fechaSieteAtras > startDate ? fechaSieteAtras : startDate
 
-  const [ultimasPruebas, agonistaRows, pactoRows, ultimosEventos] =
-    await Promise.all([
+  const [
+    ultimasPruebas,
+    agonistaRows,
+    pactoRows,
+    ultimosEventos,
+    ultimasConversaciones,
+    consultaRows,
+  ] = await Promise.all([
       db
         .select()
         .from(pruebasDiarias)
@@ -69,6 +78,26 @@ export async function recopilarContexto(agonistId: string) {
         .where(eq(agoraEventos.agonistId, agonistId))
         .orderBy(desc(agoraEventos.createdAt))
         .limit(10),
+      db
+        .select({ contenido: mentorConversaciones.contenido })
+        .from(mentorConversaciones)
+        .where(
+          and(
+            eq(mentorConversaciones.agonistId, agonistId),
+            eq(mentorConversaciones.rol, 'user')
+          )
+        )
+        .orderBy(desc(mentorConversaciones.createdAt))
+        .limit(5),
+      db
+        .select({
+          elSacrificio: consultaMediodia.elSacrificio,
+          elMomento: consultaMediodia.elMomento,
+          queHaCambiado: consultaMediodia.queHaCambiado,
+        })
+        .from(consultaMediodia)
+        .where(eq(consultaMediodia.agonistId, agonistId))
+        .limit(1),
     ])
 
   return {
@@ -76,6 +105,8 @@ export async function recopilarContexto(agonistId: string) {
     agonista: agonistaRows[0] ?? null,
     pacto: pactoRows[0] ?? null,
     eventos: ultimosEventos,
+    mensajesMentor: ultimasConversaciones.map((c) => c.contenido),
+    consulta: consultaRows[0] ?? null,
   }
 }
 
@@ -349,32 +380,170 @@ function detectarDiaPerfecto(pruebas: DatosPruebas[]): SeñalDetectada | null {
   }
 }
 
+// ─── Detección semántica en conversaciones del Mentor ─────────────────────────
+
+const DOMINIO_A_SEÑAL: Record<
+  string,
+  { dios: string; tipoContenido: string; contexto: string }
+> = {
+  sueno: {
+    dios: 'morfeo',
+    tipoContenido: 'higiene_sueno',
+    contexto:
+      'El agonista ha mencionado problemas con el sueño o la recuperación en sus conversaciones con el Mentor.',
+  },
+  cansancio: {
+    dios: 'morfeo',
+    tipoContenido: 'sobreexigencia_moderada',
+    contexto:
+      'El agonista ha expresado cansancio o agotamiento en sus conversaciones con el Mentor.',
+  },
+  lectura: {
+    dios: 'apolo',
+    tipoContenido: 'retomar_lectura',
+    contexto:
+      'El agonista ha mencionado dificultades para mantener el hábito de lectura en sus conversaciones con el Mentor.',
+  },
+  motivacion: {
+    dios: 'nike',
+    tipoContenido: 'mentalidad_competitiva',
+    contexto:
+      'El agonista ha expresado dudas sobre su motivación o constancia en sus conversaciones con el Mentor.',
+  },
+  movimiento: {
+    dios: 'hermes',
+    tipoContenido: 'retomar_movimiento',
+    contexto:
+      'El agonista ha mencionado dificultades para moverse o caminar en sus conversaciones con el Mentor.',
+  },
+  entrenamiento: {
+    dios: 'ares',
+    tipoContenido: 'retomar_entrenamiento',
+    contexto:
+      'El agonista ha expresado problemas con el entrenamiento físico en sus conversaciones con el Mentor.',
+  },
+  rivalidad: {
+    dios: 'eris',
+    tipoContenido: 'mentalidad_competitiva',
+    contexto:
+      'El agonista ha mencionado al rival o la competencia en tono de preocupación en sus conversaciones con el Mentor.',
+  },
+}
+
+async function detectarSeñalMentor(
+  mensajes: string[],
+  consulta: { elSacrificio: string; elMomento: string; queHaCambiado: string } | null
+): Promise<SeñalDetectada | null> {
+  if (mensajes.length === 0) return null
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return null
+
+  const anthropic = new Anthropic({ apiKey })
+  const textoConversaciones = mensajes
+    .map((m, i) => `Mensaje ${i + 1}: "${m}"`)
+    .join('\n')
+
+  try {
+    const respuesta = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 100,
+      messages: [
+        {
+          role: 'user',
+          content: `Analiza estos mensajes que un agonista envió a su mentor personal:
+
+${textoConversaciones}
+
+Identifica si el agonista menciona alguna de estas preocupaciones dominantes:
+- sueno (problemas para dormir, cansancio, recuperación)
+- cansancio (agotamiento, burnout, sobrecarga)
+- lectura (no leer, dificultad para concentrarse)
+- motivacion (duda, ganas de rendirse, sin energía)
+- movimiento (sedentarismo, no caminar, pasos bajos)
+- entrenamiento (no ir al gym, lesión, parón físico)
+- rivalidad (preocupación por el rival, sentirse atrás)
+
+Responde SOLO con un JSON sin texto adicional:
+{"dominio": "nombre_del_dominio_o_null"}
+
+Si no hay una preocupación clara, responde: {"dominio": null}`,
+        },
+      ],
+    })
+
+    const texto = respuesta.content
+      .filter((b) => b.type === 'text')
+      .map((b) => (b as { text: string }).text)
+      .join('')
+      .trim()
+
+    const sinCercas = texto.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+    const parsed = JSON.parse(sinCercas) as { dominio: string | null }
+
+    if (!parsed.dominio) return null
+
+    const señalConfig = DOMINIO_A_SEÑAL[parsed.dominio]
+    if (!señalConfig) return null
+
+    const contextoConsulta = consulta
+      ? ` En la Consulta del Mediodía reveló: sacrificó "${consulta.elSacrificio}" y lo que más recuerda es "${consulta.elMomento}".`
+      : ''
+
+    return {
+      dios: señalConfig.dios,
+      tipoContenido: señalConfig.tipoContenido,
+      contextoNarrativo: señalConfig.contexto + contextoConsulta,
+      datosConcretos: `Detectado en conversaciones del Mentor. Mensajes analizados: ${mensajes.length}.`,
+      intensidad: 'leve',
+      esSobreexigencia: false,
+    }
+  } catch {
+    return null
+  }
+}
+
 // ─── Orquestador de detección ─────────────────────────────────────────────────
 
 export async function detectarSeñal(agonistId: string): Promise<SeñalDetectada | null> {
-  const { pruebas, agonista, pacto } = await recopilarContexto(agonistId)
+  const { pruebas, agonista, pacto, mensajesMentor, consulta } =
+    await recopilarContexto(agonistId)
 
   if (!agonista || pruebas.length === 0) return null
 
+  function enriquecerConConsulta(
+    señal: SeñalDetectada,
+    c: { elSacrificio: string; elMomento: string; queHaCambiado: string } | null
+  ): SeñalDetectada {
+    if (!c) return señal
+    return {
+      ...señal,
+      contextoNarrativo: `${señal.contextoNarrativo} El agonista reveló en su Consulta que lo que cambió en él es: "${c.queHaCambiado}".`,
+    }
+  }
+
   if (pacto) {
     const sobreexigencia = detectarSobreexigencia(pruebas, pacto)
-    if (sobreexigencia) return sobreexigencia
+    if (sobreexigencia) return enriquecerConConsulta(sobreexigencia, consulta)
   }
 
   const habitoFallido = detectarHabitoFallido(pruebas)
-  if (habitoFallido) return habitoFallido
+  if (habitoFallido) return enriquecerConConsulta(habitoFallido, consulta)
 
   const estancamiento = detectarEstancamiento(pruebas, agonista)
-  if (estancamiento) return estancamiento
+  if (estancamiento) return enriquecerConConsulta(estancamiento, consulta)
 
   const racha = detectarRacha(pruebas)
-  if (racha) return racha
+  if (racha) return enriquecerConConsulta(racha, consulta)
 
   const metaSuperada = detectarMetaSuperada(pruebas)
-  if (metaSuperada) return metaSuperada
+  if (metaSuperada) return enriquecerConConsulta(metaSuperada, consulta)
+
+  const señalMentor = await detectarSeñalMentor(mensajesMentor, consulta)
+  if (señalMentor) return señalMentor
 
   const diaPerfecto = detectarDiaPerfecto(pruebas)
-  if (diaPerfecto) return diaPerfecto
+  if (diaPerfecto) return enriquecerConConsulta(diaPerfecto, consulta)
 
   return null
 }

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { inscripciones, agoraEventos } from '@/lib/db/schema'
+import { agonistas, inscripciones, agoraEventos } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { INSCRIPCIONES } from '@/lib/db/constants'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
@@ -33,13 +33,24 @@ export async function yaDesbloqueada(
 export async function desbloquearInscripcion(
   agonistId: string,
   agonistaNombre: string,
-  inscripcionId: string
+  inscripcionId: string,
+  kleosAlDesbloquear?: number
 ): Promise<boolean> {
   // Evitar duplicados
   if (await yaDesbloqueada(agonistId, inscripcionId)) return false
 
   const config = INSCRIPCIONES.find((i) => i.id === inscripcionId)
   if (!config) return false
+
+  let kleos = kleosAlDesbloquear
+  if (kleos === undefined) {
+    const k = await db
+      .select({ kleosTotal: agonistas.kleosTotal })
+      .from(agonistas)
+      .where(eq(agonistas.id, agonistId))
+      .limit(1)
+    kleos = k[0]?.kleosTotal ?? 0
+  }
 
   try {
     // 1. Insertar en DB
@@ -58,7 +69,10 @@ export async function desbloquearInscripcion(
       agonistId,
       tipo: 'inscripcion_desbloqueada',
       contenido: `${agonistaNombre} desbloqueó: ${config.nombre}. ${config.descripcion}`,
-      metadata: { inscripcionId },
+      metadata: {
+        inscripcionId,
+        kleosAlDesbloquear: kleos ?? kleosAlDesbloquear ?? 0,
+      },
     })
 
     // 3. Disparar comentarios de dioses (async, no bloquea)

@@ -1,7 +1,12 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { mentorConversaciones, pruebasDiarias, llamas } from '@/lib/db/schema'
+import {
+  mentorConversaciones,
+  pruebasDiarias,
+  llamas,
+  consultaMediodia,
+} from '@/lib/db/schema'
 import { eq, asc, and } from 'drizzle-orm'
 import { getCurrentAgonista, AGONISTAS } from '@/lib/auth'
 import { getAgonistaByClerkId } from '@/lib/db/queries'
@@ -134,7 +139,8 @@ export async function POST(req: Request) {
     ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
     : null
 
-  const [pruebaHoyRows, llamasAgonista, historialPrevio] = await Promise.all([
+  const [pruebaHoyRows, llamasAgonista, historialPrevio, consultaRows] =
+    await Promise.all([
     db
       .select()
       .from(pruebasDiarias)
@@ -147,11 +153,29 @@ export async function POST(req: Request) {
       .where(eq(mentorConversaciones.agonistId, agonista.id))
       .orderBy(asc(mentorConversaciones.createdAt))
       .limit(MAX_HISTORIAL),
-  ])
+    db
+      .select({
+        elSacrificio: consultaMediodia.elSacrificio,
+        elMomento: consultaMediodia.elMomento,
+        queHaCambiado: consultaMediodia.queHaCambiado,
+      })
+      .from(consultaMediodia)
+      .where(eq(consultaMediodia.agonistId, agonista.id))
+      .limit(1),
+    ])
 
   const pruebaHoy = pruebaHoyRows[0]
   const rachaMaxima = llamasAgonista.reduce((max, l) => Math.max(max, l.rachMaxima), 0)
   const rachaActual = llamasAgonista.reduce((max, l) => Math.max(max, l.rachaActual), 0)
+
+  const consulta = consultaRows[0] ?? null
+  const contextoConsulta = consulta
+    ? `
+Reflexiones del agonista en la Consulta del Mediodía (día 15):
+- Lo que sacrificó para estar aquí: "${consulta.elSacrificio}"
+- El momento que más recuerda del Agon hasta ahora: "${consulta.elMomento}"
+- Lo que cambió en él: "${consulta.queHaCambiado}"`
+    : ''
 
   const contextoAgonista = `
 Datos del agonista que mentorizas:
@@ -164,6 +188,7 @@ Datos del agonista que mentorizas:
 - Antagonista: ${rival?.nombre ?? 'desconocido'} con ${rival?.kleosTotal ?? 0} kleos
 - Diferencia de kleos: ${agonista.kleosTotal - (rival?.kleosTotal ?? 0)} (positivo = va ganando)
 ${pruebaHoy ? `- Hoy (${hoy}): ${pruebaHoy.diaPerfecto ? 'día perfecto ✓' : `kleos ganados: ${pruebaHoy.kleosGanado}`}` : `- Hoy (${hoy}): sin registro aún`}
+${contextoConsulta}
 `.trim()
 
   const systemPrompt = `${mentor.personalidad}
