@@ -362,6 +362,75 @@ export const INSCRIPCIONES = [
     tipo: 'publica' as const,
     secreto: false,
   },
+  {
+    id: 'el_iniciado_de_la_ciudad',
+    nombre: 'El Iniciado de la Ciudad',
+    descripcion:
+      'La Ciudad de Olimpia abrió sus puertas. El Altis registra el primer paso dentro de sus muros.',
+    condicion: 'Alcanza rango Conocido en tu primera facción.',
+    icono: '🏛️',
+    tipo: 'publica' as const,
+    secreto: false,
+  },
+  {
+    id: 'el_reconocido',
+    nombre: 'El Reconocido',
+    descripcion:
+      'Ya no eres un extraño en la Ciudad. Una facción sabe tu nombre y lo que vales.',
+    condicion: 'Alcanza rango Aliado en cualquier facción.',
+    icono: '🤝',
+    tipo: 'publica' as const,
+    secreto: false,
+  },
+  {
+    id: 'campeon_de_la_ciudad',
+    nombre: 'Campeón de la Ciudad',
+    descripcion:
+      'El rango más alto que la Ciudad otorga. No todos llegan. El Altis inscribe a los que sí.',
+    condicion: 'Alcanza rango Campeón en cualquier facción.',
+    icono: '⚜️',
+    tipo: 'publica' as const,
+    secreto: false,
+  },
+  {
+    id: 'la_disputa',
+    nombre: 'La Disputa',
+    descripcion:
+      'Dos agonistas reclamaron el mismo trono. El agon no admite dos campeones en el mismo lugar.',
+    condicion: 'Inicia una Disputa de Campeón.',
+    icono: '⚔️',
+    tipo: 'publica' as const,
+    secreto: false,
+  },
+  {
+    id: 'el_forjado_en_crisis',
+    nombre: 'El Forjado en Crisis',
+    descripcion: 'La primera crisis llegó. El agonista estuvo ahí para recibirla.',
+    condicion: 'Participa en tu primera Crisis de Ciudad.',
+    icono: '🌋',
+    tipo: 'publica' as const,
+    secreto: false,
+  },
+  {
+    id: 'el_extraordinario',
+    nombre: 'El Extraordinario',
+    descripcion:
+      'El agon ofreció más de lo que el contrato exigía. El agonista aceptó.',
+    condicion: 'Completa tu primera prueba extraordinaria.',
+    icono: '✨',
+    tipo: 'publica' as const,
+    secreto: false,
+  },
+  {
+    id: 'mas_alla_de_lo_ordinario',
+    nombre: 'Más Allá de lo Ordinario',
+    descripcion:
+      'Diez veces el agon llamó fuera del contrato. Diez veces el agonista respondió.',
+    condicion: 'Completa 10 pruebas extraordinarias totales.',
+    icono: '🌠',
+    tipo: 'publica' as const,
+    secreto: false,
+  },
 
   // ─── SECRETAS (20) ────────────────────────────────
   {
@@ -541,6 +610,47 @@ export const INSCRIPCIONES = [
     descripcion: 'Podrías haberte relajado. Marcaste las 7 pruebas igual. Hasta el final.',
     condicion: 'Completa las 7 pruebas el día 29.',
     icono: '🏁',
+    tipo: 'secreta' as const,
+    secreto: true,
+  },
+  {
+    id: 'la_redencion',
+    nombre: 'La Redención',
+    descripcion:
+      'Cayó en la Disputa. Perdió el rango. Volvió a ganarlo. El Altis no olvida el camino de regreso.',
+    condicion:
+      'Perder una Disputa de Campeón y recuperar rango Campeón en la misma facción.',
+    icono: '🔄',
+    tipo: 'secreta' as const,
+    secreto: true,
+  },
+  {
+    id: 'el_hegemon_absoluto',
+    nombre: 'El Hegemon Absoluto',
+    descripcion:
+      'Dos tronos. Mismo agonista. La Ciudad entera bajo un solo nombre. El Altis no había visto esto antes.',
+    condicion: 'Tener dos facciones en rango Campeón simultáneamente.',
+    icono: '👑',
+    tipo: 'secreta' as const,
+    secreto: true,
+  },
+  {
+    id: 'la_marca_del_traidor',
+    nombre: 'La Marca del Traidor',
+    descripcion:
+      'Dos veces la Ciudad te vio caer. Dos veces la marca quedó. El Altis no juzga — solo registra.',
+    condicion: 'Acumular 2 traiciones (traicion_count = 2).',
+    icono: '🩸',
+    tipo: 'secreta' as const,
+    secreto: true,
+  },
+  {
+    id: 'el_sacrificio',
+    nombre: 'El Sacrificio',
+    descripcion:
+      'Nadie lo pidió. Nadie lo vio venir. El agonista entregó algo real sin saber qué recibiría a cambio.',
+    condicion: 'Ejecutar un sacrificio asimétrico voluntario en una Crisis tipo H.',
+    icono: '🕯️',
     tipo: 'secreta' as const,
     secreto: true,
   },
@@ -768,6 +878,46 @@ export const INSCRIPCIONES = [
     descripcion: 'Llegó lejos. Más lejos de lo que nadie esperaba. El día que nadie vio venir fue el mejor día del agon.',
     condicion: 'Acumula más kleos en un día que en cualquier otro día previo, después del día 20.',
     icono: '🌺',
+    tipo: 'easter_egg' as const,
+    secreto: true,
+  },
+  {
+    id: 'when_you_play_the_game',
+    nombre: 'When You Play the Game of Thrones',
+    descripcion:
+      'Dos reclamaron el mismo trono. Solo uno lo conservó. El otro aprendió que en este juego no hay empates.',
+    condicion: 'Ganar una Disputa de Campeón.',
+    icono: '🐉',
+    tipo: 'easter_egg' as const,
+    secreto: true,
+  },
+  {
+    id: 'jamal_malik',
+    nombre: 'Jamal Malik',
+    descripcion:
+      'No estudió para esto. No lo prepararon para esto. Respondió desde lo que vivió. Y ganó.',
+    condicion: 'Ganar una apuesta de trivia en una Crisis tipo F.',
+    icono: '📺',
+    tipo: 'easter_egg' as const,
+    secreto: true,
+  },
+  {
+    id: 'mision_imposible',
+    nombre: 'Su Misión, si Decide Aceptarla',
+    descripcion:
+      'Cuatro crisis. Cuatro veces el expediente decía que no podía completarse. Cuatro veces se equivocó el expediente.',
+    condicion: 'Resolver las 4 crisis del reto.',
+    icono: '💣',
+    tipo: 'easter_egg' as const,
+    secreto: true,
+  },
+  {
+    id: 'sin_tiempo_para_morir',
+    nombre: 'Sin Tiempo Para Morir',
+    descripcion:
+      'La ventana se abría por horas. Podría haberla ignorado. Eligió no hacerlo. El Altis registra a los agentes que actúan cuando otros dudan.',
+    condicion: 'Completar una prueba Destino de dificultad difícil.',
+    icono: '🔫',
     tipo: 'easter_egg' as const,
     secreto: true,
   },

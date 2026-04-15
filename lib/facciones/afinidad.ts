@@ -53,6 +53,7 @@ async function upsertFaccion(params: {
   campeonCount: number
   rachaMilestoneActual: number
   rachaMilestoneNuevo: number
+  traicionCount?: number
 }): Promise<{ subioACampeon: boolean }> {
   const {
     agonistId,
@@ -63,9 +64,12 @@ async function upsertFaccion(params: {
     campeonCount,
     rachaMilestoneActual,
     rachaMilestoneNuevo,
+    traicionCount = 0,
   } = params
 
-  const puntosTotal = puntosActuales + puntosNuevos
+  const penalidad = Math.min(traicionCount, 2) * 0.15
+  const puntosEfectivos = Math.round(puntosNuevos * (1 - penalidad))
+  const puntosTotal = puntosActuales + puntosEfectivos
   let nuevoRango = calcularRango(puntosTotal)
 
   // Límite: máx 2 facciones en Campeón simultáneamente
@@ -213,6 +217,7 @@ export async function actualizarAfinidadHabitos(
         faccionId === 'tribunal_kleos'
           ? nuevoMilestoneMax
           : (actual?.rachaMilestoneMaximo ?? 0),
+      traicionCount: actual?.traicionCount ?? 0,
     })
     if (subioACampeon) {
       void detectarDisputaCampeon(agonistId, faccionId)
@@ -288,6 +293,7 @@ export async function actualizarAfinidadEvento(
     campeonCount,
     rachaMilestoneActual: actual?.rachaMilestoneMaximo ?? 0,
     rachaMilestoneNuevo: actual?.rachaMilestoneMaximo ?? 0,
+    traicionCount: actual?.traicionCount ?? 0,
   })
   if (subioACampeon) {
     void detectarDisputaCampeon(agonistId, faccionId)

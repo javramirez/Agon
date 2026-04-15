@@ -340,7 +340,12 @@ export async function resolverDisputasVencidas(): Promise<void> {
 
       await db
         .update(faccionesAfinidad)
-        .set({ rango: 3, puntosAfinidad: 55, updatedAt: new Date() })
+        .set({
+          rango: 3,
+          puntosAfinidad: 55,
+          traicionCount: sql`LEAST(traicion_count + 1, 2)`,
+          updatedAt: new Date(),
+        })
         .where(
           and(
             eq(faccionesAfinidad.agonistId, perdedorId),

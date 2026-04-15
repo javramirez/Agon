@@ -515,6 +515,7 @@ export const faccionesAfinidad = pgTable(
     puntosAfinidad: integer('puntos_afinidad').notNull().default(0),
     rango: integer('rango').notNull().default(1),
     rachaMilestoneMaximo: integer('racha_milestone_maximo').notNull().default(0),
+    traicionCount: integer('traicion_count').notNull().default(0),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (t) => [

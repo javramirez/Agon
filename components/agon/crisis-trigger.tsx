@@ -13,6 +13,20 @@ export function CrisisTrigger() {
       .then((r) => r.json())
       .then((data: { crisis?: CrisisData | null }) => {
         if (data.crisis && !data.crisis.resuelta) {
+          const crisisId = data.crisis.id
+          const yaDecidio = data.crisis.miDecision !== null
+
+          if (yaDecidio) {
+            const dismissed = sessionStorage.getItem(
+              `crisis_dismissed_${crisisId}`
+            )
+            if (dismissed) {
+              setCrisis(data.crisis)
+              setVisible(false)
+              return
+            }
+          }
+
           setCrisis(data.crisis)
           setVisible(true)
         }
@@ -30,10 +44,25 @@ export function CrisisTrigger() {
         fetch('/api/crisis/estado')
           .then((r) => r.json())
           .then((data: { crisis?: CrisisData | null }) => {
-            if (data.crisis && !data.crisis.resuelta) {
-              setCrisis(data.crisis)
-            } else {
+            if (!data.crisis || data.crisis.resuelta) {
+              if (crisis.id) {
+                sessionStorage.removeItem(`crisis_dismissed_${crisis.id}`)
+              }
               setVisible(false)
+              return
+            }
+
+            const yaDecidio = data.crisis.miDecision !== null
+            setCrisis(data.crisis)
+
+            if (yaDecidio) {
+              sessionStorage.setItem(
+                `crisis_dismissed_${data.crisis.id}`,
+                '1'
+              )
+              setVisible(false)
+            } else {
+              setVisible(true)
             }
           })
           .catch(() => {})

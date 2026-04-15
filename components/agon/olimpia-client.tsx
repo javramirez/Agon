@@ -384,6 +384,15 @@ function PanelDetalle({
             </span>
           </div>
           <BarraProgreso puntos={miPuntos} color={faccion.color} delay={0.2} />
+          {(miData?.traicionCount ?? 0) > 0 && (
+            <p
+              className="text-[10px] mt-2"
+              style={{ color: 'rgba(220,80,60,0.7)' }}
+            >
+              ⚠️ Esta facción recuerda tu traición — los puntos que acumulas aquí se
+              reducen un {(miData?.traicionCount ?? 0) * 15}%.
+            </p>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -537,6 +546,7 @@ export function OlimpiaClient({
   const [faccionSeleccionada, setFaccionSeleccionada] =
     useState<FaccionId>('guardia_hierro')
   const faccionIds = Object.keys(FACCIONES) as FaccionId[]
+  const sinRival = rivalAfinidad.length === 0 || rivalNombre === 'Tu rival'
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#0a0a0a' }}>
@@ -552,6 +562,25 @@ export function OlimpiaClient({
             Las facciones observan el Agon. Gana su lealtad completando los hábitos que
             veneran.
           </p>
+
+          {sinRival && (
+            <div
+              className="mt-4 rounded-xl px-4 py-3 flex items-center gap-3 max-w-md"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.07)',
+              }}
+            >
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>⚔️</span>
+              <p
+                className="text-xs leading-relaxed"
+                style={{ color: 'rgba(255,255,255,0.3)' }}
+              >
+                Tu rival aún no ha iniciado su camino en Olimpia. Las comparaciones aparecerán
+                cuando complete su Pacto Inicial.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-10 items-start">

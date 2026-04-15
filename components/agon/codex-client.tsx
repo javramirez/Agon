@@ -71,7 +71,7 @@ const tabScrollClass =
 function DetalleLore({ entrada, onClose }: { entrada: EntradaLore; onClose?: () => void }) {
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      <div className="relative w-full aspect-[4/3] flex-shrink-0 bg-surface-2">
+      <div className="relative w-full aspect-[16/9] flex-shrink-0 bg-surface-2">
         {entrada.imagen ? (
           <Image
             src={entrada.imagen}
@@ -139,6 +139,25 @@ function ListaEntradas({
   onSeleccionar: (e: EntradaLore) => void
   mentorAsignado?: string | null
 }) {
+  if (entradas.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-4 text-center px-6">
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 20 }}>📖</span>
+        </div>
+        <p className="text-sm text-muted-foreground/60 font-body max-w-xs leading-relaxed">
+          Esta sección del Códex aún no tiene registros. El Altis los inscribirá con el tiempo.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="divide-y divide-border/40">
       {entradas.map((entrada, i) => {
@@ -165,10 +184,6 @@ function ListaEntradas({
                 activa ? 'bg-amber' : 'bg-transparent'
               )}
             />
-
-            <span className={cn('text-xl flex-shrink-0', activa ? entrada.color : 'opacity-60')}>
-              {entrada.avatar}
-            </span>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
