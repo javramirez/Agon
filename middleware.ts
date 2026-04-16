@@ -33,7 +33,12 @@ export default clerkMiddleware(async (auth, req) => {
 
   if (isProtectedRoute(req) || isOnboardingRoute(req)) {
     if (!userId) {
-      return NextResponse.redirect(new URL('/sign-in', req.url))
+      const signInUrl = new URL('/sign-in', req.url)
+      if (isOnboardingRoute(req)) {
+        const returnTo = new URL(req.nextUrl.pathname + req.nextUrl.search, req.url)
+        signInUrl.searchParams.set('redirect_url', returnTo.href)
+      }
+      return NextResponse.redirect(signInUrl)
     }
     // Sin allowlist — cualquier usuario autenticado pasa.
     // La app decide qué mostrar según estado en DB.

@@ -1,8 +1,42 @@
 'use client'
 
+import { Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { SignIn } from '@clerk/nextjs'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
+
+const SIGN_IN_APPEARANCE = {
+  variables: {
+    colorBackground: 'transparent',
+    colorInputBackground: 'rgba(255,255,255,0.04)',
+    colorInputText: '#f5f5f5',
+    colorText: '#f5f5f5',
+    colorTextSecondary: '#888888',
+    colorPrimary: '#F59E0B',
+    colorDanger: '#EF4444',
+    borderRadius: '0.75rem',
+    fontFamily: 'Inter, sans-serif',
+    fontSize: '14px',
+  },
+  elements: {
+    card: 'shadow-none border-none',
+    headerTitle: 'hidden',
+    headerSubtitle: 'hidden',
+    logoBox: 'hidden',
+  },
+} as const
+
+function SignInWithRedirect() {
+  const searchParams = useSearchParams()
+  const redirectUrl = searchParams.get('redirect_url') ?? undefined
+  return (
+    <SignIn
+      {...(redirectUrl ? { forceRedirectUrl: redirectUrl } : {})}
+      appearance={SIGN_IN_APPEARANCE}
+    />
+  )
+}
 
 const PARTICLES = [
   { left: '5%', top: '15%', duration: 4.2, delay: 0 },
@@ -285,28 +319,15 @@ export default function SignInPage() {
               <div className="mx-6 h-px bg-white/5 mb-1" />
 
               {/* Widget — sin padding lateral para respetar su ancho natural */}
-              <SignIn
-                appearance={{
-                  variables: {
-                    colorBackground: 'transparent',
-                    colorInputBackground: 'rgba(255,255,255,0.04)',
-                    colorInputText: '#f5f5f5',
-                    colorText: '#f5f5f5',
-                    colorTextSecondary: '#888888',
-                    colorPrimary: '#F59E0B',
-                    colorDanger: '#EF4444',
-                    borderRadius: '0.75rem',
-                    fontFamily: 'Inter, sans-serif',
-                    fontSize: '14px',
-                  },
-                  elements: {
-                    card: 'shadow-none border-none',
-                    headerTitle: 'hidden',
-                    headerSubtitle: 'hidden',
-                    logoBox: 'hidden',
-                  },
-                }}
-              />
+              <Suspense
+                fallback={
+                  <div className="min-h-[280px] flex items-center justify-center text-xs text-muted-foreground font-body px-6">
+                    Cargando…
+                  </div>
+                }
+              >
+                <SignInWithRedirect />
+              </Suspense>
 
               {/* Línea dorada inferior */}
               <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber/20 to-transparent z-10" />
