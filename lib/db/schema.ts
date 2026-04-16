@@ -159,7 +159,7 @@ export const pruebasDiarias = pgTable('pruebas_diarias', {
 })
 
 // ─── KLEOS LOG ────────────────────────────────────────
-// Historial de kleos ganado — para auditoría y La Crónica
+// Historial de kleos ganado: para auditoría y La Crónica
 
 export const kleosLog = pgTable('kleos_log', {
   id: varchar('id', { length: 256 }).primaryKey(),
@@ -388,23 +388,23 @@ export const pactoInicial = pgTable('pacto_inicial', {
     .references(() => agonistas.id),
   acto: integer('acto').notNull().default(1),
 
-  // Bloque 1 — Tú
+  // Bloque 1: Tú
   objetivo: text('objetivo').notNull(),
   arquetipo: arquetipoEnum('arquetipo').notNull(),
   puntoPartida: varchar('punto_partida', { length: 64 }).notNull(),
   compromisoEscala: integer('compromiso_escala').notNull(),
 
-  // Línea base declarada — para detección de sobreexigencia
+  // Línea base declarada: para detección de sobreexigencia
   lineaBaseGym: integer('linea_base_gym').notNull().default(0),
   lineaBaseCardio: integer('linea_base_cardio').notNull().default(0),
   lineaBasePaginas: integer('linea_base_paginas').notNull().default(0),
 
-  // Bloque 2 — Tu sombra
+  // Bloque 2: Tu sombra
   sombraTipo: text('sombra_tipo').notNull(),
   apuestaGanas: text('apuesta_ganas').notNull(),
   apuestaPierdes: text('apuesta_pierdes').notNull(),
 
-  // Bloque 3 — El rival
+  // Bloque 3: El rival
   rivalFortalezas: jsonb('rival_fortalezas').notNull().$type<string[]>(),
   rivalDebilidad: text('rival_debilidad').notNull(),
   preocupacionEscala: jsonb('preocupacion_escala')
@@ -502,7 +502,7 @@ export const notificaciones = pgTable('notificaciones', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
-// ─── Ciudad de Olimpia — Sistema de Afinidad ─────────────────────────────────
+// ─── Ciudad de Olimpia: Sistema de Afinidad ─────────────────────────────────
 
 export const faccionesAfinidad = pgTable(
   'facciones_afinidad',
@@ -553,7 +553,7 @@ export const disputasCampeon = pgTable(
 )
 
 // ─── CALENDARIO DE CRISIS ─────────────────────────────
-// Generado una sola vez al inicio del reto — 4 crisis sorteadas del pool de 19
+// Generado una sola vez al inicio del reto: 4 crisis sorteadas del pool de 19
 
 export const calendarioCrisis = pgTable('calendario_crisis', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -573,7 +573,7 @@ export const crisisCiudad = pgTable(
     fechaActivacion: timestamp('fecha_activacion').defaultNow().notNull(),
     fechaExpiracion: timestamp('fecha_expiracion').notNull(),
 
-    // Decisiones de cada agonista — null hasta que deciden
+    // Decisiones de cada agonista: null hasta que deciden
     decisionAgonista1: varchar('decision_agonista1', { length: 1 }), // 'A' | 'B'
     decisionAgonista2: varchar('decision_agonista2', { length: 1 }), // 'A' | 'B'
 
@@ -585,7 +585,7 @@ export const crisisCiudad = pgTable(
     puntajeAgonista1: integer('puntaje_agonista1'),
     puntajeAgonista2: integer('puntaje_agonista2'),
 
-    // Preguntas de trivia seleccionadas — mismas para ambos
+    // Preguntas de trivia seleccionadas: mismas para ambos
     triviaPreguntas: jsonb('trivia_preguntas').$type<string[]>(),
 
     // Resolución
@@ -598,7 +598,7 @@ export const crisisCiudad = pgTable(
       .default(false)
       .notNull(),
 
-    // Cambio de líder en Códex (Crisis 19 — Milcíades)
+    // Cambio de líder en Códex (Crisis 19: Milcíades)
     liderModificado: jsonb('lider_modificado').$type<{
       faccionId: string
       liderOriginal: string

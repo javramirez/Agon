@@ -1,6 +1,6 @@
 // ─── TIPOS ────────────────────────────────────────────────────────────────────
 
-export type Narrative = 'origen' | 'consistencia' | 'gloria' | 'legado' | 'easter_egg'
+export type Narrative = 'origen' | 'consistencia' | 'gloria' | 'legado' | 'easter_egg' | 'gran_agon'
 export type Intensity = 'forjada' | 'templada' | 'epica'
 
 export interface VisualTokens {
@@ -45,11 +45,37 @@ export interface VisualTokens {
   categoryColor: string
 }
 
+const GRAN_AGON_EPICA: VisualTokens = {
+  primaryColor: '#ffd760',
+  secondaryColor: '#d4a8ff',
+  glowColor: 'rgba(245,200,80,0.9)',
+  bgGradient: 'linear-gradient(180deg, #030108 0%, #010005 100%)',
+  borderColor: 'rgba(245,200,80,1.0)',
+  borderGlow:
+    '0 0 60px rgba(245,158,11,0.5), 0 0 20px rgba(180,100,255,0.4), 0 0 4px rgba(255,230,100,1.0)',
+  particleColor: '#ffd760',
+  particleDensity: 200,
+  particleSize: 5,
+  lightRays: true,
+  lightRayColor: 'rgba(255,220,80,0.9)',
+  glowIntensity: 1.0,
+  shake: 1.2,
+  scaleOnReveal: 1.18,
+  flashColor: 'rgba(255,255,255,1.0)',
+  flashIntensity: 1.0,
+  animatedBg: true,
+  bgAnimation: 'sunburst',
+  titleColor: '#ffd760',
+  subtitleColor: '#d4a8ff',
+  categoryLabel: '✦ El Gran Agon ✦',
+  categoryColor: 'rgba(245,200,80,0.9)',
+}
+
 // ─── SISTEMA VISUAL ───────────────────────────────────────────────────────────
 
 export const VISUAL_SYSTEM: Record<Narrative, Record<Intensity, VisualTokens>> = {
   // ══════════════════════════════════════════════════════
-  // EL ORIGEN — Azul / Mármol / Nacimiento
+  // EL ORIGEN: Azul / Mármol / Nacimiento
   // ══════════════════════════════════════════════════════
   origen: {
     forjada: {
@@ -127,7 +153,7 @@ export const VISUAL_SYSTEM: Record<Narrative, Record<Intensity, VisualTokens>> =
   },
 
   // ══════════════════════════════════════════════════════
-  // LA CONSISTENCIA — Naranja / Fuego / Forja
+  // LA CONSISTENCIA: Naranja / Fuego / Forja
   // ══════════════════════════════════════════════════════
   consistencia: {
     forjada: {
@@ -205,7 +231,7 @@ export const VISUAL_SYSTEM: Record<Narrative, Record<Intensity, VisualTokens>> =
   },
 
   // ══════════════════════════════════════════════════════
-  // LA GLORIA — Dorado / Luz / Olimpo
+  // LA GLORIA: Dorado / Luz / Olimpo
   // ══════════════════════════════════════════════════════
   gloria: {
     forjada: {
@@ -283,7 +309,7 @@ export const VISUAL_SYSTEM: Record<Narrative, Record<Intensity, VisualTokens>> =
   },
 
   // ══════════════════════════════════════════════════════
-  // EL LEGADO — Púrpura / Piedra / Eternidad
+  // EL LEGADO: Púrpura / Piedra / Eternidad
   // ══════════════════════════════════════════════════════
   legado: {
     forjada: {
@@ -361,7 +387,7 @@ export const VISUAL_SYSTEM: Record<Narrative, Record<Intensity, VisualTokens>> =
   },
 
   // ══════════════════════════════════════════════════════
-  // EASTER EGG — Dorado máximo / Carta personalizada
+  // EASTER EGG: Dorado máximo / Carta personalizada
   // ══════════════════════════════════════════════════════
   easter_egg: {
     forjada: {
@@ -437,6 +463,12 @@ export const VISUAL_SYSTEM: Record<Narrative, Record<Intensity, VisualTokens>> =
       categoryColor: 'rgba(245,158,11,0.8)',
     },
   },
+
+  gran_agon: {
+    forjada: GRAN_AGON_EPICA, // fallback — no se usa
+    templada: GRAN_AGON_EPICA, // fallback — no se usa
+    epica: GRAN_AGON_EPICA,
+  },
 }
 
 // ─── HELPER: obtener tokens desde una inscripción ──────────────────────────────
@@ -496,7 +528,7 @@ export const INSCRIPCION_VISUAL_MAP: Record<
   gemelos_del_agon: { narrative: 'legado', intensity: 'templada' },
   imparable: { narrative: 'legado', intensity: 'templada' },
   la_remontada: { narrative: 'legado', intensity: 'epica' },
-  el_gran_agon: { narrative: 'legado', intensity: 'epica' },
+  el_gran_agon: { narrative: 'gran_agon' as NarrativeKey, intensity: 'epica' as IntensityKey },
 
   // ── SECRETAS ───────────────────────────────────────────
   guardian_de_la_noche: { narrative: 'origen', intensity: 'templada' },
@@ -520,7 +552,7 @@ export const INSCRIPCION_VISUAL_MAP: Record<
   la_venganza: { narrative: 'legado', intensity: 'epica' },
   el_ultimo_agon: { narrative: 'legado', intensity: 'epica' },
 
-  // ── NUEVAS — CIUDAD DE OLIMPIA + CRISIS ────────────────
+  // ── NUEVAS: CIUDAD DE OLIMPIA + CRISIS ────────────────
   el_iniciado_de_la_ciudad: { narrative: 'origen', intensity: 'forjada' },
   el_reconocido: { narrative: 'origen', intensity: 'templada' },
   campeon_de_la_ciudad: { narrative: 'gloria', intensity: 'epica' },

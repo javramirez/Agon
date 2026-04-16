@@ -104,7 +104,8 @@ function FaccionCard({
       type="button"
       onClick={onClick}
       whileTap={{ scale: 0.98 }}
-      className="w-full text-left rounded-2xl p-4 transition-all duration-200"
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      className="w-full text-left rounded-2xl p-4 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber/50"
       style={{
         backgroundColor: seleccionada
           ? `${faccion.color}0F`
@@ -549,41 +550,30 @@ export function OlimpiaClient({
   const sinRival = rivalAfinidad.length === 0 || rivalNombre === 'Tu rival'
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#0a0a0a' }}>
-      <div className="max-w-5xl mx-auto px-6 py-12">
-        <div className="mb-12">
-          <h1 className="text-3xl font-semibold tracking-tight text-white/90">
-            La Ciudad de Olimpia
-          </h1>
-          <p
-            className="text-sm mt-2 max-w-md leading-relaxed"
-            style={{ color: 'rgba(255,255,255,0.35)' }}
-          >
-            Las facciones observan el Agon. Gana su lealtad completando los hábitos que
-            veneran.
-          </p>
+    <div className="space-y-6">
+      <div className="pt-2">
+        <p className="text-xs text-muted-foreground tracking-widest uppercase font-body mb-1">
+          La Ciudad
+        </p>
+        <h1 className="font-display text-2xl font-bold tracking-wide">
+          La Ciudad de Olimpia.
+        </h1>
+        <p className="text-xs text-muted-foreground font-body mt-1 leading-relaxed">
+          Las facciones observan el Agon. Gana su lealtad completando los hábitos que veneran.
+        </p>
 
-          {sinRival && (
-            <div
-              className="mt-4 rounded-xl px-4 py-3 flex items-center gap-3 max-w-md"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.07)',
-              }}
-            >
-              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 16 }}>⚔️</span>
-              <p
-                className="text-xs leading-relaxed"
-                style={{ color: 'rgba(255,255,255,0.3)' }}
-              >
-                Tu rival aún no ha iniciado su camino en Olimpia. Las comparaciones aparecerán
-                cuando complete su Pacto Inicial.
-              </p>
-            </div>
-          )}
-        </div>
+        {sinRival && (
+          <div className="mt-3 rounded-xl px-4 py-3 flex items-center gap-3 bg-surface-1 border border-border">
+            <span className="text-base">⚔️</span>
+            <p className="text-xs text-muted-foreground font-body leading-relaxed">
+              Tu rival aún no ha iniciado su camino en Olimpia. Las comparaciones aparecerán
+              cuando complete su Pacto Inicial.
+            </p>
+          </div>
+        )}
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-10 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-6 items-start">
           <div className="flex flex-col gap-3">
             {faccionIds.map((id) => (
               <FaccionCard
@@ -619,7 +609,6 @@ export function OlimpiaClient({
               />
             </AnimatePresence>
           </div>
-        </div>
       </div>
     </div>
   )

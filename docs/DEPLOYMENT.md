@@ -1,4 +1,4 @@
-# Deployment — Agon
+# Deployment: Agon
 
 Guía paso a paso para deployar Agon desde cero. Pensada para quien no participó en el desarrollo.
 
@@ -8,18 +8,18 @@ Guía paso a paso para deployar Agon desde cero. Pensada para quien no particip�
 
 Cuentas necesarias:
 
-- [GitHub](https://github.com) — repositorio del código
-- [Vercel](https://vercel.com) — deploy + Vercel Blob
-- [Clerk](https://clerk.com) — autenticación
-- [Neon](https://neon.tech) — base de datos PostgreSQL
-- [Anthropic](https://console.anthropic.com) — API de IA
+- [GitHub](https://github.com): repositorio del código
+- [Vercel](https://vercel.com): deploy + Vercel Blob
+- [Clerk](https://clerk.com): autenticación
+- [Neon](https://neon.tech): base de datos PostgreSQL
+- [Anthropic](https://console.anthropic.com): API de IA
 
 ---
 
 ## 1. Configurar Clerk
 
 1. Crear aplicación en [dashboard.clerk.com](https://dashboard.clerk.com)
-2. Nombre: `agon` — método de login: Email (u otro acordado)
+2. Nombre: `agon` - método de login: Email (u otro acordado)
 3. Copiar desde **API Keys**:
    - `Publishable key` → `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
    - `Secret key` → `CLERK_SECRET_KEY`
@@ -45,7 +45,7 @@ Cuentas necesarias:
 
 1. En [vercel.com](https://vercel.com), crear o usar un proyecto
 2. **Storage** → **Create Database** → **Blob**
-3. Nombre: `agon-blob` — Access: **Public**
+3. Nombre: `agon-blob` - Access: **Public**
 4. Copiar `BLOB_READ_WRITE_TOKEN` desde Settings del store
 
 ---

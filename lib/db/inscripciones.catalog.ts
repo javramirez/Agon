@@ -131,7 +131,7 @@ export const INSCRIPCIONES = [
   {
     id: 'la_primera_carrera',
     nombre: 'La Primera Carrera',
-    descripcion: 'No es gym — es movimiento distinto, disciplina distinta. El Altis lo distingue.',
+    descripcion: 'No es gym: es movimiento distinto, disciplina distinta. El Altis lo distingue.',
     condicion: 'Registra tu primera sesión de cardio.',
     icono: '🏃',
     tipo: 'publica' as const,
@@ -176,7 +176,7 @@ export const INSCRIPCIONES = [
   {
     id: 'el_estoico',
     nombre: 'El Estoico',
-    descripcion: 'Cinco días seguidos. No fue suerte — fue decisión repetida.',
+    descripcion: 'Cinco días seguidos. No fue suerte: fue decisión repetida.',
     condicion: 'Completa 5 días perfectos consecutivos.',
     icono: '🗿',
     tipo: 'publica' as const,
@@ -185,7 +185,7 @@ export const INSCRIPCIONES = [
   {
     id: 'el_caminante',
     nombre: 'El Caminante',
-    descripcion: 'No es una racha — es consistencia acumulada. El agonista que siempre avanza.',
+    descripcion: 'No es una racha: es consistencia acumulada. El agonista que siempre avanza.',
     condicion: 'Registra 10.000+ pasos en 14 días totales.',
     icono: '🚶',
     tipo: 'publica' as const,
@@ -266,7 +266,7 @@ export const INSCRIPCIONES = [
   {
     id: 'la_biblioteca_del_agon',
     nombre: 'La Biblioteca del Agon',
-    descripcion: 'Has leído más en 29 días que la mayoría en un año.',
+    descripcion: 'Trescientas páginas. El Altis no pregunta cuánto costó cada una.',
     condicion: 'Acumula 300 páginas leídas en total.',
     icono: '📚',
     tipo: 'publica' as const,
@@ -302,7 +302,7 @@ export const INSCRIPCIONES = [
   {
     id: 'el_heroe_del_altis',
     nombre: 'El Héroe del Altis',
-    descripcion: 'No como título honorífico — como descripción de lo que está ocurriendo.',
+    descripcion: 'No como título honorífico, sino como descripción de lo que está ocurriendo.',
     condicion: 'Alcanza el nivel Héroe (1.300 kleos).',
     icono: '🔥',
     tipo: 'publica' as const,
@@ -517,7 +517,7 @@ export const INSCRIPCIONES = [
   {
     id: 'la_herejia',
     nombre: 'La Herejía',
-    descripcion: 'La mejor respuesta no fue una palabra — fueron las siete pruebas.',
+    descripcion: 'La mejor respuesta no fue una palabra: fueron las siete pruebas.',
     condicion: 'Ser señalado y completar las 7 pruebas ese mismo día.',
     icono: '⚡',
     tipo: 'secreta' as const,
@@ -589,7 +589,7 @@ export const INSCRIPCIONES = [
   {
     id: 'el_inmortal',
     nombre: 'El Inmortal',
-    descripcion: 'El nivel más alto del Gran Agon. El Altis no tiene palabras — solo esta inscripción.',
+    descripcion: 'El nivel más alto del Gran Agon. El Altis no tiene palabras: solo esta inscripción.',
     condicion: 'Alcanza el nivel Inmortal (3.900 kleos).',
     icono: '🏛️',
     tipo: 'secreta' as const,
@@ -638,7 +638,7 @@ export const INSCRIPCIONES = [
     id: 'la_marca_del_traidor',
     nombre: 'La Marca del Traidor',
     descripcion:
-      'Dos veces la Ciudad te vio caer. Dos veces la marca quedó. El Altis no juzga — solo registra.',
+      'Dos veces la Ciudad te vio caer. Dos veces la marca quedó. El Altis no juzga, solo registra.',
     condicion: 'Acumular 2 traiciones (traicion_count = 2).',
     icono: '🩸',
     tipo: 'secreta' as const,
@@ -677,7 +677,7 @@ export const INSCRIPCIONES = [
   {
     id: 'no_estas_entretenido',
     nombre: '¿No Estás Entretenido?',
-    descripcion: 'El pulgar apuntó hacia arriba. Las siete pruebas estaban completas. El domingo no fue un día de descanso — fue un día de gloria.',
+    descripcion: 'El pulgar apuntó hacia arriba. Las siete pruebas estaban completas. El domingo no fue un día de descanso: fue un día de gloria.',
     condicion: 'Completa las 7 pruebas un domingo.',
     icono: '🏟️',
     tipo: 'easter_egg' as const,

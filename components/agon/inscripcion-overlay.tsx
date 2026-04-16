@@ -239,6 +239,7 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
 
   const isEpica = intensity === 'epica'
   const isEasterEgg = narrative === 'easter_egg'
+  const isGranAgan = inscripcionId === 'el_gran_agon'
   const esUltima = indiceActual === inscripcionIds.length - 1
 
   useEffect(() => {
@@ -248,7 +249,7 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
   }, [indiceActual, tokens])
 
   const handleComplete = useCallback(() => {
-    // Director en 'control' — el botón ya es visible
+    // Director en 'control': el botón ya es visible
   }, [])
 
   const { playPhase, resetAudio } = useCinematicAudio({
@@ -262,11 +263,13 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
     [playPhase]
   )
 
-  const intensityKey: CinematicIntensity = isEasterEgg
-    ? 'easter_egg'
-    : isEpica
-      ? 'epica'
-      : 'forjada'
+  const intensityKey: CinematicIntensity = isGranAgan
+    ? 'easter_egg' // usa el perfil más épico disponible
+    : isEasterEgg
+      ? 'easter_egg'
+      : isEpica
+        ? 'epica'
+        : 'forjada'
 
   const { phase, start, reset, showButton } = useCinematicReveal({
     intensity: intensityKey,
@@ -375,6 +378,20 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
 
         <ParticleField particles={particlesRef.current} color={primaryColor} phase={phase} />
 
+        {isGranAgan && (
+          <ParticleField
+            particles={particlesRef.current.map((p) => ({
+              ...p,
+              id: p.id + 1000,
+              x: 100 - p.x,
+              y: 100 - p.y,
+              angle: p.angle + 180,
+            }))}
+            color="rgba(212,168,255,0.7)"
+            phase={phase}
+          />
+        )}
+
         {tokens.lightRays && (
           <LightRays
             color={tokens.lightRayColor}
@@ -423,7 +440,7 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
                       : { type: 'spring' as const, stiffness: 260, damping: 20, duration: 0.6 }
                 }
               >
-                {/* Opción A — shake reemplazado por entrada diferenciada, mantener solo el glow pulse */}
+                {/* Opción A: shake reemplazado por entrada diferenciada, mantener solo el glow pulse */}
                 <motion.div
                   animate={
                     phase === 'afterglow'
@@ -479,7 +496,7 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
               <motion.button
                 type="button"
                 onClick={handleSiguiente}
-                className="rounded-xl font-display font-bold tracking-widest uppercase transition-colors"
+                className="rounded-xl font-display font-bold tracking-widest uppercase transition-colors mt-6"
                 style={{
                   padding: '14px 32px',
                   fontSize: 11,
@@ -494,9 +511,11 @@ export function InscripcionOverlay({ inscripcionIds, onCerrar }: Props) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
               >
-                {esUltima
-                  ? 'El Altis lo registra'
-                  : `Ver siguiente (${indiceActual + 2} de ${inscripcionIds.length})`}
+                {isGranAgan
+                  ? 'El Altis te inscribe para siempre'
+                  : esUltima
+                    ? 'El Altis lo registra'
+                    : `Ver siguiente (${indiceActual + 2} de ${inscripcionIds.length})`}
               </motion.button>
             )}
           </AnimatePresence>

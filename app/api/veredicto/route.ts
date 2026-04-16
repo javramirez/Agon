@@ -7,6 +7,38 @@ import { getAmbosAgonistas } from '@/lib/db/queries'
 import { NIVEL_LABELS } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
 import type { PruebaDiaria } from '@/lib/db/schema'
+import Anthropic from '@anthropic-ai/sdk'
+
+async function generarFraseVeredicto(
+  ganadorNombre: string | null,
+  empate: boolean,
+  stats1: { nombre: string; kleosTotal: number; diasPerfectos: number },
+  stats2: { nombre: string; kleosTotal: number; diasPerfectos: number }
+): Promise<string> {
+  const key = process.env.ANTHROPIC_API_KEY
+  if (!key) return 'El Altis inscribe en silencio lo que las palabras no pueden contener.'
+
+  const anthropic = new Anthropic({ apiKey: key })
+
+  const prompt = empate
+    ? `Dos agonistas completaron el Gran Agon empatados en kleos. ${stats1.nombre} acumuló ${stats1.kleosTotal} kleos y ${stats1.diasPerfectos} días perfectos. ${stats2.nombre} acumuló ${stats2.kleosTotal} kleos y ${stats2.diasPerfectos} días perfectos. Escribe UNA sola frase épica y ceremoniosa que el Altis inscribiría en piedra sobre este empate. Máximo 20 palabras. Sin guion largo. Sin comillas.`
+    : `${ganadorNombre} ganó el Gran Agon. Los datos: ${stats1.nombre} acumuló ${stats1.kleosTotal} kleos y ${stats1.diasPerfectos} días perfectos. ${stats2.nombre} acumuló ${stats2.kleosTotal} kleos y ${stats2.diasPerfectos} días perfectos. Escribe UNA sola frase épica y ceremoniosa que el Altis inscribiría en piedra sobre la victoria. Menciona al ganador. Máximo 20 palabras. Sin guion largo. Sin comillas.`
+
+  try {
+    const res = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    return res.content
+      .filter((b) => b.type === 'text')
+      .map((b) => (b as { text: string }).text)
+      .join('')
+      .trim()
+  } catch {
+    return 'El Altis inscribe en silencio lo que las palabras no pueden contener.'
+  }
+}
 
 export async function GET() {
   const { userId } = await auth()
@@ -46,17 +78,35 @@ export async function GET() {
     oraculo: agonista.oraculoMensaje,
   })
 
+  const stats1 = calcularStats(a1, pruebas1, inscripciones1)
+  const stats2 = calcularStats(a2, pruebas2, inscripciones2)
+
+  const ganadorNombre =
+    a1.kleosTotal > a2.kleosTotal ? a1.nombre : a2.kleosTotal > a1.kleosTotal ? a2.nombre : null
+  const esEmpate = a1.kleosTotal === a2.kleosTotal
+
+  const fraseVeredicto = await generarFraseVeredicto(
+    ganadorNombre,
+    esEmpate,
+    {
+      nombre: a1.nombre,
+      kleosTotal: a1.kleosTotal,
+      diasPerfectos: pruebas1.filter((p) => p.diaPerfecto).length,
+    },
+    {
+      nombre: a2.nombre,
+      kleosTotal: a2.kleosTotal,
+      diasPerfectos: pruebas2.filter((p) => p.diaPerfecto).length,
+    }
+  )
+
   return NextResponse.json({
-    agonista1: calcularStats(a1, pruebas1, inscripciones1),
-    agonista2: calcularStats(a2, pruebas2, inscripciones2),
-    ganador:
-      a1.kleosTotal > a2.kleosTotal
-        ? a1.nombre
-        : a2.kleosTotal > a1.kleosTotal
-          ? a2.nombre
-          : null,
-    empate: a1.kleosTotal === a2.kleosTotal,
+    agonista1: stats1,
+    agonista2: stats2,
+    ganador: ganadorNombre,
+    empate: esEmpate,
     totalHegemonias: todasHegemonias.length,
+    fraseVeredicto,
   })
 }
 

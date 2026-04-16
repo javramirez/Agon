@@ -512,7 +512,7 @@ function SeccionCronicas({ cronicas: cronicasProp }: { cronicas: Cronica[] }) {
   const listaCronicas: EntradaLore[] = cronicasProp.map((c) => ({
     id: c.id,
     nombre: `Semana ${c.semana}`,
-    subtitulo: `${fmtFecha(c.fechaInicio)} — ${fmtFecha(c.fechaFin)}`,
+    subtitulo: `${fmtFecha(c.fechaInicio)} - ${fmtFecha(c.fechaFin)}`,
     avatar: '📰',
     color: 'text-amber',
     descripcion: previewRelato(c.relato),
@@ -588,7 +588,7 @@ function SeccionCronicas({ cronicas: cronicasProp }: { cronicas: Cronica[] }) {
               </button>
               <div className="space-y-1">
                 <p className="text-xs text-amber/70 font-body tracking-widest uppercase">
-                  {fmtFecha(seleccionada.fechaInicio)} — {fmtFecha(seleccionada.fechaFin)}
+                  {fmtFecha(seleccionada.fechaInicio)} - {fmtFecha(seleccionada.fechaFin)}
                 </p>
                 <h2 className="font-display text-xl font-bold">Semana {seleccionada.semana}</h2>
               </div>
@@ -645,7 +645,7 @@ const CLAUSULAS_CONTRATO: {
   },
   {
     numero: 'Séptimo',
-    titulo: 'La Ekecheiria — Cláusula de Fuerza Mayor',
+    titulo: 'La Ekecheiria: Cláusula de Fuerza Mayor',
     texto:
       'En caso de enfermedad o lesión real, la parte afectada puede invocar La Ekecheiria. Se dispone de 7 días corridos posteriores al 13 de mayo como colchón de recuperación.',
     muted: true,
@@ -736,7 +736,7 @@ function SeccionContrato({
 
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground tracking-widest uppercase font-body">
-                Premios y Penitencias — Cláusula Sexta
+                Premios y Penitencias: Cláusula Sexta
               </p>
               {PREMIOS_CONTRATO.map((p) => (
                 <div key={p.agonista} className="rounded-xl border border-border bg-surface-1 p-4 space-y-3">
@@ -838,7 +838,7 @@ function SeccionContrato({
                   { label: 'El Arquetipo', valor: ARQUETIPO_LABELS[pacto.arquetipo] ?? pacto.arquetipo },
                   { label: 'Si gano...', valor: pacto.apuestaGanas },
                   { label: 'Si pierdo...', valor: pacto.apuestaPierdes },
-                  { label: 'Mentor asignado', valor: mentorAsignado ?? '—' },
+                  { label: 'Mentor asignado', valor: mentorAsignado ?? 'sin asignar' },
                 ].map((c, i) => (
                   <motion.div
                     key={c.label}
@@ -1183,7 +1183,7 @@ function PanelBitacora({
 
   return createPortal(
     <>
-      {/* Desktop — Modal centrado */}
+      {/* Desktop: Modal centrado */}
       <div className="hidden sm:flex fixed inset-0 z-[9999] items-center justify-center">
         <motion.div
           className="absolute inset-0"
@@ -1209,7 +1209,7 @@ function PanelBitacora({
         </motion.div>
       </div>
 
-      {/* Mobile — Drawer desde abajo */}
+      {/* Mobile: Drawer desde abajo */}
       <div className="sm:hidden fixed inset-0 z-[9999] flex items-end">
         <motion.div
           className="absolute inset-0"

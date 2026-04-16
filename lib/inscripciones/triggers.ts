@@ -78,90 +78,90 @@ export async function verificarInscripciones(
 
   // ─── PÚBLICAS EXISTENTES ───────────────────────────────────────────────────
 
-  // La Llama Viva — 3 días perfectos consecutivos
+  // La Llama Viva: 3 días perfectos consecutivos
   if (diasPerfectos.length >= 3) {
     if (calcularRachaDias(diasPerfectosOrdenados) >= 3) {
       await desbloquear('la_llama_viva')
     }
   }
 
-  // El Agua Sagrada — 7 días solo agua
+  // El Agua Sagrada: 7 días solo agua
   const diasAgua = todasLasPruebas.filter((p) => p.soloAgua).length
   if (diasAgua >= 7) await desbloquear('agua_sagrada')
 
-  // La Semana Olímpica — 7 días perfectos consecutivos
+  // La Semana Olímpica: 7 días perfectos consecutivos
   if (diasPerfectos.length >= 7) {
     if (calcularRachaDias(diasPerfectosOrdenados) >= 7) {
       await desbloquear('semana_olimpica')
     }
   }
 
-  // La Furia del Agon — 5 sesiones de gym en una semana
+  // La Furia del Agon: 5 sesiones de gym en una semana
   if (pruebaNueva.sesionesGym >= 5) await desbloquear('furia_del_agon')
 
-  // El Heraldo — antes de las 7am
+  // El Heraldo: antes de las 7am
   if (horaActual < 7) await desbloquear('el_heraldo')
 
-  // El Filósofo del Agon — 100 páginas totales
+  // El Filósofo del Agon: 100 páginas totales
   const totalPaginas = todasLasPruebas.reduce((sum, p) => sum + (p.paginasLeidas ?? 0), 0)
   if (totalPaginas >= 100) await desbloquear('filosofo_del_agon')
 
-  // El Ayuno de Hierro — 14 días sin comida rápida
+  // El Ayuno de Hierro: 14 días sin comida rápida
   const diasSinComida = todasLasPruebas.filter((p) => p.sinComidaRapida).length
   if (diasSinComida >= 14) await desbloquear('ayuno_de_hierro')
 
-  // Imparable — 14 días perfectos totales
+  // Imparable: 14 días perfectos totales
   if (diasPerfectos.length >= 14) await desbloquear('imparable')
 
-  // El Gran Agon — 29 días completados
+  // El Gran Agon: 29 días completados
   if (todasLasPruebas.length >= 29) await desbloquear('el_gran_agon')
 
-  // La Precisión del Sabio — exactamente 8h sueño 3 días consecutivos
+  // La Precisión del Sabio: exactamente 8h sueño 3 días consecutivos
   const diasOchoHoras = todasLasPruebas
     .filter((p) => p.horasSueno === 8)
     .map((p) => String(p.fecha))
     .sort()
   if (calcularRachaDias(diasOchoHoras) >= 3) await desbloquear('precision_del_sabio')
 
-  // Más Allá del Contrato — cardio 7 días consecutivos
+  // Más Allá del Contrato: cardio 7 días consecutivos
   const rachaCardio = todasLasLlamas.find((l) => l.habitoId === 'cardio')?.rachaActual ?? 0
   if (rachaCardio >= 7) await desbloquear('mas_alla_del_contrato')
 
-  // El Guardián de la Noche — entre 2am y 5am
+  // El Guardián de la Noche: entre 2am y 5am
   if (horaActual >= 2 && horaActual < 5) await desbloquear('guardian_de_la_noche')
 
   // ─── PÚBLICAS NUEVAS ───────────────────────────────────────────────────────
 
-  // El Iniciado — primer día perfecto
+  // El Iniciado: primer día perfecto
   if (pruebaNueva.diaPerfecto && diasPerfectos.length === 1) {
     await desbloquear('el_iniciado')
   }
 
-  // El Primer Paso — primer día con meta efectiva de pasos
+  // El Primer Paso: primer día con meta efectiva de pasos
   const diasConPasos = todasLasPruebas.filter((p) => p.pasos >= metasEfectivas.pasos)
   if (diasConPasos.length === 1 && pruebaNueva.pasos >= metasEfectivas.pasos) {
     await desbloquear('el_primer_paso')
   }
 
-  // El Primer Combate — primera sesión de gym
+  // El Primer Combate: primera sesión de gym
   const diasConGym = todasLasPruebas.filter((p) => p.sesionesGym > 0)
   if (diasConGym.length === 1 && pruebaNueva.sesionesGym > 0) {
     await desbloquear('el_primer_combate')
   }
 
-  // La Primera Carrera — primera sesión de cardio
+  // La Primera Carrera: primera sesión de cardio
   const diasConCardio = todasLasPruebas.filter((p) => p.sesionesCardio > 0)
   if (diasConCardio.length === 1 && pruebaNueva.sesionesCardio > 0) {
     await desbloquear('la_primera_carrera')
   }
 
-  // El Bautismo — primer día solo agua
+  // El Bautismo: primer día solo agua
   const diasSoloAgua = todasLasPruebas.filter((p) => p.soloAgua)
   if (diasSoloAgua.length === 1 && pruebaNueva.soloAgua) {
     await desbloquear('el_bautismo')
   }
 
-  // El Despertar de Apolo — primer día con 10+ páginas
+  // El Despertar de Apolo: primer día con 10+ páginas
   const diasConLectura = todasLasPruebas.filter(
     (p) => p.paginasLeidas >= metasEfectivas.paginasLeidas
   )
@@ -172,7 +172,7 @@ export async function verificarInscripciones(
     await desbloquear('el_despertar_de_apolo')
   }
 
-  // El Madrugador — 7 pruebas antes del mediodía, 3 veces
+  // El Madrugador: 7 pruebas antes del mediodía, 3 veces
   if (horaActual < 12 && pruebaNueva.diaPerfecto) {
     const diasMadrugador = todasLasPruebas.filter((p) => {
       const hora = new Date(p.updatedAt).getHours()
@@ -181,30 +181,30 @@ export async function verificarInscripciones(
     if (diasMadrugador.length >= 3) await desbloquear('el_madrugador')
   }
 
-  // La Bestia — gym + cardio mismo día, 5 veces totales
+  // La Bestia: gym + cardio mismo día, 5 veces totales
   const diasDobleEntrenamiento = todasLasPruebas.filter(
     (p) => p.sesionesGym > 0 && p.sesionesCardio > 0
   )
   if (diasDobleEntrenamiento.length >= 5) await desbloquear('la_bestia')
 
-  // El Estoico — 5 días perfectos consecutivos
+  // El Estoico: 5 días perfectos consecutivos
   if (diasPerfectos.length >= 5) {
     if (calcularRachaDias(diasPerfectosOrdenados) >= 5) {
       await desbloquear('el_estoico')
     }
   }
 
-  // El Caminante — meta efectiva de pasos en 14 días totales
+  // El Caminante: meta efectiva de pasos en 14 días totales
   const totalDiasPasos = todasLasPruebas.filter((p) => p.pasos >= metasEfectivas.pasos).length
   if (totalDiasPasos >= 14) await desbloquear('el_caminante')
 
-  // El Discípulo de Morfeo — 7+ horas sueño en 14 días totales
+  // El Discípulo de Morfeo: 7+ horas sueño en 14 días totales
   const totalDiasSueno = todasLasPruebas.filter(
     (p) => p.horasSueno >= metasEfectivas.horasSueno
   ).length
   if (totalDiasSueno >= 14) await desbloquear('el_discipulo_de_morfeo')
 
-  // El Punto Sin Retorno — completar el día 14
+  // El Punto Sin Retorno: completar el día 14
   if (diaActual === 14 && pruebaNueva.diaPerfecto) {
     await desbloquear('el_punto_sin_retorno')
   }
@@ -235,7 +235,7 @@ export async function verificarInscripciones(
   const inscripcionNivel = nivelMap[agonista.nivel]
   if (inscripcionNivel) await desbloquear(inscripcionNivel)
 
-  // La Constancia — misma prueba 10 días consecutivos
+  // La Constancia: misma prueba 10 días consecutivos
   const habitosParaConstancia = ['agua', 'comida', 'pasos', 'sueno', 'lectura', 'gym', 'cardio']
   for (const habitoId of habitosParaConstancia) {
     const llama = todasLasLlamas.find((l) => l.habitoId === habitoId)
@@ -245,19 +245,19 @@ export async function verificarInscripciones(
     }
   }
 
-  // El Rey del Cardio — 3 sesiones cardio/semana durante 3 semanas consecutivas
+  // El Rey del Cardio: 3 sesiones cardio/semana durante 3 semanas consecutivas
   const rachaCardioPorSemana = todasLasLlamas.find((l) => l.habitoId === 'cardio')?.rachaActual ?? 0
   if (rachaCardioPorSemana >= 21) await desbloquear('el_rey_del_cardio')
 
-  // El Purista — 21 días sin comida rápida totales
+  // El Purista: 21 días sin comida rápida totales
   if (diasSinComida >= 21) await desbloquear('el_purista')
 
-  // La Pureza del Agua — 21 días solo agua totales
+  // La Pureza del Agua: 21 días solo agua totales
   if (diasAgua >= 21) await desbloquear('la_pureza_del_agua')
 
   // ─── SECRETAS NUEVAS ───────────────────────────────────────────────────────
 
-  // El Insomnio del Agonista — actividad después de medianoche 3 veces
+  // El Insomnio del Agonista: actividad después de medianoche 3 veces
   if (horaActual === 0) {
     const diasMedianoche = todasLasPruebas.filter((p) => {
       const hora = new Date(p.updatedAt).getHours()
@@ -266,21 +266,21 @@ export async function verificarInscripciones(
     if (diasMedianoche.length >= 3) await desbloquear('el_insomnio')
   }
 
-  // El Primero del Olimpo — antes de las 5:30am
+  // El Primero del Olimpo: antes de las 5:30am
   if (horaDecimal < 5.5) await desbloquear('el_primero_del_olimpo')
 
-  // La Cadena de Oro — 10 días perfectos consecutivos
+  // La Cadena de Oro: 10 días perfectos consecutivos
   if (diasPerfectos.length >= 10) {
     if (calcularRachaDias(diasPerfectosOrdenados) >= 10) {
       await desbloquear('la_cadena_de_oro')
     }
   }
 
-  // El Hijo de Ares — gym 4 sesiones/semana durante 3 semanas consecutivas
+  // El Hijo de Ares: gym 4 sesiones/semana durante 3 semanas consecutivas
   const rachaGym = todasLasLlamas.find((l) => l.habitoId === 'gym')?.rachaActual ?? 0
   if (rachaGym >= 21) await desbloquear('el_hijo_de_ares')
 
-  // El Monje del Altis — 5 días perfectos sin publicar en el Ágora
+  // El Monje del Altis: 5 días perfectos sin publicar en el Ágora
   if (diasPerfectos.length >= 5) {
     const eventosAgora = await db
       .select()
@@ -298,20 +298,20 @@ export async function verificarInscripciones(
     if (diasPerfectosSinPublicar.length >= 5) await desbloquear('el_monje_del_altis')
   }
 
-  // El Constante — al menos 1 prueba registrada los 29 días
+  // El Constante: al menos 1 prueba registrada los 29 días
   if (todasLasPruebas.length >= 29) await desbloquear('el_constante')
 
-  // El Cuerpo sin Límites — gym + cardio mismo día, 7 veces totales
+  // El Cuerpo sin Límites: gym + cardio mismo día, 7 veces totales
   if (diasDobleEntrenamiento.length >= 7) await desbloquear('el_cuerpo_sin_limites')
 
-  // El Último Agon — 7 pruebas el día 29
+  // El Último Agon: 7 pruebas el día 29
   if (diaActual === 29 && pruebaNueva.diaPerfecto) {
     await desbloquear('el_ultimo_agon')
   }
 
   // ─── EASTER EGGS ──────────────────────────────────────────────────────────
 
-  // El Boxeador de Philadelphia — gym + cardio + meta efectiva de pasos antes de las 8am
+  // El Boxeador de Philadelphia: gym + cardio + meta efectiva de pasos antes de las 8am
   if (
     horaActual < 8 &&
     pruebaNueva.sesionesGym > 0 &&
@@ -321,27 +321,27 @@ export async function verificarInscripciones(
     await desbloquear('el_boxeador_de_philadelphia')
   }
 
-  // Espartanos — exactamente 300 kleos en un día
+  // Espartanos: exactamente 300 kleos en un día
   if (pruebaNueva.kleosGanado === 300) {
     await desbloquear('espartanos_cual_es_su_oficio')
   }
 
-  // ¿No Estás Entretenido? — 7 pruebas un domingo
+  // ¿No Estás Entretenido?: 7 pruebas un domingo
   const diaSemana = new Date().getDay() // 0 = domingo
   if (diaSemana === 0 && pruebaNueva.diaPerfecto) {
     await desbloquear('no_estas_entretenido')
   }
 
-  // El Fantasma de Esparta — gym + cardio + meta efectiva de pasos mismo día, 5 veces
+  // El Fantasma de Esparta: gym + cardio + meta efectiva de pasos mismo día, 5 veces
   const diasTripleEntrenamiento = todasLasPruebas.filter(
     (p) => p.sesionesGym > 0 && p.sesionesCardio > 0 && p.pasos >= metasEfectivas.pasos
   )
   if (diasTripleEntrenamiento.length >= 5) await desbloquear('el_fantasma_de_esparta')
 
-  // El Orgullo de Philadelphia — gym + cardio + meta efectiva de pasos mismo día, 10 veces
+  // El Orgullo de Philadelphia: gym + cardio + meta efectiva de pasos mismo día, 10 veces
   if (diasTripleEntrenamiento.length >= 10) await desbloquear('el_orgullo_de_philadelphia')
 
-  // Boogeyman — día perfecto después de fallar un día completo
+  // Boogeyman: día perfecto después de fallar un día completo
   if (pruebaNueva.diaPerfecto && todasLasPruebas.length >= 2) {
     const pruebas = [...todasLasPruebas].sort((a, b) =>
       String(a.fecha) < String(b.fecha) ? -1 : 1
@@ -364,7 +364,7 @@ export async function verificarInscripciones(
     }
   }
 
-  // Cada Intento es un Escape — fallar un día y al siguiente día perfecto
+  // Cada Intento es un Escape: fallar un día y al siguiente día perfecto
   if (pruebaNueva.diaPerfecto && todasLasPruebas.length >= 2) {
     const pruebas = [...todasLasPruebas].sort((a, b) =>
       String(a.fecha) < String(b.fecha) ? -1 : 1
@@ -376,21 +376,21 @@ export async function verificarInscripciones(
     }
   }
 
-  // Not My Tempo — gym 6 días consecutivos
+  // Not My Tempo: gym 6 días consecutivos
   const rachaGymActual = todasLasLlamas.find((l) => l.habitoId === 'gym')?.rachaActual ?? 0
   if (rachaGymActual >= 6) await desbloquear('not_my_tempo')
 
-  // That's What She Said — 7 pruebas un lunes
+  // That's What She Said: 7 pruebas un lunes
   if (diaSemana === 1 && pruebaNueva.diaPerfecto) {
     await desbloquear('thats_what_she_said')
   }
 
-  // May the Fourth — día 4 del agon con 7 pruebas
+  // May the Fourth: día 4 del agon con 7 pruebas
   if (diaActual === 4 && pruebaNueva.diaPerfecto) {
     await desbloquear('may_the_fourth')
   }
 
-  // Daniel San — 7 hábitos los primeros 7 días consecutivos
+  // Daniel San: 7 hábitos los primeros 7 días consecutivos
   if (diaActual <= 7 && pruebaNueva.diaPerfecto) {
     const primerosNDias = todasLasPruebas
       .sort((a, b) => (String(a.fecha) < String(b.fecha) ? -1 : 1))
@@ -400,7 +400,7 @@ export async function verificarInscripciones(
     if (todosCompletos) await desbloquear('daniel_san')
   }
 
-  // ¿Cuál es la Primera Regla del Agon? — sin publicar en el Ágora los primeros 7 días
+  // ¿Cuál es la Primera Regla del Agon?: sin publicar en el Ágora los primeros 7 días
   if (diaActual <= 8 && pruebaNueva.diaPerfecto) {
     const startRaw = process.env.NEXT_PUBLIC_AGON_START_DATE
     const eventosPropio = await db
@@ -428,14 +428,14 @@ export async function verificarInscripciones(
     }
   }
 
-  // Run Agonista Run — meta efectiva de pasos 10 días consecutivos
+  // Run Agonista Run: meta efectiva de pasos 10 días consecutivos
   const diasPasosOrdenados = todasLasPruebas
     .filter((p) => p.pasos >= metasEfectivas.pasos)
     .map((p) => String(p.fecha))
     .sort()
   if (calcularRachaDias(diasPasosOrdenados) >= 10) await desbloquear('run_agonista_run')
 
-  // Di Hola a mi Pequeño Amigo — mayor kleos diario después del día 20
+  // Di Hola a mi Pequeño Amigo: mayor kleos diario después del día 20
   if (diaActual > 20) {
     const pruebasAnteriores = todasLasPruebas.filter((p) => p.id !== pruebaNueva.id)
     const maxKleosAnterior =
@@ -480,7 +480,7 @@ export async function verificarInscripcionesAfinidad(
 
 // ─── TRIGGERS EXTERNOS (llamados desde otras rutas) ────────────────────────────
 
-// Gemelos del Agon — ambos completan día perfecto el mismo día
+// Gemelos del Agon: ambos completan día perfecto el mismo día
 export async function verificarGemelosDelAgan(hoy: string): Promise<void> {
   const ambos = await getAmbosAgonistas()
   if (ambos.length < 2) return
@@ -507,7 +507,7 @@ export async function verificarGemelosDelAgan(hoy: string): Promise<void> {
   }
 }
 
-// La Piedra del Agon — ambos fallan la misma prueba el mismo día
+// La Piedra del Agon: ambos fallan la misma prueba el mismo día
 export async function verificarPiedraDelAgan(hoy: string): Promise<void> {
   const ambos = await getAmbosAgonistas()
   if (ambos.length < 2) return
@@ -575,7 +575,7 @@ export async function verificarPiedraDelAgan(hoy: string): Promise<void> {
   }
 }
 
-// El Espejo — ambos alcanzan el mismo nivel el mismo día
+// El Espejo: ambos alcanzan el mismo nivel el mismo día
 export async function verificarEspejoDelAgan(
   agonistId: string,
   nivelNuevo: string
@@ -593,8 +593,8 @@ export async function verificarEspejoDelAgan(
   }
 }
 
-// Red Pill or Blue Pill — tú día perfecto, antagonista 0 pruebas
-// Algunos Hombres Solo Quieren Ver el Mundo Arder — mismo que Red Pill pero
+// Red Pill or Blue Pill: tú día perfecto, antagonista 0 pruebas
+// Algunos Hombres Solo Quieren Ver el Mundo Arder: mismo que Red Pill pero
 // se verifica por separado porque son inscripciones distintas
 export async function verificarEasterEggsDuales(
   agonistId: string,
@@ -644,7 +644,7 @@ export async function verificarEasterEggsDuales(
     await desbloquearInscripcion(yo.id, yo.nombre, 'algunos_hombres')
   }
 
-  // Don't Let Him Leave Murph — mismas 7 pruebas el mismo día
+  // Don't Let Him Leave Murph: mismas 7 pruebas el mismo día
   const misPruebas = [
     miPrueba[0].soloAgua,
     miPrueba[0].sinComidaRapida,
@@ -673,7 +673,7 @@ export async function verificarEasterEggsDuales(
   }
 }
 
-// La Remontada — recuperar 300 kleos de desventaja (según kleos_log)
+// La Remontada: recuperar 300 kleos de desventaja (según kleos_log)
 export async function verificarRemontada(
   agonistId: string,
   agonistaNombre: string,
@@ -731,7 +731,7 @@ export async function verificarRemontada(
   }
 }
 
-// Atrápelos a Todos — 5 inscripciones en 24 horas
+// Atrápelos a Todos: 5 inscripciones en 24 horas
 export async function verificarAtrapalosATodos(
   agonistId: string,
   agonistaNombre: string
@@ -749,7 +749,7 @@ export async function verificarAtrapalosATodos(
   }
 }
 
-// La Especia Debe Fluir — nivel Semidiós sin fallar agua
+// La Especia Debe Fluir: nivel Semidiós sin fallar agua
 export async function verificarEspeciaDebeFluir(
   agonistId: string,
   nivelNuevo: string,

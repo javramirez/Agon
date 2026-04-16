@@ -1,4 +1,4 @@
-# Arquitectura — Agon
+# Arquitectura: Agon
 
 ## Stack elegido y justificación
 
@@ -40,8 +40,8 @@ Browser
         │     ├── Neon / Drizzle (queries)
         │     └── Anthropic API (La Crónica)
         └── Client Components (interactividad)
-              ├── Polling (usePulso — 15s)
-              ├── Polling (useCorrespondencia — 5s)
+              ├── Polling (usePulso: 15s)
+              ├── Polling (useCorrespondencia: 5s)
               └── Vercel Blob (upload fotos)
 ```
 
@@ -79,5 +79,5 @@ Tras cada `POST /api/pruebas`, el servidor recalcula nivel y kleos. El cliente n
 | Clerk (2 usuarios) | Supabase Auth | Slots free tier agotados |
 | Neon | Supabase | Slots free tier agotados |
 | Kleos recalculado | Kleos solo incremental | Consistencia y reglas únicas en servidor |
-| Admin manual (crónica, semana sagrada) | Cron automático | MVP — 29 días, activación consciente |
+| Admin manual (crónica, semana sagrada) | Cron automático | MVP: 29 días, activación consciente |
 | `date` por día | `timestamp` solo | Queries y comparaciones por día más simples |

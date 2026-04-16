@@ -26,8 +26,15 @@ export function isGranAgonActivo(): boolean {
   return hoy >= inicio && hoy <= fin
 }
 
-/** Día de La Ceremonia del Veredicto (misma fecha calendario que el fin del Gran Agon). */
+/** Día de La Ceremonia del Veredicto — activa desde el día 29 en adelante. */
 export function isVeredictoDay(): boolean {
+  const fin = parseISO(process.env.NEXT_PUBLIC_AGON_END_DATE!)
+  const hoy = startOfDay(new Date())
+  return hoy >= startOfDay(fin)
+}
+
+/** Retorna true únicamente el día 29 del Gran Agon. */
+export function isUltimoDia(): boolean {
   const fin = parseISO(process.env.NEXT_PUBLIC_AGON_END_DATE!)
   const hoy = new Date()
   return isSameDay(startOfDay(hoy), startOfDay(fin))

@@ -50,6 +50,8 @@ import {
   verificarEspejoDelAgan,
   verificarEspeciaDebeFluir,
 } from '@/lib/inscripciones/triggers'
+import { isUltimoDia } from '@/lib/utils'
+import { ambosConfirmaronHoy, triggerSilencioDelOlimpo } from '@/lib/dioses/silencio-olimpo'
 import type { PruebaDiaria } from '@/lib/db/schema'
 
 function calcularKleosTotal(
@@ -481,6 +483,14 @@ export async function POST(req: Request) {
     .where(eq(pruebasDiarias.id, prueba.id))
     .limit(1)
   const pruebaDef = pruebaDefRows[0]
+
+  // Silencio del Olimpo: trigger automático el día 29
+  if (isUltimoDia()) {
+    const ambosConfirmaron = await ambosConfirmaronHoy(hoy)
+    if (ambosConfirmaron) {
+      void triggerSilencioDelOlimpo().catch(() => {})
+    }
+  }
 
   return NextResponse.json({
     ok: true,

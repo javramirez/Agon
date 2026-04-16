@@ -25,7 +25,7 @@ export interface ConsecuenciaCrisis {
   consecuenciaDiferidaAfinidad?: ConsecuenciaAfinidad[]
   consecuenciaDiferidaKleos?: number
   consecuenciaDiferidaEventoAgora?: string
-  metaSuenoBonus?: number // para El Sueño Eterno — sube meta horasSueno
+  metaSuenoBonus?: number // para El Sueño Eterno: sube meta horasSueno
 }
 
 export interface EscenarioD {
@@ -53,7 +53,7 @@ export interface CrisisConfig {
   // Consecuencias para crisis sin Tipo D (se aplican individualmente)
   consecuenciaA?: ConsecuenciaCrisis
   consecuenciaB?: ConsecuenciaCrisis
-  // Para Tipo D — 4 escenarios
+  // Para Tipo D: 4 escenarios
   escenarioAmbosA?: ConsecuenciaCrisis & { descripcionAgora: string }
   escenarioAmbosB?: ConsecuenciaCrisis & { descripcionAgora: string }
   escenarioYoArivaB?: ConsecuenciaCrisis & {
@@ -66,11 +66,11 @@ export interface CrisisConfig {
     notificacionA: string
     notificacionB: string
   }
-  // Para Tipo F — apuesta
+  // Para Tipo F: apuesta
   habitoApuesta?: string // 'pasos' | 'paginasLeidas' etc
   kleosApuesta?: number
   diasApuesta?: number
-  // Para Tipo H — sacrificio
+  // Para Tipo H: sacrificio
   kleosSacrificio?: number
   kleosRecompensaAmbos?: number
   // Para trivia (Crisis 9)
@@ -87,14 +87,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'La Sequía del Logos',
     mecanicas: ['A'],
     descripcionNarrativa:
-      'Un mensajero llega al Ágora con noticias que helan la sangre: los pozos de sabiduría de la Escuela del Logos se están secando. Los pergaminos arden solos. Apolo guarda silencio. Los eruditos dicen que es castigo — que el Agon ha glorificado demasiado el músculo y olvidado la mente. Ares responde que la mente sin cuerpo es humo. La ciudad debe decidir cómo responder.',
+      'Un mensajero llega al Ágora con noticias que helan la sangre: los pozos de sabiduría de la Escuela del Logos se están secando. Los pergaminos arden solos. Apolo guarda silencio. Los eruditos dicen que es castigo, que el Agon ha glorificado demasiado el músculo y olvidado la mente. Ares responde que la mente sin cuerpo es humo. La ciudad debe decidir cómo responder.',
     opcionA: {
       label: 'Redirigimos los recursos hacia la Escuela',
       argumentoFavor: 'Sin conocimiento, la victoria es vacía. Un campeón ignorante es solo un animal disciplinado.',
       argumentoContra: 'Debilitar el cuerpo ahora, en medio del Agon, es rendirse a medias.',
     },
     opcionB: {
-      label: 'El Agon no se detiene — la Escuela se reconstruye sola',
+      label: 'El Agon no se detiene: la Escuela se reconstruye sola',
       argumentoFavor: 'Las instituciones sobreviven a las crisis cuando los individuos no se rinden. Tu rendimiento es el mensaje.',
       argumentoContra: 'Ignorar el colapso del conocimiento es elegir la fuerza bruta sobre la civilización.',
     },
@@ -126,14 +126,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'El Extranjero en las Puertas',
     mecanicas: ['A'],
     descripcionNarrativa:
-      'Un guerrero extranjero llega a Olimpia. No viene a combatir — viene huyendo. Trae consigo conocimiento de técnicas de entrenamiento nunca vistas, pero también trae una maldición, dicen los sacerdotes de Morfeo: quienes duermen cerca de él pierden el descanso sagrado. La Guardia de Hierro quiere absorberlo. El Concilio de las Sombras exige expulsarlo.',
+      'Un guerrero extranjero llega a Olimpia. No viene a combatir: viene huyendo. Trae consigo conocimiento de técnicas de entrenamiento nunca vistas, pero también trae una maldición, dicen los sacerdotes de Morfeo: quienes duermen cerca de él pierden el descanso sagrado. La Guardia de Hierro quiere absorberlo. El Concilio de las Sombras exige expulsarlo.',
     opcionA: {
-      label: 'El extranjero se queda — su conocimiento vale el riesgo',
+      label: 'El extranjero se queda: su conocimiento vale el riesgo',
       argumentoFavor: 'El progreso siempre llega desde afuera. Rechazar lo desconocido es elegir la mediocridad conocida.',
       argumentoContra: 'El bienestar de la ciudad no puede sacrificarse por la ambición de unos pocos. El sueño es sagrado.',
     },
     opcionB: {
-      label: 'El extranjero debe partir — la ciudad no es un experimento',
+      label: 'El extranjero debe partir: la ciudad no es un experimento',
       argumentoFavor: 'Una ciudad que no protege a sus ciudadanos del caos no merece llamarse ciudad.',
       argumentoContra: 'El miedo disfrazado de prudencia es cobardía. Olimpia se construyó acogiendo lo que otras ciudades rechazaron.',
     },
@@ -165,14 +165,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'La Traición del Altis',
     mecanicas: ['A', 'D'],
     descripcionNarrativa:
-      'Los registros del Altis muestran una anomalía. Alguien acumuló kleos en circunstancias que el Tribunal no puede explicar. No hay pruebas — solo sospecha. Y la sospecha en el Agon es veneno. Eris sonríe. Nike exige respuestas. La ciudad mira a los dos agonistas y espera.',
+      'Los registros del Altis muestran una anomalía. Alguien acumuló kleos en circunstancias que el Tribunal no puede explicar. No hay pruebas: solo sospecha. Y la sospecha en el Agon es veneno. Eris sonríe. Nike exige respuestas. La ciudad mira a los dos agonistas y espera.',
     opcionA: {
       label: 'Señalo a mi rival ante el Tribunal',
       argumentoFavor: 'Si hay trampa, el silencio es complicidad. El Agon exige transparencia.',
       argumentoContra: 'Acusar sin prueba es el arma del cobarde. Si estás equivocado, destruiste algo que no tenía precio.',
     },
     opcionB: {
-      label: 'Guardo silencio — el Agon me dará la razón',
+      label: 'Guardo silencio: el Agon me dará la razón',
       argumentoFavor: 'La dignidad no se negocia. Quien gana limpio no necesita destruir al otro.',
       argumentoContra: 'Tu silencio será interpretado como miedo o como culpa. Olimpia no perdona la pasividad.',
     },
@@ -183,11 +183,11 @@ export const CRISIS_POOL: CrisisConfig[] = [
         { faccionId: 'tribunal_kleos', puntos: -30 },
         { faccionId: 'gremio_tierra', puntos: -20 },
       ],
-      marcaE: 'Acusó al rival — quien también lo acusó. El Tribunal quedó paralizado.',
+      marcaE: 'Acusó al rival, quien también lo acusó. El Tribunal quedó paralizado.',
       eventoAgora: 'rivalidad_acusacion_mutua',
     },
     escenarioAmbosB: {
-      descripcionAgora: 'Dos guerreros que se miran a los ojos y no dicen nada. El Tribunal archiva el caso. El silencio puede ser dignidad — o puede ser miedo.',
+      descripcionAgora: 'Dos guerreros que se miran a los ojos y no dicen nada. El Tribunal archiva el caso. El silencio puede ser dignidad, o puede ser miedo.',
       afinidad: [
         { faccionId: 'concilio_sombras', puntos: 35 },
         { faccionId: 'gremio_tierra', puntos: 35 },
@@ -196,7 +196,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       marcaE: 'Guardó silencio ante la sospecha. El Tribunal archivó el caso.',
     },
     escenarioYoArivaB: {
-      descripcionAgora: 'Un agonista señaló. El otro no respondió. El silencio puede ser dignidad — o puede ser culpa. Olimpia decidirá qué creer.',
+      descripcionAgora: 'Un agonista señaló. El otro no respondió. El silencio puede ser dignidad, o puede ser culpa. Olimpia decidirá qué creer.',
       notificacionA: 'Señalaste a tu rival. Él guardó silencio. El Ágora lo registra.',
       notificacionB: 'Tu rival te señaló ante el Tribunal. Tú guardaste silencio. El Altis lo inscribió.',
       afinidad: [
@@ -208,7 +208,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       eventoAgora: 'rivalidad_acusacion',
     },
     escenarioYoBrivaA: {
-      descripcionAgora: 'Un agonista guardó silencio. El otro lo señaló. El silencio puede ser dignidad — o puede ser culpa.',
+      descripcionAgora: 'Un agonista guardó silencio. El otro lo señaló. El silencio puede ser dignidad, o puede ser culpa.',
       notificacionA: 'Tu rival te señaló. Tú guardaste silencio. El Altis lo inscribió.',
       notificacionB: 'Guardaste silencio cuando tu rival te señaló. El Agon tiene memoria.',
       afinidad: [
@@ -226,14 +226,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'El Precio del Fuego',
     mecanicas: ['B', 'E'],
     descripcionNarrativa:
-      'Prometeo ha vuelto a Olimpia — encadenado a una roca que nadie recuerda haber puesto ahí. Los sacerdotes dicen que trae un don: conocimiento que acelera el progreso. Pero los dioses lo encadenaron por algo. Apolo advierte que el fuego robado siempre tiene un precio. Hermes dice que el conocimiento no tiene dueño.',
+      'Prometeo ha vuelto a Olimpia, encadenado a una roca que nadie recuerda haber puesto ahí. Los sacerdotes dicen que trae un don: conocimiento que acelera el progreso. Pero los dioses lo encadenaron por algo. Apolo advierte que el fuego robado siempre tiene un precio. Hermes dice que el conocimiento no tiene dueño.',
     opcionA: {
       label: 'Acepto el don de Prometeo',
       argumentoFavor: 'Los dioses encadenaron a Prometeo por miedo, no por justicia. El conocimiento que libera no puede ser pecado.',
       argumentoContra: 'Cada atajo tiene un costo diferido. Lo que Prometeo da, los dioses lo cobran con interés.',
     },
     opcionB: {
-      label: 'Rechazo el don — lo que se roba no se merece',
+      label: 'Rechazo el don: lo que se roba no se merece',
       argumentoFavor: 'La disciplina del Agon no admite atajos. Lo que no se gana con sudor no pertenece al agonista.',
       argumentoContra: 'Rechazas poder real por un principio abstracto mientras tu rival quizás no lo hará.',
     },
@@ -247,7 +247,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
         { faccionId: 'tribunal_kleos', puntos: 40 },
         { faccionId: 'gremio_tierra', puntos: 40 },
       ],
-      marcaE: 'Rechazó el fuego — eligió el camino largo.',
+      marcaE: 'Rechazó el fuego: eligió el camino largo.',
     },
   },
 
@@ -257,14 +257,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'El Juicio de las Sombras',
     mecanicas: ['A', 'D'],
     descripcionNarrativa:
-      'El Concilio de las Sombras ha convocado un juicio extraordinario. Morfeo reveló en sueños que uno de los dos agonistas está sacrificando el descanso sagrado — no por descuido, sino por estrategia. Que está usando el agotamiento como arma. El Concilio exige que cada agonista declare si el otro está durmiendo lo suficiente. No hay forma de verificarlo. Solo existe la palabra de cada uno.',
+      'El Concilio de las Sombras ha convocado un juicio extraordinario. Morfeo reveló en sueños que uno de los dos agonistas está sacrificando el descanso sagrado, no por descuido, sino por estrategia. Que está usando el agotamiento como arma. El Concilio exige que cada agonista declare si el otro está durmiendo lo suficiente. No hay forma de verificarlo. Solo existe la palabra de cada uno.',
     opcionA: {
-      label: 'Denuncio — mi rival sacrifica el sueño deliberadamente',
+      label: 'Denuncio: mi rival sacrifica el sueño deliberadamente',
       argumentoFavor: 'El Agon no puede construirse sobre el colapso físico. Señalarlo es proteger la integridad del reto.',
       argumentoContra: 'Acusar algo que no puedes probar es sembrar desconfianza donde había competencia limpia.',
     },
     opcionB: {
-      label: 'Defiendo — mi rival descansa lo suficiente',
+      label: 'Defiendo: mi rival descansa lo suficiente',
       argumentoFavor: 'La generosidad sobre la ventaja táctica es el acto más honesto que puede hacer un agonista.',
       argumentoContra: 'Si mientes para protegerlo, estás mintiendo ante el Concilio de las Sombras. Morfeo escucha.',
     },
@@ -317,14 +317,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'La Llama que Devora',
     mecanicas: ['A', 'B'],
     descripcionNarrativa:
-      'Un incendio arrasa los almacenes del Gremio de la Tierra. No fue accidente — los rastros de azufre apuntan a un ritual. Los sacerdotes de Deméter lloran sobre las cenizas. La ciudad tiene reservas para sobrevivir, pero no para prosperar. El Agon puede continuar como está, o puede transformarse temporalmente en un esfuerzo colectivo de reconstrucción.',
+      'Un incendio arrasa los almacenes del Gremio de la Tierra. No fue accidente: los rastros de azufre apuntan a un ritual. Los sacerdotes de Deméter lloran sobre las cenizas. La ciudad tiene reservas para sobrevivir, pero no para prosperar. El Agon puede continuar como está, o puede transformarse temporalmente en un esfuerzo colectivo de reconstrucción.',
     opcionA: {
-      label: 'Suspendemos el Agon — reconstruimos primero',
+      label: 'Suspendemos el Agon: reconstruimos primero',
       argumentoFavor: 'Un Agon sobre cenizas es una farsa. La grandeza se mide en cómo respondes cuando la ciudad te necesita.',
       argumentoContra: 'El Agon tiene una duración fija. Cada día perdido es irrecuperable.',
     },
     opcionB: {
-      label: 'El Agon continúa — la ciudad se reconstruye sola',
+      label: 'El Agon continúa: la ciudad se reconstruye sola',
       argumentoFavor: 'Tu victoria en el Agon inspirará a la ciudad más que tu sacrificio.',
       argumentoContra: 'Elegiste tu gloria personal sobre el bien colectivo. Deméter no olvida.',
     },
@@ -358,19 +358,19 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'El Oráculo Roto',
     mecanicas: ['D', 'E'],
     descripcionNarrativa:
-      'El Oráculo de Delfos ha emitido una profecía sobre el Gran Agon — pero llegó fragmentada. Lo que se sabe: uno de los dos agonistas ganará el Agon pero perderá algo que no puede recuperar. La profecía completa solo existe si ambos la buscan juntos. Cada uno debe consentir en que el otro sepa.',
+      'El Oráculo de Delfos ha emitido una profecía sobre el Gran Agon, pero llegó fragmentada. Lo que se sabe: uno de los dos agonistas ganará el Agon pero perderá algo que no puede recuperar. La profecía completa solo existe si ambos la buscan juntos. Cada uno debe consentir en que el otro sepa.',
     opcionA: {
-      label: 'Consiento — quiero que ambos conozcamos la profecía',
+      label: 'Consiento: quiero que ambos conozcamos la profecía',
       argumentoFavor: 'Ser advertido es una ventaja, no una vulnerabilidad. La verdad no puede hacerte daño si ya la conoces.',
       argumentoContra: 'Expones información sobre ti mismo antes de saber si el otro hará lo mismo.',
     },
     opcionB: {
-      label: 'No consiento — prefiero no saber',
+      label: 'No consiento: prefiero no saber',
       argumentoFavor: 'La ignorancia estratégica es una forma de poder. Lo que no sabes no puede paralizarte.',
       argumentoContra: 'Quien prefirió no saber eligió la comodidad sobre la verdad. Apolo no lo olvida.',
     },
     escenarioAmbosA: {
-      descripcionAgora: 'El fragmento perdido revela algo que ninguno esperaba: la derrota no vendrá del rival — vendrá de uno mismo. Apolo sonríe.',
+      descripcionAgora: 'El fragmento perdido revela algo que ninguno esperaba: la derrota no vendrá del rival. Vendrá de uno mismo. Apolo sonríe.',
       afinidad: [
         { faccionId: 'escuela_logos', puntos: 40 },
         { faccionId: 'tribunal_kleos', puntos: 40 },
@@ -379,7 +379,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       marcaE: 'Consintió conocer la profecía rota. Apolo le habló directamente.',
     },
     escenarioAmbosB: {
-      descripcionAgora: 'Dos hombres que prefirieron la ignorancia a la vulnerabilidad. El Oráculo se cierra. Lo que iba a ocurrir, ocurrirá de todas formas — pero sin advertencia.',
+      descripcionAgora: 'Dos hombres que prefirieron la ignorancia a la vulnerabilidad. El Oráculo se cierra. Lo que iba a ocurrir, ocurrirá de todas formas, pero sin advertencia.',
       afinidad: [
         { faccionId: 'hermandad_caos', puntos: 35 },
         { faccionId: 'escuela_logos', puntos: -30 },
@@ -396,7 +396,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
         { faccionId: 'gremio_tierra', puntos: 35 },
         { faccionId: 'hermandad_caos', puntos: -15 },
       ],
-      marcaE: 'Quiso conocer la profecía — su rival se lo impidió.',
+      marcaE: 'Quiso conocer la profecía: su rival se lo impidió.',
     },
     escenarioYoBrivaA: {
       descripcionAgora: 'Uno retiró la mano. El otro quiso saber. El Oráculo permanece sellado.',
@@ -420,8 +420,8 @@ export const CRISIS_POOL: CrisisConfig[] = [
       'Un heraldo de Hermes llega al Ágora con un contrato de apuesta sagrada. Los dioses quieren ver a los agonistas apostar algo real. El que más pasos acumule en 3 días demuestra quién merece el favor de Hermes. La apuesta es vinculante.',
     opcionA: {
       label: 'Acepto la apuesta',
-      argumentoFavor: 'Los dioses piden espectáculo — dárselo es honrarlos. Si tienes miedo de competir en terreno neutral, ya perdiste.',
-      argumentoContra: 'Una apuesta forzada por los dioses no es una apuesta — es una trampa disfrazada de honor.',
+      argumentoFavor: 'Los dioses piden espectáculo: dárselo es honrarlos. Si tienes miedo de competir en terreno neutral, ya perdiste.',
+      argumentoContra: 'Una apuesta forzada por los dioses no es una apuesta: es una trampa disfrazada de honor.',
     },
     opcionB: {
       label: 'Rechazo el contrato',
@@ -433,7 +433,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
     diasApuesta: 3,
     consecuenciaA: {
       afinidad: [{ faccionId: 'corredores_alba', puntos: 30 }],
-      marcaE: 'Aceptó el desafío de Hermes — corrió cuando los dioses lo pidieron.',
+      marcaE: 'Aceptó el desafío de Hermes: corrió cuando los dioses lo pidieron.',
     },
     consecuenciaB: {
       afinidad: [
@@ -452,12 +452,12 @@ export const CRISIS_POOL: CrisisConfig[] = [
     descripcionNarrativa:
       'Los archivos del Tribunal del Kleos revelan que hace generaciones, las familias de los dos agonistas estuvieron en lados opuestos de una guerra. La deuda nunca fue saldada. Nike lo hizo público. El Tribunal exige que la deuda se resuelva con conocimiento. Quien demuestre mayor dominio intelectual en la trivia sagrada salda la deuda a su favor.',
     opcionA: {
-      label: 'Acepto saldar la deuda — que el Logos decida',
+      label: 'Acepto saldar la deuda: que el Logos decida',
       argumentoFavor: 'Las deudas históricas no desaparecen ignorándolas. Enfrentarla con conocimiento es la única forma honorable.',
       argumentoContra: 'Aceptar una deuda que no contrajiste es legitimar una narrativa que otros construyeron sobre ti.',
     },
     opcionB: {
-      label: 'Rechazo la deuda — no soy responsable del pasado',
+      label: 'Rechazo la deuda: no soy responsable del pasado',
       argumentoFavor: 'Cargar con culpas ajenas es el camino más rápido hacia la parálisis.',
       argumentoContra: 'Quien ignora la historia está condenado a repetirla.',
     },
@@ -496,14 +496,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     descripcionNarrativa:
       'El Oráculo de Delfos envió una instrucción grabada en piedra: "Conócete a ti mismo." El Altis exige que cada agonista exponga su mayor obstáculo interno. El primero en hablar define el tono. El segundo responde habiendo escuchado.',
     opcionA: {
-      label: 'Hablo primero — la verdad no espera',
+      label: 'Hablo primero: la verdad no espera',
       argumentoFavor: 'Quien habla primero desde la vulnerabilidad define el nivel de honestidad del intercambio.',
       argumentoContra: 'El segundo responderá habiendo leído lo tuyo. Tendrá contexto que tú no tuviste.',
     },
     opcionB: {
-      label: 'Escucho primero — leo antes de hablar',
+      label: 'Escucho primero: leo antes de hablar',
       argumentoFavor: 'La honestidad del primero puede liberarte para ir más profundo.',
-      argumentoContra: 'Tu reflexión siempre será leída como reacción — nunca como declaración original.',
+      argumentoContra: 'Tu reflexión siempre será leída como reacción, nunca como declaración original.',
     },
     consecuenciaA: {
       afinidad: [
@@ -522,7 +522,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
         { faccionId: 'gremio_tierra', puntos: 40 },
         { faccionId: 'hermandad_caos', puntos: -15 },
       ],
-      marcaE: 'Se miró al espejo de Delfos — con el contexto del otro como guía.',
+      marcaE: 'Se miró al espejo de Delfos, con el contexto del otro como guía.',
       eventoAgora: 'espejo_delfos',
     },
   },
@@ -533,14 +533,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'El Sacrificio de Prometeo',
     mecanicas: ['H'],
     descripcionNarrativa:
-      'Los dioses han enviado una señal: el Agon está consumiendo demasiado. Las facciones están agotadas. Nike exige un gesto de nobleza. La ciudad necesita un sacrificio voluntario — no forzado. Nadie sabrá lo que el otro decidió hasta que el plazo expire.',
+      'Los dioses han enviado una señal: el Agon está consumiendo demasiado. Las facciones están agotadas. Nike exige un gesto de nobleza. La ciudad necesita un sacrificio voluntario, no forzado. Nadie sabrá lo que el otro decidió hasta que el plazo expire.',
     opcionA: {
       label: 'Me sacrifico por Olimpia',
-      argumentoFavor: 'La nobleza no se anuncia — se demuestra. Un campeón que no puede sacrificarse no merece el título.',
+      argumentoFavor: 'La nobleza no se anuncia, se demuestra. Un campeón que no puede sacrificarse no merece el título.',
       argumentoContra: 'Si el otro no se sacrifica, habrás pagado un precio real mientras tu rival acumula ventaja.',
     },
     opcionB: {
-      label: 'El Agon me lo exige todo — no puedo ceder',
+      label: 'El Agon me lo exige todo: no puedo ceder',
       argumentoFavor: 'Traicionarte a ti mismo no salva a nadie. El Agon exige que des todo.',
       argumentoContra: 'Cuando todos eligen su propio beneficio, todos pierden.',
     },
@@ -554,14 +554,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     titulo: 'La Alianza Imposible',
     mecanicas: ['H', 'D'],
     descripcionNarrativa:
-      'Un emisario del Olimpo llega con una propuesta: los dioses están considerando cancelar el Gran Agon — dicen que la rivalidad se ha vuelto destructiva. Ofrecen un trato: si ambos agonistas acuerdan una tregua voluntaria de 48 horas, el Olimpo retirará la amenaza. Pero la tregua solo vale si ambos la eligen sin consultarse.',
+      'Un emisario del Olimpo llega con una propuesta: los dioses están considerando cancelar el Gran Agon. Dicen que la rivalidad se ha vuelto destructiva. Ofrecen un trato: si ambos agonistas acuerdan una tregua voluntaria de 48 horas, el Olimpo retirará la amenaza. Pero la tregua solo vale si ambos la eligen sin consultarse.',
     opcionA: {
       label: 'Acepto la tregua voluntaria',
       argumentoFavor: 'La grandeza se mide en saber cuándo el bien mayor supera al ego.',
       argumentoContra: 'Si el otro no acepta, habrás detenido tu Agon unilateralmente mientras tu rival acumula.',
     },
     opcionB: {
-      label: 'El Agon no se detiene — ni por los dioses',
+      label: 'El Agon no se detiene: ni por los dioses',
       argumentoFavor: 'El Gran Agon es un contrato sagrado de 29 días. Interrumpirlo es traicionarlo.',
       argumentoContra: 'Si el otro acepta y tú no, habrás rechazado una tregua que él ya honró.',
     },
@@ -583,7 +583,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       eventoAgora: 'tregua_honrada',
     },
     escenarioAmbosB: {
-      descripcionAgora: 'El emisario esperó. Nadie cedió. Se retiró sin decir nada. El Agon continúa — pero algo en el aire de Olimpia cambió.',
+      descripcionAgora: 'El emisario esperó. Nadie cedió. Se retiró sin decir nada. El Agon continúa, pero algo en el aire de Olimpia cambió.',
       afinidad: [
         { faccionId: 'hermandad_caos', puntos: 30 },
         { faccionId: 'guardia_hierro', puntos: 30 },
@@ -594,7 +594,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       marcaE: 'No aceptó la tregua. El Olimpo retiró la oferta para siempre.',
     },
     escenarioYoArivaB: {
-      descripcionAgora: 'Uno extendió la mano hacia la paz. El otro no la tomó. El emisario miró al que rechazó durante un largo silencio — y se fue.',
+      descripcionAgora: 'Uno extendió la mano hacia la paz. El otro no la tomó. El emisario miró al que rechazó durante un largo silencio, y se fue.',
       notificacionA: 'Honraste la tregua. Tu rival no lo hizo. El Altis lo inscribió.',
       notificacionB: 'No honraste la tregua que tu rival ya había aceptado. El Agon tiene memoria larga.',
       afinidad: [
@@ -608,7 +608,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       eventoAgora: 'tregua_traicionada',
     },
     escenarioYoBrivaA: {
-      descripcionAgora: 'Uno rechazó. El otro ya había aceptado. El emisario miró al que rechazó — y se fue.',
+      descripcionAgora: 'Uno rechazó. El otro ya había aceptado. El emisario miró al que rechazó, y se fue.',
       notificacionA: 'Tu rival honró la tregua. Tú no lo hiciste. El Agon tiene memoria larga.',
       notificacionB: 'Rechazaste la tregua que tu rival ya había aceptado. El Altis lo inscribió.',
       afinidad: [
@@ -634,12 +634,12 @@ export const CRISIS_POOL: CrisisConfig[] = [
     descripcionNarrativa:
       'Diomedes, líder de la Guardia de Hierro, desafió abiertamente a Ares declarando que la disciplina humana supera al favor divino. Ares no respondió. Su silencio es más aterrador que cualquier amenaza. Los guerreros miran a los agonistas esperando una señal.',
     opcionA: {
-      label: 'Respaldamos a Diomedes — el hombre supera a los dioses',
+      label: 'Respaldamos a Diomedes: el hombre supera a los dioses',
       argumentoFavor: 'Diomedes dice en voz alta lo que todo agonista piensa en silencio. Callarlo es cobardía.',
       argumentoContra: 'La hybris siempre tiene un precio. Respaldar a quien desafía a los dioses es compartir su castigo.',
     },
     opcionB: {
-      label: 'Apaciguamos a Ares — la hybris destruye ciudades',
+      label: 'Apaciguamos a Ares: la hybris destruye ciudades',
       argumentoFavor: 'Toda la historia griega es un catálogo de hombres destruidos por exceso de confianza.',
       argumentoContra: 'Abandonas a un líder en su momento más vulnerable. La Guardia recordará.',
     },
@@ -653,7 +653,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       ],
       marcaE: 'Respaldó la hybris de Diomedes cuando Ares guardó silencio.',
       consecuenciaDiferidaDias: 6,
-      consecuenciaDiferidaDescripcion: 'Ares rompe su silencio — y no viene a agradecer.',
+      consecuenciaDiferidaDescripcion: 'Ares rompe su silencio, y no viene a agradecer.',
       consecuenciaDiferidaAfinidad: [{ faccionId: 'guardia_hierro', puntos: -15 }],
       consecuenciaDiferidaEventoAgora: 'ira_ares',
     },
@@ -668,7 +668,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       ],
       marcaE: 'Apaciguó a Ares cuando Diomedes desafió a los dioses.',
       consecuenciaDiferidaDias: 3,
-      consecuenciaDiferidaDescripcion: 'Ares acepta el sacrificio — y recompensa la piedad.',
+      consecuenciaDiferidaDescripcion: 'Ares acepta el sacrificio, y recompensa la piedad.',
       consecuenciaDiferidaAfinidad: [{ faccionId: 'guardia_hierro', puntos: 20 }],
       consecuenciaDiferidaEventoAgora: 'favor_ares',
     },
@@ -681,14 +681,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     lider: 'Pitágoras',
     mecanicas: ['A', 'I'],
     descripcionNarrativa:
-      'Pitágoras ha emitido un decreto: la Escuela del Logos cerrará sus puertas durante 7 días. No como castigo — como purificación. Dice que los agonistas leen páginas pero no piensan. Que la cantidad sin calidad envenena el Logos. Apolo guarda silencio.',
+      'Pitágoras ha emitido un decreto: la Escuela del Logos cerrará sus puertas durante 7 días. No como castigo, sino como purificación. Dice que los agonistas leen páginas pero no piensan. Que la cantidad sin calidad envenena el Logos. Apolo guarda silencio.',
     opcionA: {
-      label: 'Acatamos el decreto — la reflexión vale más que la acumulación',
-      argumentoFavor: 'Pitágoras tiene razón en algo que nadie quiere admitir — leer sin pensar es coleccionar, no aprender.',
+      label: 'Acatamos el decreto: la reflexión vale más que la acumulación',
+      argumentoFavor: 'Pitágoras tiene razón en algo que nadie quiere admitir: leer sin pensar es coleccionar, no aprender.',
       argumentoContra: 'El Agon tiene 29 días contados. Cada día sin leer es afinidad perdida con Apolo.',
     },
     opcionB: {
-      label: 'Desafiamos el decreto — el conocimiento no se pausa',
+      label: 'Desafiamos el decreto: el conocimiento no se pausa',
       argumentoFavor: 'Ningún hombre tiene autoridad para decirte cuándo pensar. La libertad intelectual no se negocia.',
       argumentoContra: 'Desafiar a Pitágoras en su propio dominio es declarar que sabes más que él.',
     },
@@ -699,7 +699,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
         { faccionId: 'concilio_sombras', puntos: 40 },
         { faccionId: 'tribunal_kleos', puntos: -25 },
       ],
-      marcaE: 'Acató el decreto de Pitágoras — honró la reflexión sobre la acumulación.',
+      marcaE: 'Acató el decreto de Pitágoras: honró la reflexión sobre la acumulación.',
       consecuenciaDiferidaDias: 4,
       consecuenciaDiferidaDescripcion: 'Pitágoras reabre la Escuela y reconoce tu acatamiento.',
       consecuenciaDiferidaAfinidad: [{ faccionId: 'escuela_logos', puntos: 35 }],
@@ -713,7 +713,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
         { faccionId: 'guardia_hierro', puntos: 40 },
         { faccionId: 'escuela_logos', puntos: -30 },
       ],
-      marcaE: 'Desafió el decreto de Pitágoras — el conocimiento no se pausa.',
+      marcaE: 'Desafió el decreto de Pitágoras: el conocimiento no se pausa.',
       consecuenciaDiferidaDias: 4,
       consecuenciaDiferidaDescripcion: 'Pitágoras cierra sus puertas específicamente para ti.',
       consecuenciaDiferidaAfinidad: [{ faccionId: 'escuela_logos', puntos: -30 }],
@@ -728,14 +728,14 @@ export const CRISIS_POOL: CrisisConfig[] = [
     lider: 'Triptólemo',
     mecanicas: ['H', 'I'],
     descripcionNarrativa:
-      'Una plaga silenciosa atacó los almacenes del Gremio de la Tierra. Triptólemo tiene una sola semilla sagrada que Deméter le confió. Plantarla ahora significa 3 días de escasez mientras germina. Triptólemo mira a los agonistas — esta semilla pertenece a quienes merezcan recibirla.',
+      'Una plaga silenciosa atacó los almacenes del Gremio de la Tierra. Triptólemo tiene una sola semilla sagrada que Deméter le confió. Plantarla ahora significa 3 días de escasez mientras germina. Triptólemo mira a los agonistas: esta semilla pertenece a quienes merezcan recibirla.',
     opcionA: {
-      label: 'Plantamos la semilla — el futuro vale el hambre presente',
+      label: 'Plantamos la semilla: el futuro vale el hambre presente',
       argumentoFavor: 'Todas las grandes cosechas empezaron con hambre. Quien no puede tolerar la escasez presente no merece la abundancia futura.',
       argumentoContra: '3 días de escasez en el Agon son 3 días sin el rendimiento físico necesario.',
     },
     opcionB: {
-      label: 'Guardamos la semilla — la escasez presente no puede esperar',
+      label: 'Guardamos la semilla: la escasez presente no puede esperar',
       argumentoFavor: 'Un agonista hambriento no puede competir. La generosidad que te destruye no es virtud.',
       argumentoContra: 'Guardar la semilla es elegir la supervivencia sobre la regeneración.',
     },
@@ -781,17 +781,17 @@ export const CRISIS_POOL: CrisisConfig[] = [
     descripcionNarrativa:
       'Tersites irrumpió en el Ágora y dijo lo que nadie se había atrevido: "Este Agon es una farsa. Dos hombres con tiempo, recursos y comodidad compitiendo entre sí y llamándolo disciplina. ¿Qué saben ustedes del esfuerzo real?" La ciudad quedó en silencio.',
     opcionA: {
-      label: 'Tersites tiene razón — lo reconozco públicamente',
+      label: 'Tersites tiene razón: lo reconozco públicamente',
       argumentoFavor: 'La honestidad sobre las propias ventajas es la única forma de que el mérito real signifique algo.',
       argumentoContra: 'La humildad performativa es su propia forma de privilegio.',
     },
     opcionB: {
-      label: 'Tersites se equivoca — el esfuerzo es el esfuerzo',
+      label: 'Tersites se equivoca: el esfuerzo es el esfuerzo',
       argumentoFavor: 'Relativizar el esfuerzo propio no honra a nadie. El contexto no anula el sacrificio.',
       argumentoContra: 'Ignorar las condiciones en las que compites no las hace desaparecer.',
     },
     escenarioAmbosA: {
-      descripcionAgora: 'Dos agonistas que se miraron al espejo y no apartaron la vista. Tersites no esperaba esto. Eris se retiró frustrada — no hay caos donde hay honestidad.',
+      descripcionAgora: 'Dos agonistas que se miraron al espejo y no apartaron la vista. Tersites no esperaba esto. Eris se retiró frustrada: no hay caos donde hay honestidad.',
       afinidad: [
         { faccionId: 'escuela_logos', puntos: 50 },
         { faccionId: 'gremio_tierra', puntos: 50 },
@@ -801,7 +801,7 @@ export const CRISIS_POOL: CrisisConfig[] = [
       marcaE: 'Miró al espejo de Tersites y no apartó la vista.',
     },
     escenarioAmbosB: {
-      descripcionAgora: 'Tersites fue escoltado fuera del Ágora. Nike asintió. Eris sonrió — la negación también es su alimento.',
+      descripcionAgora: 'Tersites fue escoltado fuera del Ágora. Nike asintió. Eris sonrió: la negación también es su alimento.',
       afinidad: [
         { faccionId: 'tribunal_kleos', puntos: 45 },
         { faccionId: 'guardia_hierro', puntos: 45 },
@@ -846,12 +846,12 @@ export const CRISIS_POOL: CrisisConfig[] = [
     descripcionNarrativa:
       'Un mensajero llega a Olimpia y colapsa antes de terminar su mensaje. Solo se escuchó: "Corred... o todo se pierde." Feidípides propone que los dos agonistas compitan en pasos durante 3 días. El perdedor contribuirá con kleos al fondo de defensa.',
     opcionA: {
-      label: 'Acepto la carrera — el movimiento es la respuesta',
+      label: 'Acepto la carrera: el movimiento es la respuesta',
       argumentoFavor: 'Cuando el mensajero dice corred, corres. La acción es la única respuesta honesta.',
-      argumentoContra: 'Correr sin dirección no es disciplina — es ansiedad disfrazada de valentía.',
+      argumentoContra: 'Correr sin dirección no es disciplina: es ansiedad disfrazada de valentía.',
     },
     opcionB: {
-      label: 'Rechazo la carrera — el mensaje no lo justifica',
+      label: 'Rechazo la carrera: el mensaje no lo justifica',
       argumentoFavor: 'Las decisiones tomadas en pánico producen resultados de pánico.',
       argumentoContra: 'La prudencia que paraliza es cobardía con mejor nombre.',
     },
@@ -885,12 +885,12 @@ export const CRISIS_POOL: CrisisConfig[] = [
     descripcionNarrativa:
       'Endimión no ha aparecido en el Concilio desde hace tres días. Sus seguidores lo encontraron dormido, respirando, pero imposible de despertar. Morfeo envía un mensaje: "El sueño sagrado tiene un precio. Quien quiera que Endimión despierte debe pagarlo."',
     opcionA: {
-      label: 'Pagamos el precio — que Endimión despierte',
+      label: 'Pagamos el precio: que Endimión despierte',
       argumentoFavor: 'Una ciudad sin sus líderes es una ciudad a la deriva. El precio del sueño sagrado es el precio de la civilización.',
       argumentoContra: 'Morfeo dijo que quien duerme fue elegido. Despertar a Endimión contra la voluntad del dios es hybris.',
     },
     opcionB: {
-      label: 'Respetamos el sueño — Morfeo sabe lo que hace',
+      label: 'Respetamos el sueño: Morfeo sabe lo que hace',
       argumentoFavor: 'Los dioses no actúan sin razón. Interferir en el designio de Morfeo es exactamente la arrogancia que destruye ciudades.',
       argumentoContra: 'La deferencia a los dioses que paraliza la acción humana es resignación disfrazada de piedad.',
     },
@@ -927,10 +927,10 @@ export const CRISIS_POOL: CrisisConfig[] = [
     lider: 'Milcíades',
     mecanicas: ['G', 'E', 'I'],
     descripcionNarrativa:
-      'El Tribunal del Kleos ha convocado un juicio sin precedentes. Milcíades — su propio líder — está siendo juzgado por sus pares. La acusación: favoreció a ciertos agonistas en el pasado. No niega ni confirma. Solo dice: "Juzgadme como juzgáis a todos." El primero en declarar define el tono de la sala.',
+      'El Tribunal del Kleos ha convocado un juicio sin precedentes. Milcíades, su propio líder, está siendo juzgado por sus pares. La acusación: favoreció a ciertos agonistas en el pasado. No niega ni confirma. Solo dice: "Juzgadme como juzgáis a todos." El primero en declarar define el tono de la sala.',
     opcionA: {
       label: 'Milcíades debe ser juzgado como cualquier otro',
-      argumentoFavor: 'Un sistema de justicia que protege a sus fundadores no es justicia — es nepotismo con toga.',
+      argumentoFavor: 'Un sistema de justicia que protege a sus fundadores no es justicia: es nepotismo con toga.',
       argumentoContra: 'Juzgar al hombre que construyó las instituciones con sus propias reglas es una trampa circular.',
     },
     opcionB: {

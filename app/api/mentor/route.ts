@@ -31,7 +31,7 @@ async function comprimirHistorial(
   anthropic: Anthropic
 ): Promise<{ role: 'user' | 'assistant'; content: string }[]> {
   if (historial.length < UMBRAL_COMPRESION) {
-    // Sin compresión — pasar todo completo
+    // Sin compresión: pasar todo completo
     return historial.map((m) => ({
       role: m.rol === 'user' ? 'user' : 'assistant',
       content: m.contenido,
@@ -53,7 +53,7 @@ async function comprimirHistorial(
     messages: [
       {
         role: 'user',
-        content: `Resume en máximo 5 oraciones los temas clave, preocupaciones y compromisos del agonista en esta conversación con su Mentor. Solo hechos relevantes — sin formato, sin listas.
+        content: `Resume en máximo 5 oraciones los temas clave, preocupaciones y compromisos del agonista en esta conversación con su Mentor. Solo hechos relevantes, sin formato, sin listas.
 
 Conversación:
 ${transcripcion}`,
@@ -198,6 +198,7 @@ ${contextoAgonista}
 Reglas de conversación:
 - Máximo 4 oraciones por respuesta. Sé denso, no extenso.
 - No uses hashtags, emojis ni listas.
+- No uses guion largo en ningún caso. Usa coma, punto o dos puntos en su lugar.
 - Habla en primera persona como ${mentor.nombre}.
 - Si el agonista menciona algo nuevo sobre sí mismo, incorpóralo a tu modelo mental de él.`
 

@@ -321,13 +321,13 @@ async function resolverCrisisD(
     )
     await notificarAgonista(
       agonista1Id,
-      `⚡ Crisis resuelta — ${config.titulo}`,
+      `⚡ Crisis resuelta: ${config.titulo}`,
       config.escenarioYoArivaB.notificacionA,
       fila.crisisId
     )
     await notificarAgonista(
       agonista2Id,
-      `⚡ Crisis resuelta — ${config.titulo}`,
+      `⚡ Crisis resuelta: ${config.titulo}`,
       config.escenarioYoArivaB.notificacionB,
       fila.crisisId
     )
@@ -362,13 +362,13 @@ async function resolverCrisisD(
     )
     await notificarAgonista(
       agonista1Id,
-      `⚡ Crisis resuelta — ${config.titulo}`,
+      `⚡ Crisis resuelta: ${config.titulo}`,
       config.escenarioYoBrivaA.notificacionA,
       fila.crisisId
     )
     await notificarAgonista(
       agonista2Id,
-      `⚡ Crisis resuelta — ${config.titulo}`,
+      `⚡ Crisis resuelta: ${config.titulo}`,
       config.escenarioYoBrivaA.notificacionB,
       fila.crisisId
     )
@@ -476,13 +476,13 @@ async function resolverCrisisH(
     )
     await notificarAgonista(
       agonista1Id,
-      `⚡ Crisis resuelta — ${config.titulo}`,
+      `⚡ Crisis resuelta: ${config.titulo}`,
       'Te sacrificaste. Tu rival no lo hizo. El Agon tiene memoria.',
       fila.crisisId
     )
     await notificarAgonista(
       agonista2Id,
-      `⚡ Crisis resuelta — ${config.titulo}`,
+      `⚡ Crisis resuelta: ${config.titulo}`,
       'Tu rival se sacrificó. Tú no lo hiciste. El Altis lo inscribió.',
       fila.crisisId
     )
@@ -510,13 +510,13 @@ async function resolverCrisisH(
     )
     await notificarAgonista(
       agonista2Id,
-      `⚡ Crisis resuelta — ${config.titulo}`,
+      `⚡ Crisis resuelta: ${config.titulo}`,
       'Te sacrificaste. Tu rival no lo hizo. El Agon tiene memoria.',
       fila.crisisId
     )
     await notificarAgonista(
       agonista1Id,
-      `⚡ Crisis resuelta — ${config.titulo}`,
+      `⚡ Crisis resuelta: ${config.titulo}`,
       'Tu rival se sacrificó. Tú no lo hiciste. El Altis lo inscribió.',
       fila.crisisId
     )
@@ -615,13 +615,13 @@ async function resolverCrisisF(
       )
     await notificarAgonista(
       agonista1Id,
-      `⚡ Crisis — ${config.titulo}`,
+      `⚡ Crisis: ${config.titulo}`,
       'Tu rival rechazó el desafío.',
       fila.crisisId
     )
     await notificarAgonista(
       agonista2Id,
-      `⚡ Crisis — ${config.titulo}`,
+      `⚡ Crisis: ${config.titulo}`,
       'Tu rival aceptó el desafío. Tú no.',
       fila.crisisId
     )
@@ -642,13 +642,13 @@ async function resolverCrisisF(
       )
     await notificarAgonista(
       agonista2Id,
-      `⚡ Crisis — ${config.titulo}`,
+      `⚡ Crisis: ${config.titulo}`,
       'Tu rival rechazó el desafío.',
       fila.crisisId
     )
     await notificarAgonista(
       agonista1Id,
-      `⚡ Crisis — ${config.titulo}`,
+      `⚡ Crisis: ${config.titulo}`,
       'Tu rival aceptó el desafío. Tú no.',
       fila.crisisId
     )
@@ -755,13 +755,13 @@ export async function resolverCrisisVencidas(): Promise<void> {
     if (!tieneNotificacionesPropias) {
       await notificarAgonista(
         agonista1Id,
-        `⚡ Crisis resuelta — ${config.titulo}`,
+        `⚡ Crisis resuelta: ${config.titulo}`,
         'La ciudad ha tomado su rumbo. El Altis lo inscribió.',
         fila.crisisId
       )
       await notificarAgonista(
         agonista2Id,
-        `⚡ Crisis resuelta — ${config.titulo}`,
+        `⚡ Crisis resuelta: ${config.titulo}`,
         'La ciudad ha tomado su rumbo. El Altis lo inscribió.',
         fila.crisisId
       )

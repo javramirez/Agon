@@ -2,7 +2,7 @@
 
 > "La excelencia no se declara. Se inscribe."
 
-Plataforma de gamificación para el Gran Agon — un desafío personal de 29 días de disciplina entre dos agonistas. Registro de hábitos diarios, sistema de kleos (XP), niveles, inscripciones (logros), batalla en tiempo real, y La Ceremonia del Veredicto final.
+Plataforma de gamificación para el Gran Agon: un desafío personal de 29 días de disciplina entre dos agonistas. Registro de hábitos diarios, sistema de kleos (XP), niveles, inscripciones (logros), batalla en tiempo real, y La Ceremonia del Veredicto final.
 
 ---
 
@@ -15,7 +15,7 @@ Plataforma de gamificación para el Gran Agon — un desafío personal de 29 dí
 | **Antagonista** | El rival de cada agonista |
 | **Kleos** | Puntos acumulados (gloria ganada con actos) |
 | **Las Pruebas** | Los 7 hábitos diarios a completar |
-| **El Altis** | El scoreboard — registro del Gran Agon |
+| **El Altis** | El scoreboard: registro del Gran Agon |
 | **El Ágora** | El feed social compartido |
 | **La Hegemonía** | El ganador de cada semana |
 | **Las Inscripciones** | Los logros desbloqueados |
@@ -35,7 +35,7 @@ Plataforma de gamificación para el Gran Agon — un desafío personal de 29 dí
 | Base de datos | Neon (PostgreSQL serverless) |
 | ORM | Drizzle ORM |
 | Storage | Vercel Blob (fotos de gym/cardio) |
-| IA | Anthropic API — Claude Haiku (La Crónica del Período) |
+| IA | Anthropic API: Claude Haiku (La Crónica del Período) |
 | Deploy | Vercel |
 
 ---
@@ -106,15 +106,15 @@ Ver [.env.example](.env.example) para la lista completa con comentarios.
 
 Las variables críticas son:
 
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` — Clerk frontend
-- `CLERK_SECRET_KEY` — Clerk backend
-- `CLERK_JAVIER_USER_ID` — ID del primer agonista
-- `CLERK_MATIAS_USER_ID` — ID del segundo agonista
-- `DATABASE_URL` — Neon Direct Connection URL
-- `BLOB_READ_WRITE_TOKEN` — Vercel Blob token
-- `ANTHROPIC_API_KEY` — Para La Crónica del Período
-- `NEXT_PUBLIC_AGON_START_DATE` — Fecha inicio (YYYY-MM-DD)
-- `NEXT_PUBLIC_AGON_END_DATE` — Fecha fin (YYYY-MM-DD)
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: Clerk frontend
+- `CLERK_SECRET_KEY`: Clerk backend
+- `CLERK_JAVIER_USER_ID`: ID del primer agonista
+- `CLERK_MATIAS_USER_ID`: ID del segundo agonista
+- `DATABASE_URL`: Neon Direct Connection URL
+- `BLOB_READ_WRITE_TOKEN`: Vercel Blob token
+- `ANTHROPIC_API_KEY`: Para La Crónica del Período
+- `NEXT_PUBLIC_AGON_START_DATE`: Fecha inicio (YYYY-MM-DD)
+- `NEXT_PUBLIC_AGON_END_DATE`: Fecha fin (YYYY-MM-DD)
 
 ---
 
@@ -159,5 +159,5 @@ agon/
 ## El Gran Agon en producción
 
 **URL:** [agon.vercel.app](https://agon.vercel.app)  
-**Período:** 6 de abril — 4 de mayo de 2026  
+**Período:** 6 de abril - 4 de mayo de 2026
 **Agonistas:** Javier Ramírez y Matías Rufin

@@ -4,7 +4,7 @@ import { NivelBadge } from '@/components/agon/nivel-badge'
 import { KleosBadge } from '@/components/agon/kleos-badge'
 import { PulsoRealtime } from '@/components/agon/pulso-realtime'
 import { PruebasDelDia } from '@/components/agon/pruebas-del-dia'
-import { getDiaDelAgan, getDiasRestantes, getMensajeHora } from '@/lib/utils'
+import { getDiaDelAgan, getDiasRestantes, getMensajeHora, isUltimoDia } from '@/lib/utils'
 import {
   getOrCreatePruebaDiariaHoy,
   getLlamasAgonista,
@@ -16,6 +16,7 @@ import { eq } from 'drizzle-orm'
 import { getMetasEfectivas, getVentajasActivas } from '@/lib/facciones/afinidad'
 import { AGONISTAS } from '@/lib/auth'
 import { SemanaSagradaBanner } from '@/components/agon/semana-sagrada-banner'
+import { UltimoDiaBanner } from '@/components/agon/ultimo-dia-banner'
 import { DashboardEventos } from '@/components/agon/dashboard-eventos'
 import { sleep } from '@/lib/utils/sleep'
 import type { PruebaDiaria } from '@/lib/db/schema'
@@ -64,6 +65,7 @@ export default async function DashboardPage() {
 
   const diaActual = getDiaDelAgan()
   const diasRestantes = getDiasRestantes()
+  const esUltimoDia = isUltimoDia()
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -82,6 +84,7 @@ export default async function DashboardPage() {
       </div>
 
       <SemanaSagradaBanner />
+      {esUltimoDia && <UltimoDiaBanner />}
       <DashboardEventos />
 
       <div className="bg-surface-1 rounded-lg border border-border p-4 space-y-3">

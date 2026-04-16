@@ -1,9 +1,9 @@
-# API — Agon
+# API: Agon
 
 Documentación de los endpoints bajo `/app/api`.  
 **Autenticación:** casi todos usan `auth()` de Clerk; sin sesión válida → `401` JSON `{ error: '...' }`.
 
-**Autorización de agonistas:** el `middleware` solo permite acceso a rutas protegidas si `userId` está en `CLERK_JAVIER_USER_ID` o `CLERK_MATIAS_USER_ID`. Si un usuario con sesión no está en la lista, las peticiones a páginas se redirigen a `/unauthorized`; las llamadas `fetch` a `/api/*` pueden recibir redirección HTML según el caso — en la práctica solo deben usarse cuentas de los dos agonistas.
+**Autorización de agonistas:** el `middleware` solo permite acceso a rutas protegidas si `userId` está en `CLERK_JAVIER_USER_ID` o `CLERK_MATIAS_USER_ID`. Si un usuario con sesión no está en la lista, las peticiones a páginas se redirigen a `/unauthorized`; las llamadas `fetch` a `/api/*` pueden recibir redirección HTML según el caso. En la práctica solo deben usarse cuentas de los dos agonistas.
 
 ---
 
@@ -42,7 +42,7 @@ Actualiza un campo de la prueba del **día actual** del agonista autenticado.
 
 Sube imagen a Vercel Blob y asocia URL a la prueba del día (gym o cardio).
 
-**Body:** `multipart/form-data` — `foto` (File), `tipo`: `gym` | `cardio`
+**Body:** `multipart/form-data`: `foto` (File), `tipo`: `gym` | `cardio`
 
 **Response:** `{ "url": "https://..." }`
 

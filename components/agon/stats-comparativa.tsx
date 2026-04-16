@@ -93,7 +93,7 @@ export function StatsComparativa({
         <div className="w-12">
           {IconAntagonista
             ? <IconAntagonista size={16} className="text-muted-foreground" />
-            : <span className="text-sm text-muted-foreground">—</span>
+            : <span className="text-sm text-muted-foreground opacity-30">?</span>
           }
         </div>
       </div>
