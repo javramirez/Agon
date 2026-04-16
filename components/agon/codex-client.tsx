@@ -666,14 +666,14 @@ const CLAUSULAS_CONTRATO: {
 
 const PREMIOS_CONTRATO = [
   {
-    agonista: 'Javier',
+    agonista: 'Agonista A',
     cumple: 'Recibe un jockey.',
     falla: 'Publica una historia en inglés exponiendo sus objetivos deportivos y su proceso personal.',
   },
   {
-    agonista: 'Matías',
-    cumple: 'Recibe 3 Monster blancos de Javier.',
-    falla: 'Compra una creatina a Javier.',
+    agonista: 'Agonista B',
+    cumple: 'Recibe 3 bebidas energéticas de Agonista A.',
+    falla: 'Compra suplementación deportiva a Agonista A.',
   },
 ] as const
 

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ekecheiria, agoraEventos } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getOrCreateAgonista } from '@/lib/db/queries'
+import { getAgonistaByClerkId } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 
 export async function POST() {
@@ -12,7 +12,10 @@ export async function POST() {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
 
   const rows = await db
     .select()

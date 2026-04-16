@@ -21,12 +21,12 @@ const isProtectedRoute = createRouteMatcher([
   '/api/(.*)',
 ])
 
-const isOnboardingRoute = createRouteMatcher(['/onboarding(.*)'])
-
-const AUTHORIZED_USER_IDS = [
-  process.env.CLERK_JAVIER_USER_ID,
-  process.env.CLERK_MATIAS_USER_ID,
-].filter(Boolean) as string[]
+const isOnboardingRoute = createRouteMatcher([
+  '/onboarding(.*)',
+  '/seleccionar-modo(.*)',
+  '/unirse(.*)',
+  '/esperando(.*)',
+])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
@@ -35,10 +35,8 @@ export default clerkMiddleware(async (auth, req) => {
     if (!userId) {
       return NextResponse.redirect(new URL('/sign-in', req.url))
     }
-
-    if (!AUTHORIZED_USER_IDS.includes(userId)) {
-      return NextResponse.redirect(new URL('/unauthorized', req.url))
-    }
+    // Sin allowlist — cualquier usuario autenticado pasa.
+    // La app decide qué mostrar según estado en DB.
   }
 
   const requestHeaders = new Headers(req.headers)

@@ -108,8 +108,7 @@ Las variables críticas son:
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: Clerk frontend
 - `CLERK_SECRET_KEY`: Clerk backend
-- `CLERK_JAVIER_USER_ID`: ID del primer agonista
-- `CLERK_MATIAS_USER_ID`: ID del segundo agonista
+- `RESEND_API_KEY`: email (invitaciones duelo; ver `.env.example`)
 - `DATABASE_URL`: Neon Direct Connection URL
 - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token
 - `ANTHROPIC_API_KEY`: Para La Crónica del Período
@@ -136,7 +135,7 @@ agon/
 │   │   ├── oraculo/             # Oráculo sellado
 │   │   ├── contrato/            # Cláusulas
 │   │   ├── veredicto/           # Ceremonia final
-│   │   └── admin/               # Panel admin (Javier)
+│   │   └── admin/               # Panel admin (rol TBD)
 │   ├── api/                     # API Routes
 │   ├── onboarding/              # Onboarding + Oráculo día 1
 │   └── unauthorized/            # Usuario no autorizado
@@ -145,7 +144,7 @@ agon/
 │   └── layout/                  # Navbar, MobileNav
 ├── hooks/                       # usePulso, useCorrespondencia, etc.
 ├── lib/
-│   ├── auth/                    # AGONISTAS, helpers
+│   ├── auth/                    # Sesión Clerk + helpers (PROMPT 03)
 │   ├── cronica/                 # Generación de crónicas con IA
 │   ├── db/                      # schema, queries, constants
 │   └── inscripciones/           # Triggers de logros
@@ -160,4 +159,4 @@ agon/
 
 **URL:** [agon.vercel.app](https://agon.vercel.app)  
 **Período:** 6 de abril - 4 de mayo de 2026
-**Agonistas:** Javier Ramírez y Matías Rufin
+**Participantes:** definidos por instancia / onboarding (migración multi-instancia en curso).

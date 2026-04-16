@@ -23,10 +23,8 @@ Cuentas necesarias:
 3. Copiar desde **API Keys**:
    - `Publishable key` → `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
    - `Secret key` → `CLERK_SECRET_KEY`
-4. Crear las dos cuentas de usuario (Javier y Matías)
-5. Desde **Users**, copiar el **User ID** de cada uno:
-   - Javier → `CLERK_JAVIER_USER_ID`
-   - Matías → `CLERK_MATIAS_USER_ID`
+4. Crear cuentas de usuario según el flujo de invitación / instancia (ver PROMPT 03+).
+5. Completar el resto de variables en `.env.example` (sin IDs de usuario fijos en repo).
 
 ---
 
@@ -109,11 +107,11 @@ En el dashboard de Clerk:
 
 Checklist mínimo:
 
-- [ ] Login con cuenta de Javier → onboarding → dashboard
-- [ ] Login con cuenta de Matías → onboarding → dashboard
+- [ ] Login con cuenta de prueba → onboarding → dashboard
+- [ ] Segundo participante (duelo) según flujo de instancia
 - [ ] Marcar una prueba → kleos se actualiza
 - [ ] Subir foto en gym/cardio → aparece en El Ágora
-- [ ] `/admin` accesible solo para Javier
+- [ ] `/admin` accesible solo para rol administrador configurado
 - [ ] Generar La Crónica desde admin → aparece en El Ágora
 
 ---

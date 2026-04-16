@@ -1,22 +1,30 @@
 import { currentUser } from '@clerk/nextjs/server'
-import { getOrCreateAgonista, getAgonistaByClerkId } from '@/lib/db/queries'
-import { AGONISTAS } from './agonistas'
+import { getAgonistaByClerkId, getAntagonistaPorReto } from '@/lib/db/queries'
 
-export { AGONISTAS }
-
+/**
+ * Retorna el agonista del usuario autenticado actualmente.
+ * Retorna null si no está autenticado o no tiene registro en DB.
+ * NO crea el agonista — eso ocurre durante el onboarding.
+ */
 export async function getCurrentAgonista() {
   const user = await currentUser()
   if (!user) return null
-  return getOrCreateAgonista(user.id)
+  return getAgonistaByClerkId(user.id)
 }
 
-export async function getAntagonista(clerkId: string) {
-  const ids = Object.values(AGONISTAS).map((a) => a.clerkId)
-  const antagonistaClerkId = ids.find((id) => id !== clerkId)
-  if (!antagonistaClerkId) return null
-  return getAgonistaByClerkId(antagonistaClerkId)
+/**
+ * Retorna el antagonista del agonista actual dentro del mismo reto.
+ * Retorna null si el reto es solo o si el rival aún no se unió.
+ */
+export async function getAntagonista(retoId: string, agonistId: string) {
+  return getAntagonistaPorReto(retoId, agonistId)
 }
 
-export function isAuthorized(clerkId: string): boolean {
-  return Object.values(AGONISTAS).some((a) => a.clerkId === clerkId)
+/**
+ * Retorna true si el usuario tiene un agonista registrado en DB.
+ * Usado por el layout para decidir si redirigir al onboarding.
+ */
+export async function isRegistered(): Promise<boolean> {
+  const agonista = await getCurrentAgonista()
+  return agonista !== null
 }

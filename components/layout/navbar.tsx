@@ -21,11 +21,12 @@ const NAV_MAIN: NavMainLink[] = [
 const navMainIconClass = 'shrink-0 opacity-80'
 
 export async function Navbar() {
-  const { userId } = await auth()
+  await auth()
   const agonista = await getCurrentAgonista()
   if (!agonista) return null
 
-  const isAdmin = userId === process.env.CLERK_JAVIER_USER_ID
+  // TODO PROMPT-01: admin ligado a CLERK_JAVIER_USER_ID eliminado (PROMPT 03)
+  const isAdmin = false
   const nivel = agonista.nivel as NivelKey
   const nivelLabel = NIVEL_LABELS[nivel]
   const NivelIcono = NIVEL_ICONOS[nivel]

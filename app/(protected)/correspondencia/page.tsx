@@ -1,8 +1,8 @@
-import { getCurrentAgonista, AGONISTAS } from '@/lib/auth'
+import { getCurrentAgonista } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { CorrespondenciaChat } from '@/components/agon/correspondencia-chat'
-import { getAgonistaByClerkId } from '@/lib/db/queries'
+import { getAntagonistaPorReto } from '@/lib/db/queries'
 import { sleep } from '@/lib/utils/sleep'
 
 export default async function CorrespondenciaPage() {
@@ -10,12 +10,10 @@ export default async function CorrespondenciaPage() {
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
-  const antagonistaConfig = Object.values(AGONISTAS).find(
-    (a) => a.clerkId !== agonista.clerkId
-  )
-  const antagonista = antagonistaConfig
-    ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
-    : null
+  const antagonista =
+    agonista.retoId != null
+      ? await getAntagonistaPorReto(agonista.retoId, agonista.id)
+      : null
 
   await sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0)))
 

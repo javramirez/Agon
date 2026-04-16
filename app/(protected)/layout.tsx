@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { getCurrentAgonista } from '@/lib/auth'
+import { getRetoPorId } from '@/lib/db/queries'
 import { getEkecheiriaActiva } from '@/lib/ekecheiria/estado'
 import { procesarExpiracionEkecheiria } from '@/lib/ekecheiria/procesar'
 import { procesarSenalamientoPendiente } from '@/lib/senalamiento/procesar'
@@ -27,52 +28,70 @@ export default async function ProtectedLayout({
   if (!userId) redirect('/sign-in')
 
   const agonista = await getCurrentAgonista()
-  if (!agonista) redirect('/sign-in')
-  if (!agonista.oraculoSellado) redirect('/onboarding')
 
-  if (agonista.senalamiento_recibido) {
-    void procesarSenalamientoPendiente(agonista.id)
+  // Sin registro en DB → crear agonista y reto
+  if (!agonista) redirect('/seleccionar-modo')
+
+  // Con agonista pero sin reto asignado
+  if (!agonista.retoId) redirect('/seleccionar-modo')
+
+  const reto = await getRetoPorId(agonista.retoId)
+  if (!reto) redirect('/seleccionar-modo')
+
+  // Reto en configuración → completar onboarding
+  if (reto.estado === 'configurando') {
+    if (!agonista.oraculoSellado) redirect('/onboarding')
+    // Pacto sellado pero esperando al rival o fecha → pantalla de espera
+    redirect('/esperando')
   }
 
-  void detectarEventosRivalidad(agonista.id).catch(() => {})
+  // Reto programado → cuenta regresiva
+  if (reto.estado === 'programado') redirect('/esperando')
+
+  // Reto completado → solo veredicto disponible
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') ?? ''
+
+  if (reto.estado === 'completado' && !pathname.startsWith('/veredicto')) {
+    redirect('/veredicto')
+  }
+
+  // ── Reto activo — procesos fire-and-forget ──────────────────
 
   void orquestarVozOlimpo(agonista.id).catch(() => {})
-
-  void resolverDisputasVencidas().catch(() => {})
-
   void verificarYActivarCrisis().catch(() => {})
   void resolverCrisisVencidas().catch(() => {})
   void aplicarConsecuenciasDiferidas().catch(() => {})
 
-  const expiracion = await procesarExpiracionEkecheiria()
+  // Procesos exclusivos de modo duelo
+  if (reto.modo === 'duelo') {
+    if (agonista.senalamiento_recibido) {
+      void procesarSenalamientoPendiente(agonista.id)
+    }
+    void detectarEventosRivalidad(agonista.id).catch(() => {})
+    void resolverDisputasVencidas().catch(() => {})
+  }
 
+  const expiracion = await procesarExpiracionEkecheiria()
   const ekecheiriaActiva = await getEkecheiriaActiva()
-  const headersList = await headers()
-  const pathname = headersList.get('x-pathname') ?? ''
+
   const esRutaEkecheiria = pathname.startsWith('/ekecheiria-activa')
   const esRutaDisclaimer = pathname.startsWith('/ekecheiria-expirada')
 
-  if (ekecheiriaActiva && !esRutaEkecheiria) {
-    redirect('/ekecheiria-activa')
-  }
+  if (ekecheiriaActiva && !esRutaEkecheiria) redirect('/ekecheiria-activa')
+  if (expiracion.expirada && !esRutaDisclaimer) redirect('/ekecheiria-expirada')
 
-  if (expiracion.expirada && !esRutaDisclaimer) {
-    redirect('/ekecheiria-expirada')
-  }
-
-  // Consulta del Mediodía — día 15
-  const startDate = process.env.NEXT_PUBLIC_AGON_START_DATE ?? ''
+  // Consulta del Mediodía — día 15 (fecha dinámica desde reto)
   const esConsulta = pathname.includes('consulta-mediodia')
+  const fechaInicio = reto.fechaInicio ?? ''
   const necesitaConsulta = consultaDisponible(
-    startDate,
+    fechaInicio,
     agonista.consultaMediaCompleta ?? false
   )
+  if (necesitaConsulta && !esConsulta) redirect('/consulta-mediodia')
 
-  if (necesitaConsulta && !esConsulta) {
-    redirect('/consulta-mediodia')
-  }
-
-  const isAdmin = userId === process.env.CLERK_JAVIER_USER_ID
+  // Admin: env var dedicada, sin Clerk ID hardcodeado
+  const isAdmin = userId === process.env.ADMIN_CLERK_ID
 
   return (
     <div className="min-h-screen bg-background">

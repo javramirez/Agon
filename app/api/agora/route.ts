@@ -4,14 +4,17 @@ import {
   getAgoraEventos,
   getAclamacionesHoy,
   getTiposAclamacionHoyPorEvento,
-  getOrCreateAgonista,
+  getAgonistaByClerkId,
 } from '@/lib/db/queries'
 
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   const [eventos, aclamacionesHoy, tiposPorEvento] = await Promise.all([
     getAgoraEventos(50),
     getAclamacionesHoy(agonista.id),

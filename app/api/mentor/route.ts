@@ -8,8 +8,8 @@ import {
   consultaMediodia,
 } from '@/lib/db/schema'
 import { eq, asc, and } from 'drizzle-orm'
-import { getCurrentAgonista, AGONISTAS } from '@/lib/auth'
-import { getAgonistaByClerkId } from '@/lib/db/queries'
+import { getCurrentAgonista } from '@/lib/auth'
+import { getAntagonistaPorReto } from '@/lib/db/queries'
 import { getMentor } from '@/lib/mentor/config'
 import { crearNotificacion } from '@/lib/notificaciones/crear'
 import Anthropic from '@anthropic-ai/sdk'
@@ -134,9 +134,8 @@ export async function POST(req: Request) {
 
   const hoy = new Date().toISOString().split('T')[0]
 
-  const antagonistaConfig = Object.values(AGONISTAS).find((a) => a.clerkId !== agonista.clerkId)
-  const rival = antagonistaConfig
-    ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
+  const rival = agonista.retoId
+    ? await getAntagonistaPorReto(agonista.retoId, agonista.id)
     : null
 
   const [pruebaHoyRows, llamasAgonista, historialPrevio, consultaRows] =

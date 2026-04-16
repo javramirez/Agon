@@ -335,6 +335,7 @@ export function AgoraEventoCard({
       relato: evento.contenido,
       metadata: evento.metadata,
       createdAt: evento.createdAt,
+      retoId: null,
     }
     return <CronicaCard cronica={cronicaMock} />
   }

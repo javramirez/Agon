@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { pactoInicial, agonistas } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getCurrentAgonista } from '@/lib/auth'
+import { getRetoPorId } from '@/lib/db/queries'
 
 const ARQUETIPOS_VALIDOS = ['constante', 'explosivo', 'metodico', 'caotico'] as const
 const PUNTOS_PARTIDA_VALIDOS = [
@@ -42,6 +43,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'El Pacto ya fue sellado' }, { status: 400 })
   }
 
+  if (!agonista.retoId) {
+    return NextResponse.json({ error: 'Sin reto asignado' }, { status: 400 })
+  }
+
+  const reto = await getRetoPorId(agonista.retoId)
+  if (!reto) {
+    return NextResponse.json({ error: 'Reto no encontrado' }, { status: 404 })
+  }
+
+  const esSolo = reto.modo === 'solo'
+
   let body: unknown
   try {
     body = await req.json()
@@ -61,8 +73,8 @@ export async function POST(req: Request) {
     sombraTipo,
     apuestaGanas,
     apuestaPierdes,
-    rivalFortalezas,
-    rivalDebilidad,
+    tusFortalezas,
+    tuDebilidad,
     preocupacionEscala,
   } = b
 
@@ -111,32 +123,52 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'La apuesta (pierdes) es obligatoria.' }, { status: 400 })
   }
 
-  if (!Array.isArray(rivalFortalezas) || rivalFortalezas.length === 0 || rivalFortalezas.length > 2) {
-    return NextResponse.json({ error: 'Selecciona 1 o 2 fortalezas del rival.' }, { status: 400 })
-  }
-
-  const fortalezasNorm = rivalFortalezas.map((x) => String(x).trim()).filter(Boolean)
-  if (fortalezasNorm.length !== rivalFortalezas.length) {
-    return NextResponse.json({ error: 'Fortalezas del rival inválidas.' }, { status: 400 })
-  }
-
-  if (typeof rivalDebilidad !== 'string' || rivalDebilidad.trim().length < 3) {
-    return NextResponse.json({ error: 'La debilidad del rival es obligatoria.' }, { status: 400 })
-  }
-
-  const escala = preocupacionEscala as Record<string, unknown>
+  // Fortalezas y debilidad del agonista
   if (
-    typeof escala?.tiempo !== 'number' ||
-    typeof escala?.constancia !== 'number' ||
-    typeof escala?.rival !== 'number'
+    !Array.isArray(tusFortalezas) ||
+    tusFortalezas.length === 0 ||
+    tusFortalezas.length > 2
   ) {
+    return NextResponse.json(
+      { error: 'Selecciona 1 o 2 fortalezas.' },
+      { status: 400 }
+    )
+  }
+
+  const fortalezasNorm = (tusFortalezas as unknown[])
+    .map((x) => String(x).trim())
+    .filter(Boolean)
+
+  if (fortalezasNorm.length !== (tusFortalezas as unknown[]).length) {
+    return NextResponse.json({ error: 'Fortalezas inválidas.' }, { status: 400 })
+  }
+
+  if (typeof tuDebilidad !== 'string' || tuDebilidad.trim().length < 3) {
+    return NextResponse.json(
+      { error: 'La debilidad es obligatoria.' },
+      { status: 400 }
+    )
+  }
+
+  // Escala de preocupaciones — rival solo en duelo
+  const escala = preocupacionEscala as Record<string, unknown>
+  if (typeof escala?.tiempo !== 'number' || typeof escala?.constancia !== 'number') {
+    return NextResponse.json({ error: 'Escala de preocupación incompleta.' }, { status: 400 })
+  }
+
+  if (!esSolo && typeof escala?.rival !== 'number') {
     return NextResponse.json({ error: 'Escala de preocupación incompleta.' }, { status: 400 })
   }
 
   const t = escala.tiempo as number
   const c = escala.constancia as number
-  const rv = escala.rival as number
-  if ([t, c, rv].some((n) => n < 1 || n > 5)) {
+  const rv = esSolo ? 0 : (escala.rival as number)
+
+  if ([t, c].some((n) => n < 1 || n > 5)) {
+    return NextResponse.json({ error: 'Escala de preocupación inválida (1–5).' }, { status: 400 })
+  }
+
+  if (!esSolo && (rv < 1 || rv > 5)) {
     return NextResponse.json({ error: 'Escala de preocupación inválida (1–5).' }, { status: 400 })
   }
 
@@ -159,8 +191,8 @@ export async function POST(req: Request) {
       sombraTipo: sombraTipo.trim(),
       apuestaGanas: apuestaGanas.trim(),
       apuestaPierdes: apuestaPierdes.trim(),
-      rivalFortalezas: fortalezasNorm,
-      rivalDebilidad: rivalDebilidad.trim(),
+      tusFortalezas: fortalezasNorm,
+      tuDebilidad: (tuDebilidad as string).trim(),
       preocupacionEscala: { tiempo: t, constancia: c, rival: rv },
       mentorAsignado: mentor,
     })

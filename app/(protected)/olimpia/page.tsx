@@ -12,7 +12,10 @@ async function OlimpiaData() {
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
-  const antagonista = await getAntagonista(agonista.clerkId)
+  const antagonista =
+    agonista.retoId != null
+      ? await getAntagonista(agonista.retoId, agonista.id)
+      : null
 
   const start = Date.now()
 

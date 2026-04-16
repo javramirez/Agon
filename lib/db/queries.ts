@@ -1,6 +1,7 @@
 import { db } from './index'
 import {
   agonistas,
+  retos,
   pruebasDiarias,
   llamas,
   kleosLog,
@@ -9,8 +10,7 @@ import {
   hegemonias,
   inscripciones,
 } from './schema'
-import { eq, and, gte, lte, desc, count } from 'drizzle-orm'
-import { AGONISTAS } from '@/lib/auth/agonistas'
+import { eq, and, gte, lte, desc, count, not } from 'drizzle-orm'
 import {
   NIVEL_THRESHOLDS,
   NIVEL_LABELS,
@@ -19,43 +19,73 @@ import type { NivelKey } from '@/lib/db/constants'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { actualizarPuntosDisputaEvento } from '@/lib/facciones/disputa'
 
-// ─── AGONISTAS ────────────────────────────────────────
+// ─── AGONISTAS / RETOS ─────────────────────────────────
 
-export async function getOrCreateAgonista(clerkId: string) {
-  const existing = await db
-    .select()
-    .from(agonistas)
-    .where(eq(agonistas.clerkId, clerkId))
-    .limit(1)
-
-  if (existing.length > 0) return existing[0]
-
-  const info = Object.values(AGONISTAS).find((a) => a.clerkId === clerkId)
-  if (!info) throw new Error('Usuario no autorizado')
-
-  const nuevo = await db
-    .insert(agonistas)
-    .values({
-      id: crypto.randomUUID(),
-      clerkId,
-      nombre: info.nombre,
-    })
-    .returning()
-
-  return nuevo[0]
-}
-
-export async function getAmbosAgonistas() {
-  return db.select().from(agonistas)
-}
-
+/**
+ * Busca un agonista por su clerkId.
+ * No crea — la creación ocurre en el flujo de onboarding.
+ */
 export async function getAgonistaByClerkId(clerkId: string) {
   const result = await db
     .select()
     .from(agonistas)
     .where(eq(agonistas.clerkId, clerkId))
     .limit(1)
+
   return result[0] ?? null
+}
+
+export async function getAmbosAgonistas() {
+  return db.select().from(agonistas)
+}
+
+/**
+ * Retorna el otro agonista dentro del mismo reto.
+ * Retorna null si el reto es solo o el rival no se unió aún.
+ */
+export async function getAntagonistaPorReto(
+  retoId: string,
+  agonistIdActual: string
+) {
+  const result = await db
+    .select()
+    .from(agonistas)
+    .where(
+      and(
+        eq(agonistas.retoId, retoId),
+        not(eq(agonistas.id, agonistIdActual))
+      )
+    )
+    .limit(1)
+
+  return result[0] ?? null
+}
+
+/**
+ * Retorna un reto por su ID.
+ */
+export async function getRetoPorId(retoId: string) {
+  const result = await db
+    .select()
+    .from(retos)
+    .where(eq(retos.id, retoId))
+    .limit(1)
+
+  return result[0] ?? null
+}
+
+/**
+ * Retorna el reto activo del agonista autenticado.
+ * Incluye el agonista y el reto en una sola consulta.
+ */
+export async function getRetoActivo(clerkId: string) {
+  const agonista = await getAgonistaByClerkId(clerkId)
+  if (!agonista?.retoId) return null
+
+  const reto = await getRetoPorId(agonista.retoId)
+  if (!reto) return null
+
+  return { agonista, reto }
 }
 
 export async function sellarOraculo(clerkId: string, mensaje: string) {

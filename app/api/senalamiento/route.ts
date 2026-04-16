@@ -3,10 +3,12 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { senalamiento, agoraEventos, agonistas } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getOrCreateAgonista, getAgonistaByClerkId } from '@/lib/db/queries'
+import {
+  getAgonistaByClerkId,
+  getAntagonistaPorReto,
+} from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { notificarSenalamiento } from '@/lib/notificaciones/crear'
-import { AGONISTAS } from '@/lib/auth/agonistas'
 
 const NIVELES_SENALAMIENTO = [
   'campeon',
@@ -21,7 +23,10 @@ export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
 
   const comoSenalador = await db
     .select()
@@ -47,7 +52,10 @@ export async function POST() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
 
   if (
     !NIVELES_SENALAMIENTO.includes(
@@ -73,11 +81,8 @@ export async function POST() {
     )
   }
 
-  const antagonistaConfig = Object.values(AGONISTAS).find(
-    (a) => a.clerkId !== agonista.clerkId
-  )
-  const antagonista = antagonistaConfig
-    ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
+  const antagonista = agonista.retoId
+    ? await getAntagonistaPorReto(agonista.retoId, agonista.id)
     : null
 
   if (!antagonista) {

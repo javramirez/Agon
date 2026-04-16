@@ -1,23 +1,22 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { getOrCreateAgonista, getAgonistaByClerkId } from '@/lib/db/queries'
+import { getAgonistaByClerkId, getAntagonistaPorReto } from '@/lib/db/queries'
 import { db } from '@/lib/db'
 import { pruebasDiarias } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
-import { AGONISTAS } from '@/lib/auth'
 
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   const hoy = new Date().toISOString().split('T')[0]
 
-  const antagonistaConfig = Object.values(AGONISTAS).find(
-    (a) => a.clerkId !== agonista.clerkId
-  )
-  const antagonista = antagonistaConfig
-    ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
+  const antagonista = agonista.retoId
+    ? await getAntagonistaPorReto(agonista.retoId, agonista.id)
     : null
 
   const [pruebaPropia, pruebaAntagonista] = await Promise.all([

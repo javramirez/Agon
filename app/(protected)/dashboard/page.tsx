@@ -14,7 +14,6 @@ import { db } from '@/lib/db'
 import { faccionesAfinidad } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { getMetasEfectivas, getVentajasActivas } from '@/lib/facciones/afinidad'
-import { AGONISTAS } from '@/lib/auth'
 import { SemanaSagradaBanner } from '@/components/agon/semana-sagrada-banner'
 import { UltimoDiaBanner } from '@/components/agon/ultimo-dia-banner'
 import { DashboardEventos } from '@/components/agon/dashboard-eventos'
@@ -38,11 +37,10 @@ export default async function DashboardPage() {
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
-  const antagonistaConfig = Object.values(AGONISTAS).find(
-    (a) => a.clerkId !== agonista.clerkId
-  )
-
-  const antagonista = await getAntagonista(agonista.clerkId)
+  const antagonista =
+    agonista.retoId != null
+      ? await getAntagonista(agonista.retoId, agonista.id)
+      : null
 
   const [pruebaHoy, llamas, pruebaAntagonista, afinidades] = (await Promise.all([
     getOrCreatePruebaDiariaHoy(agonista.id),
@@ -101,14 +99,14 @@ export default async function DashboardPage() {
 
       <PulsoRealtime
         nombrePropio={agonista.nombre}
-        nombreAntagonista={antagonistaConfig?.nombre ?? 'El Antagonista'}
+        nombreAntagonista={antagonista?.nombre ?? 'El Antagonista'}
       />
 
       <PruebasDelDia
         prueba={pruebaHoy}
         llamas={llamas}
         nivel={agonista.nivel}
-        nombreAntagonista={antagonistaConfig?.nombre ?? 'El Antagonista'}
+        nombreAntagonista={antagonista?.nombre ?? 'El Antagonista'}
         pruebasAntagonista={
           pruebaAntagonista ? pruebasCompletadasAntagonista(pruebaAntagonista) : {}
         }

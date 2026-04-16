@@ -13,8 +13,8 @@ import {
 } from '@/lib/db/schema'
 import { eq, and, gte, sql } from 'drizzle-orm'
 import {
-  getOrCreateAgonista,
   getAgonistaByClerkId,
+  getAntagonistaPorReto,
   actualizarNivel,
   getAmbosAgonistas,
 } from '@/lib/db/queries'
@@ -23,7 +23,6 @@ import {
   notificarNivelSubido,
   notificarAntagonistaActivo,
 } from '@/lib/notificaciones/crear'
-import { AGONISTAS } from '@/lib/auth/agonistas'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import {
   KLEOS_POR_PRUEBA,
@@ -167,7 +166,10 @@ export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   const hoy = new Date().toISOString().split('T')[0]!
 
   let body: ConfirmarBody
@@ -414,7 +416,10 @@ export async function POST(req: Request) {
     }
   ).catch(() => {})
 
-  const agonistaNuevo = await getOrCreateAgonista(userId)
+  const agonistaNuevo = await getAgonistaByClerkId(userId)
+  if (!agonistaNuevo) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   const pruebaFinalRows = await db
     .select()
     .from(pruebasDiarias)
@@ -439,17 +444,17 @@ export async function POST(req: Request) {
     void verificarEspejoDelAgan(agonistaNuevo.id, cambioNivel.nivelNuevo).catch(() => {})
   }
 
-  if (habitosCompletados.length > 0) {
-    const antagonistaConfig = Object.values(AGONISTAS).find((a) => a.clerkId !== userId)
-    if (antagonistaConfig) {
-      const antagonista = await getAgonistaByClerkId(antagonistaConfig.clerkId)
-      if (antagonista) {
-        void notificarAntagonistaActivo(
-          antagonista.id,
-          agonista.nombre,
-          contarPruebasCompletadas(p, metasEfectivas)
-        ).catch(() => {})
-      }
+  if (habitosCompletados.length > 0 && agonistaNuevo.retoId) {
+    const antagonista = await getAntagonistaPorReto(
+      agonistaNuevo.retoId,
+      agonistaNuevo.id
+    )
+    if (antagonista) {
+      void notificarAntagonistaActivo(
+        antagonista.id,
+        agonista.nombre,
+        contarPruebasCompletadas(p, metasEfectivas)
+      ).catch(() => {})
     }
   }
 
@@ -476,7 +481,10 @@ export async function POST(req: Request) {
     })
     .catch(() => {})
 
-  const agonistaDef = await getOrCreateAgonista(userId)
+  const agonistaDef = await getAgonistaByClerkId(userId)
+  if (!agonistaDef) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   const pruebaDefRows = await db
     .select()
     .from(pruebasDiarias)

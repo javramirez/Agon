@@ -154,6 +154,7 @@ async function insertarTripticoSiCorresponde(
   const fechaBase = parseISO(fecha)
   const fechaExpira = endOfDay(addDays(fechaBase, diasHastaDomingo))
 
+  // TODO PROMPT-01: insert ya no incluye completada_por_javier/matias (columnas eliminadas)
   await db.insert(pruebaExtraordinaria).values({
     id: crypto.randomUUID(),
     semana,
@@ -165,8 +166,6 @@ async function insertarTripticoSiCorresponde(
     kleosBonus: config.kleos,
     dificultad: config.dificultad,
     activa: true,
-    completadaPorJavier: false,
-    completadaPorMatias: false,
     fechaExpira,
   })
 
@@ -248,6 +247,7 @@ export async function activarEventoDestino(
   finDelDia.setHours(23, 59, 59, 999)
   const expiraFinal = fechaExpira > finDelDia ? finDelDia : fechaExpira
 
+  // TODO PROMPT-01: sin completada_por_javier/matias (columnas eliminadas)
   await db.insert(pruebaExtraordinaria).values({
     id: crypto.randomUUID(),
     semana,
@@ -259,8 +259,6 @@ export async function activarEventoDestino(
     kleosBonus: config.kleos,
     dificultad: config.dificultad,
     activa: true,
-    completadaPorJavier: false,
-    completadaPorMatias: false,
     fechaExpira: expiraFinal,
   })
 

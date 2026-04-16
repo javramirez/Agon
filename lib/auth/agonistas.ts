@@ -1,10 +1,4 @@
-export const AGONISTAS = {
-  JAVIER: {
-    clerkId: process.env.CLERK_JAVIER_USER_ID!,
-    nombre: 'Javier',
-  },
-  MATIAS: {
-    clerkId: process.env.CLERK_MATIAS_USER_ID!,
-    nombre: 'Matías',
-  },
-} as const
+// MIGRADO — Este archivo será reemplazado en PROMPT 03
+// El modelo hardcodeado de dos agonistas fijos fue eliminado.
+// La resolución de agonistas ahora es dinámica via DB.
+export {}

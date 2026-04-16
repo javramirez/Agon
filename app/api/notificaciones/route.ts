@@ -3,14 +3,17 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { notificaciones } from '@/lib/db/schema'
 import { eq, desc, and } from 'drizzle-orm'
-import { getOrCreateAgonista } from '@/lib/db/queries'
+import { getAgonistaByClerkId } from '@/lib/db/queries'
 
 // GET — lista de notificaciones del agonista autenticado
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
 
   const lista = await db
     .select()
@@ -27,7 +30,10 @@ export async function PATCH() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
 
   await db
     .update(notificaciones)

@@ -4,8 +4,7 @@ import { VozDelAgon } from '@/components/agon/voz-del-agon'
 import { SenalamientoPanel } from '@/components/agon/senalamiento-panel'
 import { EkecheiriaPanel } from '@/components/agon/ekecheiria-panel'
 import { SectionHeader } from '@/components/agon/section-header'
-import { getAgonistaByClerkId } from '@/lib/db/queries'
-import { AGONISTAS } from '@/lib/auth/agonistas'
+import { getAntagonistaPorReto } from '@/lib/db/queries'
 import { sleep } from '@/lib/utils/sleep'
 
 export default async function PoderesPage() {
@@ -13,12 +12,10 @@ export default async function PoderesPage() {
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
-  const antagonistaConfig = Object.values(AGONISTAS).find(
-    (a) => a.clerkId !== agonista.clerkId
-  )
-  const antagonista = antagonistaConfig
-    ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
-    : null
+  const antagonista =
+    agonista.retoId != null
+      ? await getAntagonistaPorReto(agonista.retoId, agonista.id)
+      : null
 
   await sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0)))
 

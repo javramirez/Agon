@@ -5,10 +5,9 @@ import { pruebasDiarias, kleosLog } from '@/lib/db/schema'
 import { eq, asc } from 'drizzle-orm'
 import {
   getAgonistaByClerkId,
-  getOrCreateAgonista,
+  getAntagonistaPorReto,
   getStatsCompletos,
 } from '@/lib/db/queries'
-import { AGONISTAS } from '@/lib/auth'
 import { differenceInDays, parseISO } from 'date-fns'
 import type { PruebaDiaria } from '@/lib/db/schema'
 
@@ -16,12 +15,12 @@ export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
-  const antagonistaConfig = Object.values(AGONISTAS).find(
-    (a) => a.clerkId !== agonista.clerkId
-  )
-  const antagonista = antagonistaConfig
-    ? await getAgonistaByClerkId(antagonistaConfig.clerkId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  const antagonista = agonista.retoId
+    ? await getAntagonistaPorReto(agonista.retoId, agonista.id)
     : null
 
   const [pruebas1, pruebas2, kleos1, kleos2, statsPropio, statsAntagonista] =

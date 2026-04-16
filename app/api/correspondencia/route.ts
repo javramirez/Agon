@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { correspondencia } from '@/lib/db/schema'
 import { desc, eq } from 'drizzle-orm'
-import { getOrCreateAgonista } from '@/lib/db/queries'
+import { getAgonistaByClerkId } from '@/lib/db/queries'
 
 export async function GET() {
   const { userId } = await auth()
@@ -22,7 +22,10 @@ export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   let body: unknown
   try {
     body = await req.json()
@@ -62,7 +65,10 @@ export async function PATCH(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   let body: unknown
   try {
     body = await req.json()

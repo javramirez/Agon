@@ -1,8 +1,13 @@
+// TODO PROMPT-01: completada_por_javier / completada_por_matias y CLERK_JAVIER_USER_ID eliminados; filtro por kleos_log hasta PROMPT 14
 import { db } from '@/lib/db'
-import { pruebaExtraordinaria, agoraEventos } from '@/lib/db/schema'
+import { pruebaExtraordinaria, agoraEventos, kleosLog } from '@/lib/db/schema'
 import { and, eq, lte } from 'drizzle-orm'
-import { getOrCreateAgonista } from '@/lib/db/queries'
+import { getAgonistaByClerkId } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
+
+function motivoCompletacionFila(filaId: string) {
+  return `prueba_extraordinaria_row:${filaId}`
+}
 
 /**
  * Desactiva pruebas extraordinarias vencidas no completadas por el agonista actual
@@ -12,22 +17,35 @@ export async function procesarPruebasExpiradas(clerkUserId: string): Promise<{
   expiradas: number
 }> {
   const ahora = new Date()
-  const esJavier = clerkUserId === process.env.CLERK_JAVIER_USER_ID
+  const agonista = await getAgonistaByClerkId(clerkUserId)
+  if (!agonista) {
+    return { expiradas: 0 }
+  }
 
-  const expiradas = await db
+  const candidatas = await db
     .select()
     .from(pruebaExtraordinaria)
     .where(
       and(
         eq(pruebaExtraordinaria.activa, true),
-        lte(pruebaExtraordinaria.fechaExpira, ahora),
-        esJavier
-          ? eq(pruebaExtraordinaria.completadaPorJavier, false)
-          : eq(pruebaExtraordinaria.completadaPorMatias, false)
+        lte(pruebaExtraordinaria.fechaExpira, ahora)
       )
     )
 
-  const agonista = await getOrCreateAgonista(clerkUserId)
+  const expiradas = []
+  for (const p of candidatas) {
+    const hecha = await db
+      .select({ id: kleosLog.id })
+      .from(kleosLog)
+      .where(
+        and(
+          eq(kleosLog.agonistId, agonista.id),
+          eq(kleosLog.motivo, motivoCompletacionFila(p.id))
+        )
+      )
+      .limit(1)
+    if (hecha.length === 0) expiradas.push(p)
+  }
 
   for (const p of expiradas) {
     await db

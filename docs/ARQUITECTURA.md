@@ -14,7 +14,7 @@ Los slots de Supabase free tier estaban agotados. Neon ofrece PostgreSQL serverl
 ### Clerk en lugar de Supabase Auth
 
 **Desviación justificada del stack estándar Day One.**  
-Clerk simplifica la autenticación con 2 usuarios fijos. El middleware de Clerk permite autorizar por `userId` en variables de entorno (`CLERK_JAVIER_USER_ID`, `CLERK_MATIAS_USER_ID`), suficiente y explícito para un proyecto privado de 2 personas.
+Clerk gestiona la autenticación; la **autorización por instancia** (qué cuentas acceden a qué duelo) se define en prompts posteriores (sin allowlist fija en código).
 
 ### Drizzle ORM en lugar de Prisma
 

@@ -3,7 +3,7 @@
 Documentación de los endpoints bajo `/app/api`.  
 **Autenticación:** casi todos usan `auth()` de Clerk; sin sesión válida → `401` JSON `{ error: '...' }`.
 
-**Autorización de agonistas:** el `middleware` solo permite acceso a rutas protegidas si `userId` está en `CLERK_JAVIER_USER_ID` o `CLERK_MATIAS_USER_ID`. Si un usuario con sesión no está en la lista, las peticiones a páginas se redirigen a `/unauthorized`; las llamadas `fetch` a `/api/*` pueden recibir redirección HTML según el caso. En la práctica solo deben usarse cuentas de los dos agonistas.
+**Autorización de agonistas:** el `middleware` aplica la política de instancia vigente (lista blanca / membresía por duelo según implementación; ver PROMPT 03). Quien no esté autorizado para la ruta → `/unauthorized` en páginas; `fetch` a `/api/*` puede recibir redirección HTML según el caso.
 
 ---
 
@@ -174,7 +174,7 @@ Lista crónicas recientes.
 
 ### `POST /api/cronica`
 
-Genera la crónica de la semana con IA. **Solo admin (Javier)** según el handler.
+Genera la crónica de la semana con IA. **Solo rol admin** según el handler.
 
 ---
 
@@ -226,7 +226,7 @@ Fuerza `getOrCreateAgonista` y devuelve el agonista. Útil tras primer login.
 
 ## Admin
 
-Todos requieren `userId === CLERK_JAVIER_USER_ID`; si no → `403`.
+Todos requieren rol de administrador de la instancia; si no → `403`.
 
 ### `GET /api/admin/semana-sagrada`
 

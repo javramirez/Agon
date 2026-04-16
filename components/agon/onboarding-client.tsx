@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   nombre: string
+  modo: 'solo' | 'duelo'
 }
 
 type Paso = 'bienvenida' | 'dioses' | 'pacto' | 'sellando'
@@ -292,10 +293,10 @@ type RespuestasPacto = {
   sombraOtros: string
   apuestaGanas: string
   apuestaPierdes: string
-  rivalFortalezas: string[]
-  rivalFortalezasOtros: string
-  rivalDebilidad: string
-  rivalDebilidadOtros: string
+  tusFortalezas: string[]
+  tusFortalezasOtros: string
+  tuDebilidad: string
+  tuDebilidadOtros: string
   preocupacionEscala: PreocupacionEscala
 }
 
@@ -341,7 +342,7 @@ const SOMBRAS = [
   { key: 'fisico', texto: 'Las lesiones o el agotamiento físico.' },
 ]
 
-const RIVAL_FORTALEZAS = [
+const TUS_FORTALEZAS = [
   { key: 'consistencia', texto: 'Consistencia diaria' },
   { key: 'mental', texto: 'Fortaleza mental' },
   { key: 'fisico', texto: 'Condición física' },
@@ -350,27 +351,38 @@ const RIVAL_FORTALEZAS = [
   { key: 'adaptabilidad', texto: 'Adaptabilidad' },
 ]
 
-const RIVAL_DEBILIDADES = [
-  { key: 'constancia', texto: 'Falta de constancia a largo plazo.' },
-  { key: 'lesiones', texto: 'Propenso a lesiones.' },
-  { key: 'social', texto: 'Cede ante lo social.' },
-  { key: 'perfeccionismo', texto: 'Perfeccionismo — se paraliza.' },
-  { key: 'inicio', texto: 'Lento para arrancar.' },
-  { key: 'presion', texto: 'Se achica bajo presión.' },
+const TUS_DEBILIDADES = [
+  { key: 'constancia', texto: 'Me cuesta la constancia a largo plazo.' },
+  { key: 'lesiones', texto: 'Soy propenso a lesiones o agotamiento.' },
+  { key: 'social', texto: 'Cedo ante compromisos sociales.' },
+  { key: 'perfeccionismo', texto: 'Perfeccionismo — me paralizo si no es perfecto.' },
+  { key: 'inicio', texto: 'Me cuesta arrancar después de un mal día.' },
+  { key: 'presion', texto: 'Me achico bajo presión sostenida.' },
 ]
 
-const PREOCUPACIONES = [
+const PREOCUPACIONES_DUELO: { key: keyof PreocupacionEscala; texto: string }[] = [
   {
-    key: 'tiempo' as keyof PreocupacionEscala,
+    key: 'tiempo',
     texto: 'No tendré tiempo suficiente los próximos 29 días.',
   },
   {
-    key: 'constancia' as keyof PreocupacionEscala,
+    key: 'constancia',
     texto: 'Perderé constancia en la segunda mitad del reto.',
   },
   {
-    key: 'rival' as keyof PreocupacionEscala,
+    key: 'rival',
     texto: 'El antagonista será más consistente que yo.',
+  },
+]
+
+const PREOCUPACIONES_SOLO: { key: keyof PreocupacionEscala; texto: string }[] = [
+  {
+    key: 'tiempo',
+    texto: 'No tendré tiempo suficiente los próximos 29 días.',
+  },
+  {
+    key: 'constancia',
+    texto: 'Perderé constancia en la segunda mitad del reto.',
   },
 ]
 
@@ -649,17 +661,17 @@ const TITULOS_PREGUNTA = [
     subtitulo: 'El Altis necesita que declares las consecuencias.',
   },
   {
-    bloque: 'El rival · 1/3',
-    titulo: 'Sus fortalezas',
-    subtitulo: 'Elige hasta 2. Sé honesto — el Altis lo registra.',
+    bloque: 'Tú · Fortalezas',
+    titulo: 'Tus armas',
+    subtitulo: 'Elige hasta 2. ¿En qué terreno eres más fuerte?',
   },
   {
-    bloque: 'El rival · 2/3',
-    titulo: 'Su mayor debilidad',
-    subtitulo: 'El punto donde el antagonista puede caer.',
+    bloque: 'Tú · Debilidad',
+    titulo: 'Tu punto ciego',
+    subtitulo: 'El Altis lo sabe de todas formas. Sé honesto.',
   },
   {
-    bloque: 'El rival · 3/3',
+    bloque: 'Tú · Preocupaciones',
     titulo: 'Tus preocupaciones',
     subtitulo: 'Del 1 (totalmente en desacuerdo) al 5 (totalmente de acuerdo).',
   },
@@ -669,11 +681,17 @@ function PasoPacto({
   onSellar,
   cargando,
   error,
+  modo,
 }: {
   onSellar: (r: RespuestasPacto) => void
   cargando: boolean
   error: string
+  modo: 'solo' | 'duelo'
 }) {
+  const esSolo = modo === 'solo'
+  const total = 9
+  const PREOCUPACIONES = esSolo ? PREOCUPACIONES_SOLO : PREOCUPACIONES_DUELO
+
   const [idx, setIdx] = useState(0)
   const [r, setR] = useState<RespuestasPacto>({
     objetivo: '',
@@ -687,14 +705,13 @@ function PasoPacto({
     sombraOtros: '',
     apuestaGanas: '',
     apuestaPierdes: '',
-    rivalFortalezas: [],
-    rivalFortalezasOtros: '',
-    rivalDebilidad: '',
-    rivalDebilidadOtros: '',
+    tusFortalezas: [],
+    tusFortalezasOtros: '',
+    tuDebilidad: '',
+    tuDebilidadOtros: '',
     preocupacionEscala: { tiempo: 0, constancia: 0, rival: 0 },
   })
 
-  const total = 9
   const esUltima = idx === total - 1
   const meta = TITULOS_PREGUNTA[idx]
 
@@ -717,21 +734,21 @@ function PasoPacto({
         return r.apuestaGanas.trim().length >= 3 && r.apuestaPierdes.trim().length >= 3
       case 6:
         return (
-          r.rivalFortalezas.length > 0 &&
-          (!r.rivalFortalezas.includes('otros') ||
-            r.rivalFortalezasOtros.trim().length >= 3)
+          r.tusFortalezas.length > 0 &&
+          (!r.tusFortalezas.includes('otros') ||
+            r.tusFortalezasOtros.trim().length >= 3)
         )
       case 7:
         return (
-          r.rivalDebilidad !== '' &&
-          (r.rivalDebilidad !== 'otros' || r.rivalDebilidadOtros.trim().length >= 3)
+          r.tuDebilidad !== '' &&
+          (r.tuDebilidad !== 'otros' || r.tuDebilidadOtros.trim().length >= 3)
         )
       case 8:
-        return (
-          r.preocupacionEscala.tiempo > 0 &&
-          r.preocupacionEscala.constancia > 0 &&
-          r.preocupacionEscala.rival > 0
-        )
+        return esSolo
+          ? r.preocupacionEscala.tiempo > 0 && r.preocupacionEscala.constancia > 0
+          : r.preocupacionEscala.tiempo > 0 &&
+              r.preocupacionEscala.constancia > 0 &&
+              r.preocupacionEscala.rival > 0
       default:
         return false
     }
@@ -748,10 +765,10 @@ function PasoPacto({
 
   function toggleFortaleza(key: string) {
     setR((prev) => {
-      const ya = prev.rivalFortalezas.includes(key)
-      if (ya) return { ...prev, rivalFortalezas: prev.rivalFortalezas.filter((k) => k !== key) }
-      if (prev.rivalFortalezas.length >= 2) return prev
-      return { ...prev, rivalFortalezas: [...prev.rivalFortalezas, key] }
+      const ya = prev.tusFortalezas.includes(key)
+      if (ya) return { ...prev, tusFortalezas: prev.tusFortalezas.filter((k) => k !== key) }
+      if (prev.tusFortalezas.length >= 2) return prev
+      return { ...prev, tusFortalezas: [...prev.tusFortalezas, key] }
     })
   }
 
@@ -1022,7 +1039,11 @@ function PasoPacto({
                   type="text"
                   value={r.apuestaPierdes}
                   onChange={(e) => setR((p) => ({ ...p, apuestaPierdes: e.target.value }))}
-                  placeholder="Ej: Le pago una cena al antagonista"
+                  placeholder={
+                    esSolo
+                      ? 'Ej: Me obligo a repetir el reto el mes siguiente'
+                      : 'Ej: Le pago una cena al antagonista'
+                  }
                   className={cn(
                     'w-full bg-surface-1 border border-border rounded-xl px-4 py-3',
                     'text-foreground placeholder:text-muted-foreground text-sm font-body',
@@ -1035,22 +1056,22 @@ function PasoPacto({
 
           {idx === 6 && (
             <MultiSeleccionConOtros
-              opciones={RIVAL_FORTALEZAS}
-              seleccionados={r.rivalFortalezas}
-              textoOtros={r.rivalFortalezasOtros}
+              opciones={TUS_FORTALEZAS}
+              seleccionados={r.tusFortalezas}
+              textoOtros={r.tusFortalezasOtros}
               max={2}
               onToggle={toggleFortaleza}
-              onTextoOtros={(t) => setR((p) => ({ ...p, rivalFortalezasOtros: t }))}
+              onTextoOtros={(t) => setR((p) => ({ ...p, tusFortalezasOtros: t }))}
             />
           )}
 
           {idx === 7 && (
             <OpcionConOtros
-              opciones={RIVAL_DEBILIDADES}
-              valorSeleccionado={r.rivalDebilidad}
-              textoOtros={r.rivalDebilidadOtros}
-              onSeleccionar={(key) => setR((p) => ({ ...p, rivalDebilidad: key }))}
-              onTextoOtros={(t) => setR((p) => ({ ...p, rivalDebilidadOtros: t }))}
+              opciones={TUS_DEBILIDADES}
+              valorSeleccionado={r.tuDebilidad}
+              textoOtros={r.tuDebilidadOtros}
+              onSeleccionar={(key) => setR((p) => ({ ...p, tuDebilidad: key }))}
+              onTextoOtros={(t) => setR((p) => ({ ...p, tuDebilidadOtros: t }))}
             />
           )}
 
@@ -1162,7 +1183,7 @@ function PasoSellando() {
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 
-export function OnboardingClient({ nombre }: Props) {
+export function OnboardingClient({ nombre, modo }: Props) {
   const [paso, setPaso] = useState<Paso>('bienvenida')
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -1195,14 +1216,21 @@ export function OnboardingClient({ nombre }: Props) {
         respuestas.sombraTipo === 'otros' ? respuestas.sombraOtros : respuestas.sombraTipo,
       apuestaGanas: respuestas.apuestaGanas,
       apuestaPierdes: respuestas.apuestaPierdes,
-      rivalFortalezas: respuestas.rivalFortalezas.map((k) =>
-        k === 'otros' ? respuestas.rivalFortalezasOtros : k
+      tusFortalezas: respuestas.tusFortalezas.map((k) =>
+        k === 'otros' ? respuestas.tusFortalezasOtros : k
       ),
-      rivalDebilidad:
-        respuestas.rivalDebilidad === 'otros'
-          ? respuestas.rivalDebilidadOtros
-          : respuestas.rivalDebilidad,
-      preocupacionEscala: respuestas.preocupacionEscala,
+      tuDebilidad:
+        respuestas.tuDebilidad === 'otros'
+          ? respuestas.tuDebilidadOtros
+          : respuestas.tuDebilidad,
+      preocupacionEscala:
+        modo === 'solo'
+          ? {
+              tiempo: respuestas.preocupacionEscala.tiempo,
+              constancia: respuestas.preocupacionEscala.constancia,
+              rival: 0,
+            }
+          : respuestas.preocupacionEscala,
     }
 
     try {
@@ -1260,7 +1288,12 @@ export function OnboardingClient({ nombre }: Props) {
         )}
         {paso === 'dioses' && <PasoDioses onNext={() => setPaso('pacto')} />}
         {paso === 'pacto' && (
-          <PasoPacto onSellar={sellarPacto} cargando={cargando} error={error} />
+          <PasoPacto
+            onSellar={sellarPacto}
+            cargando={cargando}
+            error={error}
+            modo={modo}
+          />
         )}
         {paso === 'sellando' && <PasoSellando />}
       </AnimatePresence>

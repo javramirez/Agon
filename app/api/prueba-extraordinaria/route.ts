@@ -1,3 +1,4 @@
+// TODO PROMPT-01: columnas completadaPorJavier/Matias eliminadas del schema; tracking por kleos_log (motivo prueba_extraordinaria_row:*) hasta PROMPT 14
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
@@ -8,9 +9,12 @@ import {
   agoraEventos,
   semanaSagrada,
 } from '@/lib/db/schema'
-import { eq, and, gte } from 'drizzle-orm'
+import { eq, and, gte, like } from 'drizzle-orm'
 import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
-import { getOrCreateAgonista, getSemanaActual } from '@/lib/db/queries'
+import {
+  getAgonistaByClerkId,
+  getSemanaActual,
+} from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { desbloquearInscripcion } from '@/lib/inscripciones/desbloquear'
 import { TODAS_PRUEBAS_EXTRAORDINARIAS } from '@/lib/db/constants'
@@ -18,9 +22,43 @@ import { TODAS_PRUEBAS_EXTRAORDINARIAS } from '@/lib/db/constants'
 const MAX_TRIPTICO_SEMANA = 2
 const MAX_DESTINO_SEMANA = 3
 
+/** Completación por agonista tras PROMPT-01 (columnas completada_por_* eliminadas). PROMPT 14: modelo por agonista_id. */
+function motivoCompletacionFila(filaId: string) {
+  return `prueba_extraordinaria_row:${filaId}`
+}
+
+async function completadaPorAgonista(
+  agonistId: string,
+  filaId: string
+): Promise<boolean> {
+  const r = await db
+    .select({ id: kleosLog.id })
+    .from(kleosLog)
+    .where(
+      and(
+        eq(kleosLog.agonistId, agonistId),
+        eq(kleosLog.motivo, motivoCompletacionFila(filaId))
+      )
+    )
+    .limit(1)
+  return r.length > 0
+}
+
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({
+      triptico: {
+        disponibles: [] as unknown[],
+        completadasEstaSemana: 0,
+        maxSemana: MAX_TRIPTICO_SEMANA,
+      },
+      destino: { disponibles: [] as unknown[] },
+    })
+  }
 
   const ahora = new Date()
   const semana = getSemanaActual()
@@ -35,28 +73,32 @@ export async function GET() {
       )
     )
 
-  const esJavier = userId === process.env.CLERK_JAVIER_USER_ID
+  const conPorMi = await Promise.all(
+    activas.map(async (p) => ({
+      p,
+      porMi: await completadaPorAgonista(agonista.id, p.id),
+    }))
+  )
 
-  const completadaPorMi = (p: (typeof activas)[0]) =>
-    esJavier ? p.completadaPorJavier : p.completadaPorMatias
-
-  const tripticoCompletadasEstaSemana = activas.filter(
-    (p) =>
-      p.tipo === 'triptico' &&
-      p.semana === semana &&
-      completadaPorMi(p)
+  const tripticoCompletadasEstaSemana = conPorMi.filter(
+    (x) =>
+      x.p.tipo === 'triptico' &&
+      x.p.semana === semana &&
+      x.porMi
   ).length
 
-  const tripticosDisponibles = activas.filter(
-    (p) =>
-      p.tipo === 'triptico' &&
-      p.semana === semana &&
-      !completadaPorMi(p)
-  )
+  const tripticosDisponibles = conPorMi
+    .filter(
+      (x) =>
+        x.p.tipo === 'triptico' &&
+        x.p.semana === semana &&
+        !x.porMi
+    )
+    .map((x) => x.p)
 
-  const destinosDisponibles = activas.filter(
-    (p) => p.tipo === 'destino' && !completadaPorMi(p)
-  )
+  const destinosDisponibles = conPorMi
+    .filter((x) => x.p.tipo === 'destino' && !x.porMi)
+    .map((x) => x.p)
 
   return NextResponse.json({
     triptico: {
@@ -74,11 +116,13 @@ export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   const { pruebaId: filaId } = (await req.json()) as { pruebaId: string }
   const hoy = new Date().toISOString().split('T')[0]
   const semana = getSemanaActual()
-  const esJavier = userId === process.env.CLERK_JAVIER_USER_ID
 
   if (!filaId) {
     return NextResponse.json({ error: 'Falta pruebaId.' }, { status: 400 })
@@ -100,25 +144,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Esta prueba ya expiró.' }, { status: 400 })
   }
 
-  if (esJavier ? p.completadaPorJavier : p.completadaPorMatias) {
+  if (await completadaPorAgonista(agonista.id, p.id)) {
     return NextResponse.json({ error: 'Ya completaste esta prueba.' }, { status: 400 })
   }
 
   if (p.tipo === 'triptico') {
-    const completadasEstaSemana = await db
+    const filasSemana = await db
       .select()
       .from(pruebaExtraordinaria)
       .where(
         and(
           eq(pruebaExtraordinaria.tipo, 'triptico'),
-          eq(pruebaExtraordinaria.semana, semana),
-          esJavier
-            ? eq(pruebaExtraordinaria.completadaPorJavier, true)
-            : eq(pruebaExtraordinaria.completadaPorMatias, true)
+          eq(pruebaExtraordinaria.semana, semana)
         )
       )
 
-    if (completadasEstaSemana.length >= MAX_TRIPTICO_SEMANA) {
+    let completadas = 0
+    for (const row of filasSemana) {
+      if (await completadaPorAgonista(agonista.id, row.id)) completadas += 1
+    }
+
+    if (completadas >= MAX_TRIPTICO_SEMANA) {
       return NextResponse.json(
         {
           error:
@@ -130,20 +176,22 @@ export async function POST(req: Request) {
   }
 
   if (p.tipo === 'destino') {
-    const completadasEstaSemana = await db
+    const filasSemana = await db
       .select()
       .from(pruebaExtraordinaria)
       .where(
         and(
           eq(pruebaExtraordinaria.tipo, 'destino'),
-          eq(pruebaExtraordinaria.semana, semana),
-          esJavier
-            ? eq(pruebaExtraordinaria.completadaPorJavier, true)
-            : eq(pruebaExtraordinaria.completadaPorMatias, true)
+          eq(pruebaExtraordinaria.semana, semana)
         )
       )
 
-    if (completadasEstaSemana.length >= MAX_DESTINO_SEMANA) {
+    let completadas = 0
+    for (const row of filasSemana) {
+      if (await completadaPorAgonista(agonista.id, row.id)) completadas += 1
+    }
+
+    if (completadas >= MAX_DESTINO_SEMANA) {
       return NextResponse.json(
         {
           error:
@@ -164,15 +212,6 @@ export async function POST(req: Request) {
   const kleosFinales = p.kleosBonus * multiplicador
 
   await db
-    .update(pruebaExtraordinaria)
-    .set(
-      esJavier
-        ? { completadaPorJavier: true }
-        : { completadaPorMatias: true }
-    )
-    .where(eq(pruebaExtraordinaria.id, filaId))
-
-  await db
     .update(agonistas)
     .set({
       kleosTotal: agonista.kleosTotal + kleosFinales,
@@ -184,7 +223,7 @@ export async function POST(req: Request) {
     id: crypto.randomUUID(),
     agonistId: agonista.id,
     cantidad: kleosFinales,
-    motivo: `prueba_${p.tipo}`,
+    motivo: motivoCompletacionFila(filaId),
     fecha: hoy,
   })
 
@@ -203,12 +242,13 @@ export async function POST(req: Request) {
   )
 
   const todasMias = await db
-    .select({ id: pruebaExtraordinaria.id })
-    .from(pruebaExtraordinaria)
+    .select({ id: kleosLog.id })
+    .from(kleosLog)
     .where(
-      esJavier
-        ? eq(pruebaExtraordinaria.completadaPorJavier, true)
-        : eq(pruebaExtraordinaria.completadaPorMatias, true)
+      and(
+        eq(kleosLog.agonistId, agonista.id),
+        like(kleosLog.motivo, 'prueba_extraordinaria_row:%')
+      )
     )
   const totalCompletadas = todasMias.length
 

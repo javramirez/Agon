@@ -98,8 +98,39 @@ export const crisisEscenarioEnum = pgEnum('crisis_escenario', [
   '4',
 ])
 
+export const retoModoEnum = pgEnum('reto_modo', ['solo', 'duelo'])
+
+export const retoEstadoEnum = pgEnum('reto_estado', [
+  'configurando',
+  'programado',
+  'activo',
+  'completado',
+])
+
+// ─── RETOS ─────────────────────────────────────────────
+// Contenedor de cada partida (solo / duelo). Sin FK circular: creador vía clerk_id.
+
+export const retos = pgTable('retos', {
+  id: varchar('id', { length: 256 }).primaryKey(),
+  modo: retoModoEnum('modo').notNull(),
+  estado: retoEstadoEnum('estado').default('configurando').notNull(),
+  creadorClerkId: varchar('creador_clerk_id', { length: 256 }).notNull(),
+  codigoInvitacion: varchar('codigo_invitacion', { length: 64 }).unique(),
+  invitadoClerkId: varchar('invitado_clerk_id', { length: 256 }),
+  fechaInicio: date('fecha_inicio'),
+  fechaFin: date('fecha_fin'),
+  fechaConfirmadaPorCreador: boolean('fecha_confirmada_por_creador')
+    .default(false)
+    .notNull(),
+  fechaConfirmadaPorInvitado: boolean('fecha_confirmada_por_invitado')
+    .default(false)
+    .notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
 // ─── AGONISTAS ────────────────────────────────────────
-// Los dos participantes del Gran Agon
+// Participantes del Gran Agon (vinculados a un reto cuando aplica)
 
 export const agonistas = pgTable('agonistas', {
   id: varchar('id', { length: 256 }).primaryKey(),
@@ -116,6 +147,8 @@ export const agonistas = pgTable('agonistas', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   mentorAsignado: varchar('mentor_asignado', { length: 64 }),
+  retoId: varchar('reto_id', { length: 256 }).references(() => retos.id),
+  rol: varchar('rol', { length: 16 }),
 })
 
 // ─── PRUEBAS DIARIAS ──────────────────────────────────
@@ -262,6 +295,7 @@ export const hegemonias = pgTable('hegemonias', {
   kleosRival: integer('kleos_rival').default(0).notNull(),
   empate: boolean('empate').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  retoId: varchar('reto_id', { length: 256 }).references(() => retos.id),
 })
 
 // ─── SEÑALAMIENTO ─────────────────────────────────────
@@ -289,6 +323,7 @@ export const semanaSagrada = pgTable('semana_sagrada', {
   fechaInicio: date('fecha_inicio'),
   fechaFin: date('fecha_fin'),
   activadaEn: timestamp('activada_en'),
+  retoId: varchar('reto_id', { length: 256 }).references(() => retos.id),
 })
 
 // ─── PRUEBA EXTRAORDINARIA ────────────────────────────
@@ -306,9 +341,8 @@ export const pruebaExtraordinaria = pgTable('prueba_extraordinaria', {
   dificultad: varchar('dificultad', { length: 32 }).notNull(),
   activa: boolean('activa').default(true).notNull(),
   fechaExpira: timestamp('fecha_expira').notNull(),
-  completadaPorJavier: boolean('completada_por_javier').default(false).notNull(),
-  completadaPorMatias: boolean('completada_por_matias').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  retoId: varchar('reto_id', { length: 256 }).references(() => retos.id),
 })
 
 // Calendario pre-generado del Gran Agon (día 1)
@@ -319,6 +353,7 @@ export const calendarioAgan = pgTable('calendario_agon', {
   tripticoOrden: jsonb('triptico_orden').notNull(),
   destinoOrden: jsonb('destino_orden').notNull(),
   destinoHorarios: jsonb('destino_horarios').notNull(),
+  retoId: varchar('reto_id', { length: 256 }).references(() => retos.id),
 })
 
 // ─── CRÓNICAS ─────────────────────────────────────────
@@ -332,6 +367,7 @@ export const cronicas = pgTable('cronicas', {
   relato: text('relato').notNull(),
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  retoId: varchar('reto_id', { length: 256 }).references(() => retos.id),
 })
 
 // ─── EKECHEIRIA ───────────────────────────────────────
@@ -404,9 +440,9 @@ export const pactoInicial = pgTable('pacto_inicial', {
   apuestaGanas: text('apuesta_ganas').notNull(),
   apuestaPierdes: text('apuesta_pierdes').notNull(),
 
-  // Bloque 3: El rival
-  rivalFortalezas: jsonb('rival_fortalezas').notNull().$type<string[]>(),
-  rivalDebilidad: text('rival_debilidad').notNull(),
+  // Bloque 3: Fortalezas y debilidad del agonista
+  tusFortalezas: jsonb('tus_fortalezas').notNull().$type<string[]>(),
+  tuDebilidad: text('tu_debilidad').notNull(),
   preocupacionEscala: jsonb('preocupacion_escala')
     .notNull()
     .$type<{
@@ -559,6 +595,7 @@ export const calendarioCrisis = pgTable('calendario_crisis', {
   id: uuid('id').defaultRandom().primaryKey(),
   crisisSeleccionadas: jsonb('crisis_seleccionadas').notNull().$type<string[]>(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  retoId: varchar('reto_id', { length: 256 }).references(() => retos.id),
 })
 
 // ─── CRISIS DE CIUDAD ─────────────────────────────────
@@ -607,6 +644,7 @@ export const crisisCiudad = pgTable(
     } | null>(),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
+    retoId: varchar('reto_id', { length: 256 }).references(() => retos.id),
   },
   (t) => [
     index('crisis_ciudad_crisis_id_idx').on(t.crisisId),
@@ -617,7 +655,15 @@ export const crisisCiudad = pgTable(
 
 // ─── RELATIONS ────────────────────────────────────────
 
-export const agonistasRelations = relations(agonistas, ({ many }) => ({
+export const retosRelations = relations(retos, ({ many }) => ({
+  agonistas: many(agonistas),
+}))
+
+export const agonistasRelations = relations(agonistas, ({ many, one }) => ({
+  reto: one(retos, {
+    fields: [agonistas.retoId],
+    references: [retos.id],
+  }),
   pruebasDiarias: many(pruebasDiarias),
   kleosLog: many(kleosLog),
   llamas: many(llamas),
@@ -680,6 +726,8 @@ export const mentorConversacionesRelations = relations(mentorConversaciones, ({ 
 
 // ─── TIPOS INFERIDOS ──────────────────────────────────
 
+export type Reto = typeof retos.$inferSelect
+export type NuevoReto = typeof retos.$inferInsert
 export type Agonista = typeof agonistas.$inferSelect
 export type NuevoAgonista = typeof agonistas.$inferInsert
 export type PruebaDiaria = typeof pruebasDiarias.$inferSelect

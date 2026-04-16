@@ -4,14 +4,17 @@ import { put } from '@vercel/blob'
 import { db } from '@/lib/db'
 import { pruebasDiarias, agoraEventos } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getOrCreateAgonista, getOrCreatePruebaDiariaHoy } from '@/lib/db/queries'
+import { getAgonistaByClerkId, getOrCreatePruebaDiariaHoy } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 
 export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   const hoy = new Date().toISOString().split('T')[0]
 
   const formData = await req.formData()

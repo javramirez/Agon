@@ -3,13 +3,16 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { likesAgora } from '@/lib/db/schema'
 import { eq, and, count } from 'drizzle-orm'
-import { getOrCreateAgonista } from '@/lib/db/queries'
+import { getAgonistaByClerkId } from '@/lib/db/queries'
 
 export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
 
   let body: { eventoId?: string }
   try {
@@ -53,7 +56,10 @@ export async function GET(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
   const { searchParams } = new URL(req.url)
   const eventoId = searchParams.get('eventoId')
   if (!eventoId) return NextResponse.json({ error: 'Falta eventoId' }, { status: 400 })

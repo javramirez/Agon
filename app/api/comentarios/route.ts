@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { comentariosAgora, postsDioses } from '@/lib/db/schema'
 import { eq, and, asc, count } from 'drizzle-orm'
-import { getOrCreateAgonista } from '@/lib/db/queries'
+import { getAgonistaByClerkId } from '@/lib/db/queries'
 import { responderOraculo } from '@/lib/dioses/generar-comentario'
 
 export async function GET(req: Request) {
@@ -56,9 +56,12 @@ export async function GET(req: Request) {
     oraculoCerrado = post[0]?.cerrado ?? false
   }
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
   let yaPreguntoOraculo = false
   if (postDiosId) {
+    if (!agonista) {
+      return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+    }
     const mios = await db
       .select()
       .from(comentariosAgora)
@@ -84,7 +87,10 @@ export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const agonista = await getOrCreateAgonista(userId)
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
 
   let body: {
     eventoId?: string
