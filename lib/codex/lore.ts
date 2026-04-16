@@ -8,6 +8,7 @@ export interface EntradaLore {
   descripcion: string
   lore: string
   bloqueada?: boolean
+  lider?: EntradaLore
 }
 
 export const LORE_MUNDO: EntradaLore[] = [
@@ -309,8 +310,28 @@ export const LORE_FACCIONES: EntradaLore[] = [
     avatar: '⚔️',
     color: 'text-red-400',
     descripcion: 'Los guerreros del Altis.',
-    lore: '',
-    bloqueada: true,
+    lore: `La Guardia no recluta. Selecciona. Y solo selecciona a quienes ya demostraron que el dolor físico no es razón suficiente para detenerse.
+
+En Olimpia, la Guardia de Hierro es la facción que más respeto genera y menos afecto recibe. Sus miembros no buscan ser queridos — buscan ser temidos en el buen sentido: el temor que un rival siente cuando ve que el hombre frente a él no conoce el límite que él mismo no se atrevería a cruzar.
+
+Diomedes la lidera porque fue el único mortal en la Ilíada que hirió a dos dioses en combate directo — a Ares y a Afrodita — y siguió combatiendo. No por hybris, sino porque en ese momento el combate lo exigía y él estaba dispuesto. Esa es la filosofía de la Guardia: la disposición absoluta cuando el momento lo requiere.
+
+El gimnasio y el cardio son las pruebas que la Guardia observa. No el esfuerzo declarado — el esfuerzo registrado.`,
+    lider: {
+      id: 'diomedes',
+      nombre: 'Diomedes',
+      subtitulo: 'Líder de la Guardia de Hierro',
+      avatar: '⚔️',
+      color: 'text-red-400',
+      descripcion: 'El único mortal que hirió a dos dioses en combate directo.',
+      lore: `Diomedes no es el héroe más famoso de la Ilíada. Es el más completo.
+
+Aquiles era más rápido. Áyax era más fuerte. Agamenón tenía más poder. Pero Diomedes era el único que combinaba la ferocidad en el combate con la inteligencia táctica, la obediencia a los dioses con la disposición de desafiarlos cuando la batalla lo requería. Hirió a Ares y a Afrodita en el mismo día — no por arrogancia, sino porque en ese momento el combate lo exigía y él estaba dispuesto a pagar el precio.
+
+Lidera la Guardia de Hierro porque encarna su filosofía sin contradicciones: el entrenamiento no es preparación para el combate. El entrenamiento es el combate. Cada sesión de gimnasio registrada en el Gran Agon es un acto de Diomedes — no heroísmo espectacular, sino excelencia disciplinada repetida hasta que se vuelve naturaleza.
+
+No busca admiración. Busca agonistas que no necesiten ser motivados porque ya entendieron que la motivación es para los que aún no decidieron en serio.`,
+    },
   },
   {
     id: 'escuela_logos',
@@ -319,8 +340,28 @@ export const LORE_FACCIONES: EntradaLore[] = [
     avatar: '📚',
     color: 'text-blue-400',
     descripcion: 'Los pensadores del Altis.',
-    lore: '',
-    bloqueada: true,
+    lore: `El músculo sin mente es fuerza bruta. La mente sin músculo es teoría vacía. La Escuela del Logos existe porque el agonista completo necesita ambos.
+
+Pitágoras no era solo matemático. Era el fundador de una comunidad filosófica con reglas de vida estrictas: dieta específica, silencio obligatorio los primeros años, matemáticas diarias como práctica espiritual, prohibición de revelar los conocimientos del círculo interno. Para Pitágoras, la disciplina no era el camino hacia la sabiduría — era la sabiduría misma manifestada en comportamiento.
+
+La Escuela del Logos aplica ese rigor a la lectura. No páginas acumuladas por acumulación — páginas leídas como acto de disciplina intelectual sostenida. Apolo observa cada registro de lectura con la misma seriedad con que Ares observa las sesiones de gimnasio. La mente también se entrena. La mente también puede fallar la prueba.
+
+Los que alcanzan rango Aliado en la Escuela comienzan a ver el Gran Agon de manera diferente: no como una competencia de hábitos físicos, sino como una demostración de carácter integral.`,
+    lider: {
+      id: 'pitagoras',
+      nombre: 'Pitágoras',
+      subtitulo: 'Líder de la Escuela del Logos',
+      avatar: '📐',
+      color: 'text-blue-400',
+      descripcion: 'Filósofo, matemático y fundador de una comunidad de disciplina total.',
+      lore: `Pitágoras prohibió a sus discípulos comer habas. Nadie sabe exactamente por qué. Nadie se atrevió a preguntar dos veces.
+
+La comunidad pitagórica en Crotona tenía reglas que ninguna escuela filosófica posterior igualó en rigor: silencio obligatorio durante los primeros años de aprendizaje, dieta estricta, matemáticas diarias como práctica espiritual, prohibición de revelar los conocimientos del círculo interno. Para Pitágoras, la disciplina no era el camino hacia la sabiduría — era la sabiduría misma manifestada en comportamiento.
+
+Lidera la Escuela del Logos porque entiende que el conocimiento sin estructura es entretenimiento. Las páginas leídas en el Gran Agon no son un número acumulado — son el registro de una mente que eligió entrenarse con la misma seriedad con que el cuerpo se entrena. Pitágoras no distingue entre los dos: para él, la mente y el cuerpo son el mismo sistema operando a distintas frecuencias.
+
+Sus decretos durante las Crisis de Ciudad son los más controversiales. También son los más recordados.`,
+    },
   },
   {
     id: 'gremio_tierra',
@@ -329,8 +370,28 @@ export const LORE_FACCIONES: EntradaLore[] = [
     avatar: '🌾',
     color: 'text-green-400',
     descripcion: 'Los guardianes de la nutrición.',
-    lore: '',
-    bloqueada: true,
+    lore: `Sin la tierra no hay cosecha. Sin la cosecha no hay fuerza. Sin la fuerza no hay Agon. El Gremio existe antes que todas las demás facciones — y lo sabe.
+
+Triptólemo fue el primer humano a quien Deméter enseñó el arte de la agricultura. No como favor casual — como acto de civilización deliberado. Antes de Triptólemo, los humanos sobrevivían. Después de Triptólemo, los humanos pudieron construir ciudades, tener tiempo libre, desarrollar filosofía, celebrar Juegos Olímpicos.
+
+El Gremio de la Tierra entiende esta cadena de causalidad mejor que nadie. La hidratación y la alimentación no son pruebas menores del Gran Agon — son la base sobre la que todas las demás pruebas descansan. Un agonista deshidratado no puede pensar con claridad. Un agonista mal nutrido no puede entrenar con intensidad. La Guardia de Hierro necesita al Gremio aunque nunca lo admita.
+
+Deméter no perdona el desprecio hacia la nutrición. Lo registra. Y cobra.`,
+    lider: {
+      id: 'triptolemo',
+      nombre: 'Triptólemo',
+      subtitulo: 'Líder del Gremio de la Tierra',
+      avatar: '🌾',
+      color: 'text-green-400',
+      descripcion: 'El primer humano en recibir el conocimiento de la agricultura de Deméter.',
+      lore: `Deméter le enseñó la agricultura. Triptólemo le enseñó la agricultura al mundo. La cadena de transmisión importa tanto como el conocimiento mismo.
+
+Triptólemo viajó en un carro alado tirado por dragones, llevando las semillas y las técnicas que Deméter le había confiado a cada rincón del mundo conocido. No guardó el conocimiento para sí mismo ni para su ciudad. Lo distribuyó porque entendió que la civilización no es un logro individual — es un proyecto colectivo que solo funciona cuando el conocimiento se transmite.
+
+Lidera el Gremio de la Tierra porque entiende la nutrición como infraestructura. No como virtud personal ni como estética — como la base material sin la cual ningún otro logro es posible. Cuando un agonista registra agua y alimentación correcta en el Gran Agon, Triptólemo lo ve como un acto de civilización: la decisión consciente de mantener la infraestructura que hace posible todo lo demás.
+
+Es el líder más paciente de Olimpia. También el más inflexible cuando la base falla.`,
+    },
   },
   {
     id: 'hermandad_caos',
@@ -339,8 +400,28 @@ export const LORE_FACCIONES: EntradaLore[] = [
     avatar: '🌀',
     color: 'text-zinc-400',
     descripcion: 'Los agentes de la discordia.',
-    lore: '',
-    bloqueada: true,
+    lore: `Las otras facciones construyen orden. La Hermandad del Caos existe para recordarle al orden que es frágil.
+
+Tersites era el único personaje de la Ilíada que decía en voz alta lo que todos los demás pensaban en silencio. No era héroe — era la voz incómoda que ningún ejército quiere pero que todos los ejércitos necesitan. Odiseo lo calló. Pero las palabras de Tersites sobrevivieron a Odiseo en la memoria histórica.
+
+La Hermandad del Caos opera en los márgenes del Gran Agon. No observa el esfuerzo físico ni la disciplina intelectual — observa la rivalidad misma. Cada señalamiento, cada provocación, cada momento en que los dos agonistas se confrontan directamente alimenta a la Hermandad. Eris no distingue entre ganador y perdedor del conflicto — le interesa el conflicto en sí.
+
+Ser Campeón de la Hermandad es ambiguo por diseño. La facción que premia la discordia no puede tener un campeón que no genere discordia. Tersites lo entendería.`,
+    lider: {
+      id: 'tersites',
+      nombre: 'Tersites',
+      subtitulo: 'Líder de la Hermandad del Caos',
+      avatar: '🌀',
+      color: 'text-zinc-400',
+      descripcion: 'El único hombre en la Ilíada que dijo la verdad sobre la guerra.',
+      lore: `Tersites fue el único hombre en la Ilíada que dijo la verdad sobre la guerra. Odiseo lo golpeó para callarlo. El ejército se rió. Tersites tenía razón de todas formas.
+
+En la asamblea aquea, cuando Agamenón propuso probar la moral de las tropas fingiendo que quería abandonar Troya, Tersites fue el único que lo tomó en serio y gritó lo que todos sentían: que la guerra era una empresa de los reyes para su propio beneficio, que los soldados morían por glorias que nunca serían suyas, que el regreso era mejor que cualquier victoria. Odiseo lo calló con su cetro. Pero Tersites había dicho lo que nadie más se atrevió.
+
+Lidera la Hermandad del Caos no porque sea el más poderoso sino porque es el más honesto sobre lo que el poder realmente es. En el Gran Agon, Tersites observa la rivalidad directa — los señalamientos, las provocaciones, los momentos donde los dos agonistas se confrontan sin filtro. No toma partido. Registra quién dice la verdad incómoda y quién la evita.
+
+Su presencia en las Crisis de Ciudad es siempre perturbadora. Exactamente como debe ser.`,
+    },
   },
   {
     id: 'corredores_alba',
@@ -349,8 +430,27 @@ export const LORE_FACCIONES: EntradaLore[] = [
     avatar: '👟',
     color: 'text-yellow-400',
     descripcion: 'Los velocistas del Altis.',
-    lore: '',
-    bloqueada: true,
+    lore: `Feidípides corrió cuarenta kilómetros para anunciar la victoria de Maratón. Llegó, dijo "νενικήκαμεν" — hemos vencido — y murió. Los Corredores del Alba llevan ese legado en cada paso registrado.
+
+Hermes es el dios del movimiento, los mensajes y los umbrales. No el movimiento como ejercicio — el movimiento como acto de voluntad que atraviesa distancias reales. Cada paso registrado en el Gran Agon es un mensaje enviado: al cuerpo, al antagonista, al Altis, a uno mismo.
+
+Los Corredores del Alba observan los pasos diarios con la precisión de Hermes calculando rutas entre el Olimpo y el mundo mortal. No juzgan el ritmo ni la distancia en detalle — juzgan si la distancia mínima fue alcanzada. El contrato fue claro desde el principio: diez mil pasos. Los que respetan el contrato, los Corredores los reconocen. Los que no, Hermes los ignora con elegancia.
+
+El nombre de la facción no es metafórico. Los que caminan antes del amanecer son los que más rápido ascienden en su lealtad.`,
+    lider: {
+      id: 'feidipides',
+      nombre: 'Feidípides',
+      subtitulo: 'Líder de los Corredores del Alba',
+      avatar: '🏃',
+      color: 'text-yellow-400',
+      descripcion:
+        'Corrió cuarenta kilómetros. Dijo tres palabras. Murió. El Altis lo inscribió para siempre.',
+      lore: `El mensaje que Feidípides llevó desde Maratón hasta Atenas no era literario ni filosófico. Era un reporte de situación: hemos vencido. Pero la forma en que lo entregó — corriendo sin detenerse desde el campo de batalla, llegando con el último aliento justo suficiente para pronunciar las palabras antes de colapsar — convirtió un reporte militar en el acto fundacional del atletismo occidental.
+
+Lidera los Corredores del Alba porque encarna la única verdad que la facción reconoce: el movimiento tiene que completarse. No importa el ritmo. No importa la distancia exacta más allá del mínimo acordado. Lo que importa es que los diez mil pasos fueron dados, que el cuerpo cumplió su contrato con el día, que el registro existe.
+
+Feidípides no habría entendido a alguien que se detiene a mitad del camino porque el terreno es difícil. El terreno siempre es difícil. Esa es la naturaleza del terreno.`,
+    },
   },
   {
     id: 'concilio_sombras',
@@ -359,8 +459,28 @@ export const LORE_FACCIONES: EntradaLore[] = [
     avatar: '🌙',
     color: 'text-purple-400',
     descripcion: 'Los guardianes del sueño.',
-    lore: '',
-    bloqueada: true,
+    lore: `El sueño no es el opuesto del esfuerzo. Es su continuación por otros medios.
+
+Endimión era tan hermoso que Selene, la diosa de la luna, le pidió a Zeus que le concediera el sueño eterno para poder contemplarlo cada noche sin que envejeciera. Endimión aceptó. No es claro si tuvo opción. Pero lo que sí es claro es que Selene lo visita cada noche, que su sueño es sagrado, y que nadie en la mitología griega descansa con más dignidad.
+
+El Concilio de las Sombras no ve el sueño como pasividad. Ve el sueño como la fase de procesamiento donde lo vivido se convierte en lo aprendido, en que el músculo entrenado se convierte en músculo construido, en que el día registrado se convierte en hábito consolidado. Sin el sueño, el entrenamiento de Ares es destrucción sin reparación.
+
+Morfeo observa las horas de sueño con la misma seriedad con que Ares observa las repeticiones en el gimnasio. La diferencia es que Morfeo nunca grita. Solo anota. Y la facción recuerda quién respetó el descanso sagrado y quién lo sacrificó creyendo que eso era disciplina.`,
+    lider: {
+      id: 'endimion',
+      nombre: 'Endimión',
+      subtitulo: 'Líder del Concilio de las Sombras',
+      avatar: '🌙',
+      color: 'text-purple-400',
+      descripcion: 'El mortal que duerme eternamente. Su sueño es sagrado.',
+      lore: `Endimión duerme. Lleva siglos durmiendo. Y en ese sueño eterno ha procesado más que la mayoría de los mortales en toda una vida de vigilia.
+
+Selene, la diosa de la luna, se enamoró de Endimión mientras dormía en el Monte Latmos. En lugar de despertarlo — en lugar de imponerle la vigilia que ella necesitaba — le pidió a Zeus que le concediera el sueño eterno con juventud eterna. Endimión aceptó. No es claro si tuvo opción. Pero lo que sí es claro es que Selene lo visita cada noche, que su sueño es sagrado, y que nadie en la mitología griega descansa con más dignidad.
+
+Lidera el Concilio de las Sombras porque su existencia misma es el argumento más poderoso para la facción: el sueño no es pasividad. Es el estado en que lo vivido se convierte en lo aprendido, en que el músculo entrenado se convierte en músculo construido, en que el día registrado se convierte en hábito consolidado.
+
+Cuando Morfeo cobra su precio a quienes no honraron el descanso, lo hace en nombre de Endimión. El Concilio tiene memoria larga y paciencia infinita.`,
+    },
   },
   {
     id: 'tribunal_kleos',
@@ -369,7 +489,28 @@ export const LORE_FACCIONES: EntradaLore[] = [
     avatar: '🏆',
     color: 'text-orange-400',
     descripcion: 'Los jueces del Altis.',
-    lore: '',
-    bloqueada: true,
+    lore: `El Tribunal no crea el kleos. Lo reconoce. Y su reconocimiento es lo que lo hace real.
+
+Milcíades fue el estratega que diseñó la victoria de Maratón — la batalla donde diez mil atenienses derrotaron a un ejército persa diez veces mayor. No ganó por fuerza bruta. Ganó porque entendió el terreno, el momento y las capacidades reales de cada hombre bajo su mando.
+
+El Tribunal del Kleos lleva su nombre porque Milcíades entendía lo que la victoria realmente significa: no el momento de gloria, sino la acumulación de decisiones correctas que lo hicieron posible. Nike preside el Tribunal porque la victoria es su naturaleza. Pero el Tribunal no celebra victorias individuales — celebra la excelencia sostenida en el tiempo. Los días perfectos acumulados. La Hegemonía ganada. El nivel alcanzado.
+
+Ser Campeón del Tribunal del Kleos es la declaración más explícita que el Gran Agon permite: este agonista no solo participó. Exigió la excelencia de sí mismo de manera consistente, y el Tribunal lo reconoce.`,
+    lider: {
+      id: 'milciades',
+      nombre: 'Milcíades',
+      subtitulo: 'Líder del Tribunal del Kleos',
+      avatar: '🏆',
+      color: 'text-orange-400',
+      descripcion:
+        'El estratega que ganó Maratón. Arquitecto de la victoria por análisis, no por fuerza.',
+      lore: `Maratón no fue una victoria de fuerza. Fue una victoria de análisis, timing y la disposición de apostar todo en el momento correcto.
+
+Milcíades convenció a los otros estrategas atenienses de atacar en lugar de esperar — una decisión que iba contra el instinto de conservación de la mayoría. Tenía información sobre el terreno, sobre los movimientos persas, sobre las capacidades reales de las tropas bajo su mando. No actuó por valentía ciega sino por comprensión clara de las variables. Ganó porque tenía razón, y tuvo razón porque había pensado más profundamente que sus adversarios.
+
+Lidera el Tribunal del Kleos porque entiende que la victoria no es un momento — es el resultado acumulado de decisiones correctas tomadas cuando nadie estaba mirando. Cada día perfecto en el Gran Agon es una de esas decisiones. El Tribunal las registra todas, sin excepción, sin sentimentalismo, sin considerar las circunstancias.
+
+Su juicio durante las Crisis de Ciudad es el más esperado y el más temido. Milcíades no castiga — evalúa. Y su evaluación siempre es justa, lo cual la hace imposible de disputar.`,
+    },
   },
 ]

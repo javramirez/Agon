@@ -1,10 +1,26 @@
 import { db } from '@/lib/db'
-import { pruebasDiarias, llamas, agoraEventos, kleosLog, inscripciones } from '@/lib/db/schema'
+import {
+  pruebasDiarias,
+  llamas,
+  agoraEventos,
+  kleosLog,
+  inscripciones,
+  faccionesAfinidad,
+} from '@/lib/db/schema'
 import { eq, and, gte, asc } from 'drizzle-orm'
 import type { Agonista, PruebaDiaria } from '@/lib/db/schema'
 import { getDiaDelAgan } from '@/lib/utils'
 import { getAmbosAgonistas } from '@/lib/db/queries'
+import { getVentajasActivas, getMetasEfectivas } from '@/lib/facciones/afinidad'
 import { desbloquearInscripcion, yaDesbloqueada } from './desbloquear'
+
+async function getMetasPasosParaAgonist(agonistId: string): Promise<number> {
+  const afinidades = await db
+    .select()
+    .from(faccionesAfinidad)
+    .where(eq(faccionesAfinidad.agonistId, agonistId))
+  return getMetasEfectivas(getVentajasActivas(afinidades)).pasos
+}
 
 // ─── HELPER: calcular racha de días consecutivos ───────────────────────────────
 
@@ -49,6 +65,13 @@ export async function verificarInscripciones(
     db.select().from(pruebasDiarias).where(eq(pruebasDiarias.agonistId, agonista.id)),
     db.select().from(llamas).where(eq(llamas.agonistId, agonista.id)),
   ])
+
+  const afinidades = await db
+    .select()
+    .from(faccionesAfinidad)
+    .where(eq(faccionesAfinidad.agonistId, agonista.id))
+  const ventajasActivas = getVentajasActivas(afinidades)
+  const metasEfectivas = getMetasEfectivas(ventajasActivas)
 
   const diasPerfectos = todasLasPruebas.filter((p) => p.diaPerfecto)
   const diasPerfectosOrdenados = diasPerfectos.map((p) => String(p.fecha)).sort()
@@ -114,9 +137,9 @@ export async function verificarInscripciones(
     await desbloquear('el_iniciado')
   }
 
-  // El Primer Paso — primer día con 10.000+ pasos
-  const diasConPasos = todasLasPruebas.filter((p) => p.pasos >= 10000)
-  if (diasConPasos.length === 1 && pruebaNueva.pasos >= 10000) {
+  // El Primer Paso — primer día con meta efectiva de pasos
+  const diasConPasos = todasLasPruebas.filter((p) => p.pasos >= metasEfectivas.pasos)
+  if (diasConPasos.length === 1 && pruebaNueva.pasos >= metasEfectivas.pasos) {
     await desbloquear('el_primer_paso')
   }
 
@@ -139,8 +162,13 @@ export async function verificarInscripciones(
   }
 
   // El Despertar de Apolo — primer día con 10+ páginas
-  const diasConLectura = todasLasPruebas.filter((p) => p.paginasLeidas >= 10)
-  if (diasConLectura.length === 1 && pruebaNueva.paginasLeidas >= 10) {
+  const diasConLectura = todasLasPruebas.filter(
+    (p) => p.paginasLeidas >= metasEfectivas.paginasLeidas
+  )
+  if (
+    diasConLectura.length === 1 &&
+    pruebaNueva.paginasLeidas >= metasEfectivas.paginasLeidas
+  ) {
     await desbloquear('el_despertar_de_apolo')
   }
 
@@ -166,12 +194,14 @@ export async function verificarInscripciones(
     }
   }
 
-  // El Caminante — 10.000+ pasos en 14 días totales
-  const totalDiasPasos = todasLasPruebas.filter((p) => p.pasos >= 10000).length
+  // El Caminante — meta efectiva de pasos en 14 días totales
+  const totalDiasPasos = todasLasPruebas.filter((p) => p.pasos >= metasEfectivas.pasos).length
   if (totalDiasPasos >= 14) await desbloquear('el_caminante')
 
   // El Discípulo de Morfeo — 7+ horas sueño en 14 días totales
-  const totalDiasSueno = todasLasPruebas.filter((p) => p.horasSueno >= 7).length
+  const totalDiasSueno = todasLasPruebas.filter(
+    (p) => p.horasSueno >= metasEfectivas.horasSueno
+  ).length
   if (totalDiasSueno >= 14) await desbloquear('el_discipulo_de_morfeo')
 
   // El Punto Sin Retorno — completar el día 14
@@ -281,12 +311,12 @@ export async function verificarInscripciones(
 
   // ─── EASTER EGGS ──────────────────────────────────────────────────────────
 
-  // El Boxeador de Philadelphia — gym + cardio + 10.000 pasos antes de las 8am
+  // El Boxeador de Philadelphia — gym + cardio + meta efectiva de pasos antes de las 8am
   if (
     horaActual < 8 &&
     pruebaNueva.sesionesGym > 0 &&
     pruebaNueva.sesionesCardio > 0 &&
-    pruebaNueva.pasos >= 10000
+    pruebaNueva.pasos >= metasEfectivas.pasos
   ) {
     await desbloquear('el_boxeador_de_philadelphia')
   }
@@ -302,13 +332,13 @@ export async function verificarInscripciones(
     await desbloquear('no_estas_entretenido')
   }
 
-  // El Fantasma de Esparta — gym + cardio + 10.000 pasos mismo día, 5 veces
+  // El Fantasma de Esparta — gym + cardio + meta efectiva de pasos mismo día, 5 veces
   const diasTripleEntrenamiento = todasLasPruebas.filter(
-    (p) => p.sesionesGym > 0 && p.sesionesCardio > 0 && p.pasos >= 10000
+    (p) => p.sesionesGym > 0 && p.sesionesCardio > 0 && p.pasos >= metasEfectivas.pasos
   )
   if (diasTripleEntrenamiento.length >= 5) await desbloquear('el_fantasma_de_esparta')
 
-  // El Orgullo de Philadelphia — gym + cardio + 10.000 pasos mismo día, 10 veces
+  // El Orgullo de Philadelphia — gym + cardio + meta efectiva de pasos mismo día, 10 veces
   if (diasTripleEntrenamiento.length >= 10) await desbloquear('el_orgullo_de_philadelphia')
 
   // Boogeyman — día perfecto después de fallar un día completo
@@ -322,9 +352,9 @@ export async function verificarInscripciones(
       const pruebasCompletadasAnterior = [
         anterior.soloAgua,
         anterior.sinComidaRapida,
-        anterior.pasos >= 10000,
-        anterior.horasSueno >= 7,
-        anterior.paginasLeidas >= 10,
+        anterior.pasos >= metasEfectivas.pasos,
+        anterior.horasSueno >= metasEfectivas.horasSueno,
+        anterior.paginasLeidas >= metasEfectivas.paginasLeidas,
         anterior.sesionesGym >= 4,
         anterior.sesionesCardio >= 3,
       ].filter(Boolean).length
@@ -398,9 +428,9 @@ export async function verificarInscripciones(
     }
   }
 
-  // Run Agonista Run — 10.000+ pasos 10 días consecutivos
+  // Run Agonista Run — meta efectiva de pasos 10 días consecutivos
   const diasPasosOrdenados = todasLasPruebas
-    .filter((p) => p.pasos >= 10000)
+    .filter((p) => p.pasos >= metasEfectivas.pasos)
     .map((p) => String(p.fecha))
     .sort()
   if (calcularRachaDias(diasPasosOrdenados) >= 10) await desbloquear('run_agonista_run')
@@ -418,6 +448,34 @@ export async function verificarInscripciones(
   }
 
   return desbloqueadas
+}
+
+// ─── TRIGGER AFINIDAD (llamado desde lib/facciones/afinidad.ts) ──────────────
+
+export async function verificarInscripcionesAfinidad(
+  agonistId: string,
+  agonistaNombre: string
+): Promise<void> {
+  const afinidades = await db
+    .select()
+    .from(faccionesAfinidad)
+    .where(eq(faccionesAfinidad.agonistId, agonistId))
+
+  const campeonesCount = afinidades.filter((a) => a.rango === 5).length
+  const aliadoCount = afinidades.filter((a) => a.rango >= 4).length
+  const conocidoCount = afinidades.filter((a) => a.rango >= 2).length
+
+  async function desbloquear(id: string) {
+    await desbloquearInscripcion(agonistId, agonistaNombre, id)
+  }
+
+  if (conocidoCount >= 1) await desbloquear('el_iniciado_de_la_ciudad')
+  if (aliadoCount >= 1) await desbloquear('el_reconocido')
+  if (campeonesCount >= 1) await desbloquear('campeon_de_la_ciudad')
+  if (campeonesCount >= 2) await desbloquear('el_hegemon_absoluto')
+
+  const tieneDosTraiciones = afinidades.some((a) => (a.traicionCount ?? 0) >= 2)
+  if (tieneDosTraiciones) await desbloquear('la_marca_del_traidor')
 }
 
 // ─── TRIGGERS EXTERNOS (llamados desde otras rutas) ────────────────────────────
@@ -471,6 +529,11 @@ export async function verificarPiedraDelAgan(hoy: string): Promise<void> {
 
   if (!p1[0] || !p2[0]) return
 
+  const [metaPasos1, metaPasos2] = await Promise.all([
+    getMetasPasosParaAgonist(a1.id),
+    getMetasPasosParaAgonist(a2.id),
+  ])
+
   const pruebas = [
     'soloAgua',
     'sinComidaRapida',
@@ -483,7 +546,6 @@ export async function verificarPiedraDelAgan(hoy: string): Promise<void> {
   const metas: Record<string, number | boolean> = {
     soloAgua: true,
     sinComidaRapida: true,
-    pasos: 10000,
     horasSueno: 7,
     paginasLeidas: 10,
     sesionesGym: 4,
@@ -491,11 +553,18 @@ export async function verificarPiedraDelAgan(hoy: string): Promise<void> {
   }
 
   for (const prueba of pruebas) {
-    const meta = metas[prueba]
     const fallo1 =
-      typeof meta === 'boolean' ? !p1[0][prueba] : (p1[0][prueba] as number) < (meta as number)
+      prueba === 'pasos'
+        ? p1[0].pasos < metaPasos1
+        : typeof metas[prueba] === 'boolean'
+          ? !p1[0][prueba]
+          : (p1[0][prueba] as number) < (metas[prueba] as number)
     const fallo2 =
-      typeof meta === 'boolean' ? !p2[0][prueba] : (p2[0][prueba] as number) < (meta as number)
+      prueba === 'pasos'
+        ? p2[0].pasos < metaPasos2
+        : typeof metas[prueba] === 'boolean'
+          ? !p2[0][prueba]
+          : (p2[0][prueba] as number) < (metas[prueba] as number)
 
     if (fallo1 && fallo2) {
       for (const agonista of ambos) {
@@ -555,10 +624,15 @@ export async function verificarEasterEggsDuales(
 
   if (!miPrueba[0] || !suPrueba[0]) return
 
+  const [metaPasosYo, metaPasosAntagonista] = await Promise.all([
+    getMetasPasosParaAgonist(yo.id),
+    getMetasPasosParaAgonist(antagonista.id),
+  ])
+
   const susPruebas = [
     suPrueba[0].soloAgua,
     suPrueba[0].sinComidaRapida,
-    suPrueba[0].pasos >= 10000,
+    suPrueba[0].pasos >= metaPasosAntagonista,
     suPrueba[0].horasSueno >= 7,
     suPrueba[0].paginasLeidas >= 10,
     suPrueba[0].sesionesGym >= 4,
@@ -574,7 +648,7 @@ export async function verificarEasterEggsDuales(
   const misPruebas = [
     miPrueba[0].soloAgua,
     miPrueba[0].sinComidaRapida,
-    miPrueba[0].pasos >= 10000,
+    miPrueba[0].pasos >= metaPasosYo,
     miPrueba[0].horasSueno >= 7,
     miPrueba[0].paginasLeidas >= 10,
     miPrueba[0].sesionesGym >= 4,
@@ -584,7 +658,7 @@ export async function verificarEasterEggsDuales(
   const susPruebasArr = [
     suPrueba[0].soloAgua,
     suPrueba[0].sinComidaRapida,
-    suPrueba[0].pasos >= 10000,
+    suPrueba[0].pasos >= metaPasosAntagonista,
     suPrueba[0].horasSueno >= 7,
     suPrueba[0].paginasLeidas >= 10,
     suPrueba[0].sesionesGym >= 4,

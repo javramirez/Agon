@@ -520,6 +520,19 @@ export const INSCRIPCION_VISUAL_MAP: Record<
   la_venganza: { narrative: 'legado', intensity: 'epica' },
   el_ultimo_agon: { narrative: 'legado', intensity: 'epica' },
 
+  // ── NUEVAS — CIUDAD DE OLIMPIA + CRISIS ────────────────
+  el_iniciado_de_la_ciudad: { narrative: 'origen', intensity: 'forjada' },
+  el_reconocido: { narrative: 'origen', intensity: 'templada' },
+  campeon_de_la_ciudad: { narrative: 'gloria', intensity: 'epica' },
+  la_disputa: { narrative: 'legado', intensity: 'templada' },
+  el_forjado_en_crisis: { narrative: 'legado', intensity: 'forjada' },
+  el_extraordinario: { narrative: 'origen', intensity: 'forjada' },
+  mas_alla_de_lo_ordinario: { narrative: 'consistencia', intensity: 'templada' },
+  la_redencion: { narrative: 'legado', intensity: 'epica' },
+  el_hegemon_absoluto: { narrative: 'gloria', intensity: 'epica' },
+  la_marca_del_traidor: { narrative: 'legado', intensity: 'forjada' },
+  el_sacrificio: { narrative: 'legado', intensity: 'templada' },
+
   // ── EASTER EGGS ────────────────────────────────────────
   el_boxeador_de_philadelphia: { narrative: 'easter_egg', intensity: 'epica' },
   espartanos_cual_es_su_oficio: { narrative: 'easter_egg', intensity: 'epica' },
@@ -546,6 +559,10 @@ export const INSCRIPCION_VISUAL_MAP: Record<
   por_troya: { narrative: 'easter_egg', intensity: 'epica' },
   algunos_hombres: { narrative: 'easter_egg', intensity: 'epica' },
   di_hola_a_mi_pequeno_amigo: { narrative: 'easter_egg', intensity: 'epica' },
+  when_you_play_the_game: { narrative: 'easter_egg', intensity: 'epica' },
+  jamal_malik: { narrative: 'easter_egg', intensity: 'epica' },
+  mision_imposible: { narrative: 'easter_egg', intensity: 'epica' },
+  sin_tiempo_para_morir: { narrative: 'easter_egg', intensity: 'epica' },
 }
 
 // ─── HELPER: obtener tokens desde un ID ──────────────────────────────────────

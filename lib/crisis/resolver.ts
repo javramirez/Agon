@@ -20,6 +20,7 @@ import {
   type EscenarioCrisis,
 } from './calendario'
 import type { FaccionId } from '@/lib/facciones/config'
+import { desbloquearInscripcion } from '@/lib/inscripciones/desbloquear'
 
 // ─── APLICAR AFINIDAD ─────────────────────────────────────────────────────────
 
@@ -491,6 +492,7 @@ async function resolverCrisisH(
       `${agonista1Nombre} cedió. ${agonista2Nombre} no lo hizo. El contraste es brutal. La ciudad eligió a quién admirar en silencio.`,
       [agonista1Id, agonista2Id]
     )
+    void desbloquearInscripcion(agonista1Id, agonista1Nombre, 'el_sacrificio')
   } else if (solo2) {
     await aplicarKleos(agonista2Id, -kleosSacrificio)
     await aplicarKleos(agonista1Id, kleosSacrificio)
@@ -524,6 +526,7 @@ async function resolverCrisisH(
       `${agonista2Nombre} cedió. ${agonista1Nombre} no lo hizo. El contraste es brutal.`,
       [agonista1Id, agonista2Id]
     )
+    void desbloquearInscripcion(agonista2Id, agonista2Nombre, 'el_sacrificio')
   }
 }
 
@@ -550,9 +553,21 @@ async function resolverCrisisF(
     if (p1 > p2) {
       await aplicarKleos(agonista1Id, kleosApuesta)
       await aplicarKleos(agonista2Id, -kleosApuesta)
+      const ganadorRow = await db
+        .select({ nombre: agonistas.nombre })
+        .from(agonistas)
+        .where(eq(agonistas.id, agonista1Id))
+        .limit(1)
+      void desbloquearInscripcion(agonista1Id, ganadorRow[0]?.nombre ?? '', 'jamal_malik')
     } else if (p2 > p1) {
       await aplicarKleos(agonista2Id, kleosApuesta)
       await aplicarKleos(agonista1Id, -kleosApuesta)
+      const ganadorRow = await db
+        .select({ nombre: agonistas.nombre })
+        .from(agonistas)
+        .where(eq(agonistas.id, agonista2Id))
+        .limit(1)
+      void desbloquearInscripcion(agonista2Id, ganadorRow[0]?.nombre ?? '', 'jamal_malik')
     }
     if (config.consecuenciaA) {
       await aplicarConsecuencia(
@@ -709,6 +724,28 @@ export async function resolverCrisisVencidas(): Promise<void> {
       .update(crisisCiudad)
       .set({ resuelta: true })
       .where(eq(crisisCiudad.id, fila.id))
+
+    const resolvedRows = await db
+      .select({ id: crisisCiudad.id })
+      .from(crisisCiudad)
+      .where(eq(crisisCiudad.resuelta, true))
+    const totalResueltas = resolvedRows.length
+
+    const [a1NombreRow, a2NombreRow] = await Promise.all([
+      db.select({ nombre: agonistas.nombre }).from(agonistas).where(eq(agonistas.id, agonista1Id)).limit(1),
+      db.select({ nombre: agonistas.nombre }).from(agonistas).where(eq(agonistas.id, agonista2Id)).limit(1),
+    ])
+    const a1Nombre = a1NombreRow[0]?.nombre ?? ''
+    const a2Nombre = a2NombreRow[0]?.nombre ?? ''
+
+    if (totalResueltas === 1) {
+      void desbloquearInscripcion(agonista1Id, a1Nombre, 'el_forjado_en_crisis')
+      void desbloquearInscripcion(agonista2Id, a2Nombre, 'el_forjado_en_crisis')
+    }
+    if (totalResueltas >= 4) {
+      void desbloquearInscripcion(agonista1Id, a1Nombre, 'mision_imposible')
+      void desbloquearInscripcion(agonista2Id, a2Nombre, 'mision_imposible')
+    }
 
     const tieneNotificacionesPropias =
       config.mecanicas.includes('D') ||

@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { NivelBadge } from '@/components/agon/nivel-badge'
 import { KleosBadge } from '@/components/agon/kleos-badge'
 import { PulsoRealtime } from '@/components/agon/pulso-realtime'
-import { DistanciaAlFrente } from '@/components/agon/distancia-al-frente'
 import { PruebasDelDia } from '@/components/agon/pruebas-del-dia'
 import { getDiaDelAgan, getDiasRestantes, getMensajeHora } from '@/lib/utils'
 import {
@@ -96,14 +95,6 @@ export default async function DashboardPage() {
           showProgress
         />
       </div>
-
-      {antagonista && (
-        <DistanciaAlFrente
-          kleosPropio={agonista.kleosTotal}
-          kleosAntagonista={antagonista.kleosTotal}
-          nombreAntagonista={antagonistaConfig?.nombre ?? 'El Antagonista'}
-        />
-      )}
 
       <PulsoRealtime
         nombrePropio={agonista.nombre}

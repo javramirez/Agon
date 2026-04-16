@@ -69,6 +69,9 @@ const tabScrollClass =
   'flex overflow-x-auto gap-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
 
 function DetalleLore({ entrada, onClose }: { entrada: EntradaLore; onClose?: () => void }) {
+  const [mostrandoLider, setMostrandoLider] = useState(false)
+  const lider = entrada.lider
+
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="relative w-full aspect-[16/9] flex-shrink-0 bg-surface-2">
@@ -115,12 +118,82 @@ function DetalleLore({ entrada, onClose }: { entrada: EntradaLore; onClose?: () 
             <p className="text-xs text-amber/40 font-body tracking-widest uppercase">Próximamente</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {entrada.lore.split('\n\n').map((parrafo, i) => (
-              <p key={i} className="text-sm text-muted-foreground font-body leading-relaxed">
-                {parrafo}
-              </p>
-            ))}
+          <div className="space-y-4">
+            <div className="space-y-3">
+              {entrada.lore.split('\n\n').map((parrafo, i) => (
+                <p key={i} className="text-sm text-muted-foreground font-body leading-relaxed">
+                  {parrafo}
+                </p>
+              ))}
+            </div>
+
+            {lider && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setMostrandoLider((v) => !v)}
+                  className={cn(
+                    'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
+                    mostrandoLider
+                      ? 'bg-surface-2 border-amber/20'
+                      : 'bg-surface-1 border-border hover:border-border-strong'
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{lider.avatar}</span>
+                    <div className="text-left">
+                      <p className={cn('text-sm font-display font-semibold', entrada.color)}>
+                        {lider.nombre}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-body">
+                        {lider.subtitulo}
+                      </p>
+                    </div>
+                  </div>
+                  <motion.span
+                    className="text-xs text-muted-foreground/50 flex-shrink-0"
+                    animate={{ rotate: mostrandoLider ? 90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    ▶
+                  </motion.span>
+                </button>
+
+                <AnimatePresence>
+                  {mostrandoLider && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-3 space-y-3">
+                        {/* Placeholder imagen líder */}
+                        <div className="w-full aspect-[16/9] rounded-xl bg-surface-2 flex items-center justify-center border border-border/40">
+                          <span className={cn('text-7xl opacity-15', entrada.color)}>
+                            {lider.avatar}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground/50 font-body italic text-center">
+                          El retrato del líder llegará pronto al Códex.
+                        </p>
+                        <div className="space-y-3 pt-1">
+                          {lider.lore.split('\n\n').map((parrafo, i) => (
+                            <p
+                              key={i}
+                              className="text-sm text-muted-foreground font-body leading-relaxed"
+                            >
+                              {parrafo}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
         )}
       </div>

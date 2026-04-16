@@ -8,6 +8,7 @@ import {
 } from '@/lib/db/schema'
 import { and, eq, lte, or, sql } from 'drizzle-orm'
 import { FACCIONES, type FaccionId } from './config'
+import { desbloquearInscripcion } from '@/lib/inscripciones/desbloquear'
 
 // ─── Mensajes de inicio del duelo — voz del dios de la facción ──────────────
 
@@ -86,6 +87,13 @@ export async function detectarDisputaCampeon(
       metadata: { disputaId: disputa.id, faccionId },
       cerrado: false,
     })
+
+    const [retadorNombreRow, defensorNombreRow] = await Promise.all([
+      db.select({ nombre: agonistas.nombre }).from(agonistas).where(eq(agonistas.id, agonistId)).limit(1),
+      db.select({ nombre: agonistas.nombre }).from(agonistas).where(eq(agonistas.id, rivalId)).limit(1),
+    ])
+    void desbloquearInscripcion(agonistId, retadorNombreRow[0]?.nombre ?? '', 'la_disputa')
+    void desbloquearInscripcion(rivalId, defensorNombreRow[0]?.nombre ?? '', 'la_disputa')
 
     const tituloNotif = `⚔️ Duelo de Facción — ${faccion.nombre}`
     const descNotif = `Dos Campeones disputan el dominio. El duelo dura 3 días. Acumula puntos en ${faccion.nombre} para mantener tu rango.`
@@ -364,6 +372,8 @@ export async function resolverDisputasVencidas(): Promise<void> {
       const perdedorNombre = perdedorRow[0]?.nombre ?? 'El retador'
       const defensorNombre = defensorNombreRow[0]?.nombre ?? 'El defensor'
       const retadorNombre = retadorNombreRow[0]?.nombre ?? 'El retador'
+
+      void desbloquearInscripcion(ganadorId, ganadorNombre, 'when_you_play_the_game')
 
       const sinPuntos = pR === 0 && pD === 0
       const contenido = sinPuntos

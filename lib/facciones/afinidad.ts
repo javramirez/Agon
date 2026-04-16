@@ -1,5 +1,5 @@
 import { db } from '@/lib/db'
-import { disputasCampeon, faccionesAfinidad } from '@/lib/db/schema'
+import { disputasCampeon, faccionesAfinidad, agonistas } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import {
   type FaccionId,
@@ -12,6 +12,8 @@ import {
   calcularRango,
 } from './config'
 import { detectarDisputaCampeon } from './disputa'
+import { desbloquearInscripcion } from '@/lib/inscripciones/desbloquear'
+import { verificarInscripcionesAfinidad } from '@/lib/inscripciones/triggers'
 
 // ─── Tipos públicos ───────────────────────────────────────────────────────────
 
@@ -54,7 +56,7 @@ async function upsertFaccion(params: {
   rachaMilestoneActual: number
   rachaMilestoneNuevo: number
   traicionCount?: number
-}): Promise<{ subioACampeon: boolean }> {
+}): Promise<{ subioACampeon: boolean; esRedencion: boolean }> {
   const {
     agonistId,
     faccionId,
@@ -104,7 +106,10 @@ async function upsertFaccion(params: {
       },
     })
 
-  return { subioACampeon: nuevoRango === 5 && rangoActual < 5 }
+  return {
+    subioACampeon: nuevoRango === 5 && rangoActual < 5,
+    esRedencion: nuevoRango === 5 && rangoActual < 5 && traicionCount > 0,
+  }
 }
 
 // ─── Función principal: llamada desde pruebas/route.ts ────────────────────────
@@ -203,9 +208,10 @@ export async function actualizarAfinidadHabitos(
     )
   }
 
+  let hayRedencion = false
   for (const [faccionId, puntosNuevos] of updatesPorFaccion) {
     const actual = afinidadMap.get(faccionId)
-    const { subioACampeon } = await upsertFaccion({
+    const { subioACampeon, esRedencion } = await upsertFaccion({
       agonistId,
       faccionId,
       puntosNuevos,
@@ -219,9 +225,20 @@ export async function actualizarAfinidadHabitos(
           : (actual?.rachaMilestoneMaximo ?? 0),
       traicionCount: actual?.traicionCount ?? 0,
     })
-    if (subioACampeon) {
-      void detectarDisputaCampeon(agonistId, faccionId)
-    }
+    if (subioACampeon) void detectarDisputaCampeon(agonistId, faccionId)
+    if (esRedencion) hayRedencion = true
+  }
+
+  const agonistaNombreRow = await db
+    .select({ nombre: agonistas.nombre })
+    .from(agonistas)
+    .where(eq(agonistas.id, agonistId))
+    .limit(1)
+  const agonistaNombre = agonistaNombreRow[0]?.nombre ?? ''
+
+  void verificarInscripcionesAfinidad(agonistId, agonistaNombre)
+  if (hayRedencion) {
+    void desbloquearInscripcion(agonistId, agonistaNombre, 'la_redencion')
   }
 }
 
@@ -284,7 +301,7 @@ export async function actualizarAfinidadEvento(
 
   const puntosFinales = erisIndiscutida ? puntos * 2 : puntos
 
-  const { subioACampeon } = await upsertFaccion({
+  const { subioACampeon, esRedencion } = await upsertFaccion({
     agonistId,
     faccionId,
     puntosNuevos: puntosFinales,
@@ -295,8 +312,18 @@ export async function actualizarAfinidadEvento(
     rachaMilestoneNuevo: actual?.rachaMilestoneMaximo ?? 0,
     traicionCount: actual?.traicionCount ?? 0,
   })
-  if (subioACampeon) {
-    void detectarDisputaCampeon(agonistId, faccionId)
+  if (subioACampeon) void detectarDisputaCampeon(agonistId, faccionId)
+
+  const agonistaNombreRow = await db
+    .select({ nombre: agonistas.nombre })
+    .from(agonistas)
+    .where(eq(agonistas.id, agonistId))
+    .limit(1)
+  const agonistaNombre = agonistaNombreRow[0]?.nombre ?? ''
+
+  void verificarInscripcionesAfinidad(agonistId, agonistaNombre)
+  if (esRedencion) {
+    void desbloquearInscripcion(agonistId, agonistaNombre, 'la_redencion')
   }
 }
 

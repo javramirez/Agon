@@ -12,6 +12,8 @@ import { eq, and, gte } from 'drizzle-orm'
 import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
 import { getOrCreateAgonista, getSemanaActual } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
+import { desbloquearInscripcion } from '@/lib/inscripciones/desbloquear'
+import { TODAS_PRUEBAS_EXTRAORDINARIAS } from '@/lib/db/constants'
 
 const MAX_TRIPTICO_SEMANA = 2
 const MAX_DESTINO_SEMANA = 3
@@ -199,6 +201,28 @@ export async function POST(req: Request) {
   void triggerComentariosDioses(eventoId).catch((err) =>
     console.error('triggerComentariosDioses prueba_extraordinaria', err)
   )
+
+  const todasMias = await db
+    .select({ id: pruebaExtraordinaria.id })
+    .from(pruebaExtraordinaria)
+    .where(
+      esJavier
+        ? eq(pruebaExtraordinaria.completadaPorJavier, true)
+        : eq(pruebaExtraordinaria.completadaPorMatias, true)
+    )
+  const totalCompletadas = todasMias.length
+
+  if (totalCompletadas === 1) {
+    void desbloquearInscripcion(agonista.id, agonista.nombre, 'el_extraordinario')
+  }
+  if (totalCompletadas >= 10) {
+    void desbloquearInscripcion(agonista.id, agonista.nombre, 'mas_alla_de_lo_ordinario')
+  }
+
+  const configPrueba = TODAS_PRUEBAS_EXTRAORDINARIAS.find((c) => c.id === p.pruebaId)
+  if (p.tipo === 'destino' && configPrueba?.dificultad === 'dificil') {
+    void desbloquearInscripcion(agonista.id, agonista.nombre, 'sin_tiempo_para_morir')
+  }
 
   return NextResponse.json({ ok: true, kleos: kleosFinales, multiplicador })
 }
