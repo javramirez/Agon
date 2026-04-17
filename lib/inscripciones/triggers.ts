@@ -14,12 +14,12 @@ import { getAmbosAgonistas, getRetoPorId } from '@/lib/db/queries'
 import { getVentajasActivas, getMetasEfectivas } from '@/lib/facciones/afinidad'
 import { desbloquearInscripcion, yaDesbloqueada } from './desbloquear'
 
-async function getMetasPasosParaAgonist(agonistId: string): Promise<number> {
+async function getMetasEfectivasParaAgonist(agonistId: string) {
   const afinidades = await db
     .select()
     .from(faccionesAfinidad)
     .where(eq(faccionesAfinidad.agonistId, agonistId))
-  return getMetasEfectivas(getVentajasActivas(afinidades)).pasos
+  return getMetasEfectivas(getVentajasActivas(afinidades))
 }
 
 // ─── HELPER: calcular racha de días consecutivos ───────────────────────────────
@@ -149,15 +149,25 @@ export async function verificarInscripciones(
     await desbloquear('el_primer_paso')
   }
 
-  // El Primer Combate: primera sesión de gym
-  const diasConGym = todasLasPruebas.filter((p) => p.sesionesGym > 0)
-  if (diasConGym.length === 1 && pruebaNueva.sesionesGym > 0) {
+  // El Primer Combate: primer día que alcanza la meta efectiva de gym
+  const diasConGym = todasLasPruebas.filter(
+    (p) => p.sesionesGym >= metasEfectivas.sesionesGym
+  )
+  if (
+    diasConGym.length === 1 &&
+    pruebaNueva.sesionesGym >= metasEfectivas.sesionesGym
+  ) {
     await desbloquear('el_primer_combate')
   }
 
-  // La Primera Carrera: primera sesión de cardio
-  const diasConCardio = todasLasPruebas.filter((p) => p.sesionesCardio > 0)
-  if (diasConCardio.length === 1 && pruebaNueva.sesionesCardio > 0) {
+  // La Primera Carrera: primer día que alcanza la meta efectiva de cardio
+  const diasConCardio = todasLasPruebas.filter(
+    (p) => p.sesionesCardio >= metasEfectivas.sesionesCardio
+  )
+  if (
+    diasConCardio.length === 1 &&
+    pruebaNueva.sesionesCardio >= metasEfectivas.sesionesCardio
+  ) {
     await desbloquear('la_primera_carrera')
   }
 
@@ -189,7 +199,9 @@ export async function verificarInscripciones(
 
   // La Bestia: gym + cardio mismo día, 5 veces totales
   const diasDobleEntrenamiento = todasLasPruebas.filter(
-    (p) => p.sesionesGym > 0 && p.sesionesCardio > 0
+    (p) =>
+      p.sesionesGym >= metasEfectivas.sesionesGym &&
+      p.sesionesCardio >= metasEfectivas.sesionesCardio
   )
   if (diasDobleEntrenamiento.length >= 5) await desbloquear('la_bestia')
 
@@ -320,8 +332,8 @@ export async function verificarInscripciones(
   // El Boxeador de Philadelphia: gym + cardio + meta efectiva de pasos antes de las 8am
   if (
     horaActual < 8 &&
-    pruebaNueva.sesionesGym > 0 &&
-    pruebaNueva.sesionesCardio > 0 &&
+    pruebaNueva.sesionesGym >= metasEfectivas.sesionesGym &&
+    pruebaNueva.sesionesCardio >= metasEfectivas.sesionesCardio &&
     pruebaNueva.pasos >= metasEfectivas.pasos
   ) {
     await desbloquear('el_boxeador_de_philadelphia')
@@ -340,7 +352,10 @@ export async function verificarInscripciones(
 
   // El Fantasma de Esparta: gym + cardio + meta efectiva de pasos mismo día, 5 veces
   const diasTripleEntrenamiento = todasLasPruebas.filter(
-    (p) => p.sesionesGym > 0 && p.sesionesCardio > 0 && p.pasos >= metasEfectivas.pasos
+    (p) =>
+      p.sesionesGym >= metasEfectivas.sesionesGym &&
+      p.sesionesCardio >= metasEfectivas.sesionesCardio &&
+      p.pasos >= metasEfectivas.pasos
   )
   if (diasTripleEntrenamiento.length >= 5) await desbloquear('el_fantasma_de_esparta')
 
@@ -361,8 +376,8 @@ export async function verificarInscripciones(
         anterior.pasos >= metasEfectivas.pasos,
         anterior.horasSueno >= metasEfectivas.horasSueno,
         anterior.paginasLeidas >= metasEfectivas.paginasLeidas,
-        anterior.sesionesGym >= 4,
-        anterior.sesionesCardio >= 3,
+        anterior.sesionesGym >= metasEfectivas.sesionesGym,
+        anterior.sesionesCardio >= metasEfectivas.sesionesCardio,
       ].filter(Boolean).length
       if (pruebasCompletadasAnterior === 0) {
         await desbloquear('boogeyman')
@@ -545,9 +560,9 @@ export async function verificarPiedraDelAgan(
 
   if (!p1[0] || !p2[0]) return
 
-  const [metaPasos1, metaPasos2] = await Promise.all([
-    getMetasPasosParaAgonist(a1.id),
-    getMetasPasosParaAgonist(a2.id),
+  const [meta1, meta2] = await Promise.all([
+    getMetasEfectivasParaAgonist(a1.id),
+    getMetasEfectivasParaAgonist(a2.id),
   ])
 
   const pruebas = [
@@ -559,28 +574,32 @@ export async function verificarPiedraDelAgan(
     'sesionesGym',
     'sesionesCardio',
   ] as const
-  const metas: Record<string, number | boolean> = {
-    soloAgua: true,
-    sinComidaRapida: true,
-    horasSueno: 7,
-    paginasLeidas: 10,
-    sesionesGym: 4,
-    sesionesCardio: 3,
-  }
 
   for (const prueba of pruebas) {
     const fallo1 =
       prueba === 'pasos'
-        ? p1[0].pasos < metaPasos1
-        : typeof metas[prueba] === 'boolean'
+        ? p1[0].pasos < meta1.pasos
+        : prueba === 'soloAgua' || prueba === 'sinComidaRapida'
           ? !p1[0][prueba]
-          : (p1[0][prueba] as number) < (metas[prueba] as number)
+          : prueba === 'horasSueno'
+            ? p1[0].horasSueno < meta1.horasSueno
+            : prueba === 'paginasLeidas'
+              ? p1[0].paginasLeidas < meta1.paginasLeidas
+              : prueba === 'sesionesGym'
+                ? p1[0].sesionesGym < meta1.sesionesGym
+                : p1[0].sesionesCardio < meta1.sesionesCardio
     const fallo2 =
       prueba === 'pasos'
-        ? p2[0].pasos < metaPasos2
-        : typeof metas[prueba] === 'boolean'
+        ? p2[0].pasos < meta2.pasos
+        : prueba === 'soloAgua' || prueba === 'sinComidaRapida'
           ? !p2[0][prueba]
-          : (p2[0][prueba] as number) < (metas[prueba] as number)
+          : prueba === 'horasSueno'
+            ? p2[0].horasSueno < meta2.horasSueno
+            : prueba === 'paginasLeidas'
+              ? p2[0].paginasLeidas < meta2.paginasLeidas
+              : prueba === 'sesionesGym'
+                ? p2[0].sesionesGym < meta2.sesionesGym
+                : p2[0].sesionesCardio < meta2.sesionesCardio
 
     if (fallo1 && fallo2) {
       for (const agonista of ambos) {
@@ -648,19 +667,19 @@ export async function verificarEasterEggsDuales(
 
   if (!miPrueba[0] || !suPrueba[0]) return
 
-  const [metaPasosYo, metaPasosAntagonista] = await Promise.all([
-    getMetasPasosParaAgonist(yo.id),
-    getMetasPasosParaAgonist(antagonista.id),
+  const [metaYo, metaAnt] = await Promise.all([
+    getMetasEfectivasParaAgonist(yo.id),
+    getMetasEfectivasParaAgonist(antagonista.id),
   ])
 
   const susPruebas = [
     suPrueba[0].soloAgua,
     suPrueba[0].sinComidaRapida,
-    suPrueba[0].pasos >= metaPasosAntagonista,
-    suPrueba[0].horasSueno >= 7,
-    suPrueba[0].paginasLeidas >= 10,
-    suPrueba[0].sesionesGym >= 4,
-    suPrueba[0].sesionesCardio >= 3,
+    suPrueba[0].pasos >= metaAnt.pasos,
+    suPrueba[0].horasSueno >= metaAnt.horasSueno,
+    suPrueba[0].paginasLeidas >= metaAnt.paginasLeidas,
+    suPrueba[0].sesionesGym >= metaAnt.sesionesGym,
+    suPrueba[0].sesionesCardio >= metaAnt.sesionesCardio,
   ].filter(Boolean).length
 
   if (miPrueba[0].diaPerfecto && susPruebas === 0) {
@@ -672,21 +691,21 @@ export async function verificarEasterEggsDuales(
   const misPruebas = [
     miPrueba[0].soloAgua,
     miPrueba[0].sinComidaRapida,
-    miPrueba[0].pasos >= metaPasosYo,
-    miPrueba[0].horasSueno >= 7,
-    miPrueba[0].paginasLeidas >= 10,
-    miPrueba[0].sesionesGym >= 4,
-    miPrueba[0].sesionesCardio >= 3,
+    miPrueba[0].pasos >= metaYo.pasos,
+    miPrueba[0].horasSueno >= metaYo.horasSueno,
+    miPrueba[0].paginasLeidas >= metaYo.paginasLeidas,
+    miPrueba[0].sesionesGym >= metaYo.sesionesGym,
+    miPrueba[0].sesionesCardio >= metaYo.sesionesCardio,
   ]
 
   const susPruebasArr = [
     suPrueba[0].soloAgua,
     suPrueba[0].sinComidaRapida,
-    suPrueba[0].pasos >= metaPasosAntagonista,
-    suPrueba[0].horasSueno >= 7,
-    suPrueba[0].paginasLeidas >= 10,
-    suPrueba[0].sesionesGym >= 4,
-    suPrueba[0].sesionesCardio >= 3,
+    suPrueba[0].pasos >= metaAnt.pasos,
+    suPrueba[0].horasSueno >= metaAnt.horasSueno,
+    suPrueba[0].paginasLeidas >= metaAnt.paginasLeidas,
+    suPrueba[0].sesionesGym >= metaAnt.sesionesGym,
+    suPrueba[0].sesionesCardio >= metaAnt.sesionesCardio,
   ]
 
   const mismasPruebas = misPruebas.every((v, i) => v === susPruebasArr[i])

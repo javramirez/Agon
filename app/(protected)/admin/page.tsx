@@ -1,11 +1,11 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
+import { AdminClient } from '@/components/agon/admin-client'
 
 export default async function AdminPage() {
   const { userId } = await auth()
   if (!userId) redirect('/sign-in')
+  if (userId !== process.env.ADMIN_CLERK_ID) redirect('/dashboard')
 
-  // TODO PROMPT-01: acceso admin por CLERK_JAVIER_USER_ID eliminado (PROMPT 03)
-  void userId
-  redirect('/dashboard')
+  return <AdminClient />
 }

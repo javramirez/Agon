@@ -29,6 +29,18 @@ export default async function ProtectedLayout({
   const { userId } = await auth()
   if (!userId) redirect('/sign-in')
 
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') ?? ''
+
+  if (userId === process.env.ADMIN_CLERK_ID && pathname.startsWith('/admin')) {
+    return (
+      <div className="min-h-screen bg-background">
+        <InactivityLogout />
+        <main className="max-w-4xl mx-auto px-4 pt-12 pb-28 sm:pb-10">{children}</main>
+      </div>
+    )
+  }
+
   const agonista = await getCurrentAgonista()
 
   // Sin registro en DB → crear agonista y reto
@@ -52,9 +64,6 @@ export default async function ProtectedLayout({
   if (reto.estado === 'programado') redirect('/esperando')
 
   // Reto completado → solo veredicto disponible
-  const headersList = await headers()
-  const pathname = headersList.get('x-pathname') ?? ''
-
   if (reto.estado === 'completado' && !pathname.startsWith('/veredicto')) {
     redirect('/veredicto')
   }
