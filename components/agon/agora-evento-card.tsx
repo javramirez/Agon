@@ -15,6 +15,7 @@ import { getDiosVisual } from '@/lib/dioses/imagen-config'
 import type { AgoraEvento, ComentarioAgora, Cronica } from '@/lib/db/schema'
 import { CronicaCard } from './cronica-card'
 import { PostVozOlimpo, type LinkPostVozOlimpo } from './post-voz-olimpo'
+import { LikeButton } from './like-button'
 
 const ACLAMACIONES_CONFIG = [
   { tipo: 'fuego', emoji: '🔥', label: 'Fuego del agon' },
@@ -84,7 +85,12 @@ export function AgoraEventoCard({
     links?: unknown
     esSobreexigencia?: boolean
     intensidad?: 'leve' | 'media' | 'fuerte'
+    /** Likes simulados de adeptos (ver lib/facciones/adeptos) */
+    likesAdeptos?: number
   } | null
+
+  const likesAdeptos =
+    metadata != null && typeof metadata.likesAdeptos === 'number' ? metadata.likesAdeptos : 0
 
   const esDios = metadata?.esDios === true
   const diosNombre = metadata?.diosNombre
@@ -424,21 +430,19 @@ export function AgoraEventoCard({
       )}
 
       <div className="flex items-center gap-4 pt-1 border-t border-border flex-wrap">
-        <button
-          type="button"
-          onClick={() => void toggleLike()}
-          disabled={!likesCargados}
+        <div
           className={cn(
-            'flex items-center gap-1.5 text-xs font-body transition-all active:scale-95',
-            miLike ? 'text-amber' : 'text-muted-foreground hover:text-foreground',
-            !likesCargados && 'opacity-50'
+            !likesCargados && 'opacity-50 pointer-events-none',
+            'text-left'
           )}
         >
-          <span className="text-sm">{miLike ? '♥' : '♡'}</span>
-          {likes > 0 && (
-            <span className="tabular-nums">{likes}</span>
-          )}
-        </button>
+          <LikeButton
+            totalLikes={likes + likesAdeptos}
+            liked={miLike}
+            onLike={toggleLike}
+            disabled={!likesCargados}
+          />
+        </div>
 
         {esOraculo ? (
           <button

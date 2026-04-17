@@ -10,6 +10,7 @@ import { esSolo } from '@/lib/retos/guards'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { notificarProvocacion } from '@/lib/notificaciones/crear'
 import { PROVOCACIONES } from '@/lib/db/constants'
+import { persistLikesAdeptosParaEvento } from '@/lib/agora/persist-likes-adeptos'
 
 const BANCO = new Set<string>(PROVOCACIONES as readonly string[])
 
@@ -88,6 +89,8 @@ export async function POST(req: Request) {
       dirigidoA: antagonista?.id ?? null,
     },
   })
+
+  await persistLikesAdeptosParaEvento(eventoId)
 
   void triggerComentariosDioses(eventoId).catch((err) =>
     console.error('triggerComentariosDioses provocacion', err)

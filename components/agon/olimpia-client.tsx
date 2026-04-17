@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FACCIONES,
@@ -11,8 +11,17 @@ import {
 } from '@/lib/facciones/config'
 import { faccionesAfinidad, type DisputaCampeon } from '@/lib/db/schema'
 import type { InferSelectModel } from 'drizzle-orm'
+import { LikeButton } from './like-button'
 
 type AfinidadRow = InferSelectModel<typeof faccionesAfinidad>
+
+/** Población base mínima para contar como "facción grande" (tier épico) */
+const POBLACION_FACCION_GRANDE = 8000
+const UMBRAL_TIER_MAX_SIN_EPICO = 23_999
+
+function getAfinidad(afinidades: AfinidadRow[], faccionId: FaccionId) {
+  return afinidades.find((a) => a.faccionId === faccionId)
+}
 
 interface Props {
   agonistaNombre: string
@@ -21,10 +30,6 @@ interface Props {
   miAfinidad: AfinidadRow[]
   rivalAfinidad: AfinidadRow[]
   disputasActivas: DisputaCampeon[]
-}
-
-function getAfinidad(afinidades: AfinidadRow[], faccionId: FaccionId) {
-  return afinidades.find((a) => a.faccionId === faccionId)
 }
 
 function RangoBadge({ rango, nombre }: { rango: number; nombre: string }) {
@@ -72,11 +77,37 @@ function BarraProgreso({
   )
 }
 
+/** Popularidad respecto al máximo demográfico de la facción (0–100 %) */
+function BarraPopularidad({
+  popularidadPct,
+  color,
+  delay = 0,
+}: {
+  popularidadPct: number
+  color: string
+  delay?: number
+}) {
+  const pct = Math.min(100, Math.max(0, popularidadPct))
+  return (
+    <div
+      className="w-full h-[3px] rounded-full overflow-hidden"
+      style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+    >
+      <motion.div
+        className="h-full rounded-full"
+        style={{ backgroundColor: color }}
+        initial={{ width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 0.7, ease: 'easeOut', delay }}
+      />
+    </div>
+  )
+}
+
 function FaccionCard({
   faccionId,
   miAfinidad,
   rivalAfinidad,
-  agonistaNombre: _agonistaNombre,
   rivalNombre,
   seleccionada,
   onClick,
@@ -84,7 +115,6 @@ function FaccionCard({
   faccionId: FaccionId
   miAfinidad: AfinidadRow[]
   rivalAfinidad: AfinidadRow[]
-  agonistaNombre: string
   rivalNombre: string
   seleccionada: boolean
   onClick: () => void
@@ -98,6 +128,10 @@ function FaccionCard({
   const rivPuntos = rivData?.puntosAfinidad ?? 0
   const miRango = miData?.rango ?? 1
   const esCampeon = miRango === 5
+
+  const adeptosActuales = getPoblacionVisible(faccion, miRango)
+  const popularidad =
+    faccion.poblacionBase > 0 ? (adeptosActuales / faccion.poblacionBase) * 100 : 0
 
   return (
     <motion.button
@@ -148,6 +182,15 @@ function FaccionCard({
           >
             {faccion.dios} · {faccion.lider}
           </div>
+          <p
+            className="text-[11px] mt-1.5 font-medium tabular-nums"
+            style={{ color: faccion.color }}
+          >
+            {adeptosActuales.toLocaleString()} adeptos
+          </p>
+          <div className="mt-2">
+            <BarraPopularidad popularidadPct={popularidad} color={faccion.color} />
+          </div>
         </div>
 
         <div className="text-right shrink-0">
@@ -165,10 +208,6 @@ function FaccionCard({
             </div>
           )}
         </div>
-      </div>
-
-      <div className="mt-3">
-        <BarraProgreso puntos={miPuntos} color={faccion.color} />
       </div>
     </motion.button>
   )
@@ -247,10 +286,10 @@ function PanelDetalle({
   const poblacionRivVisible = getPoblacionVisible(faccion, rivRango)
   const sigRangoInfo = RANGOS_AFINIDAD.find((r) => r.rango === miRango + 1)
   const ptsParaSiguiente = sigRangoInfo ? sigRangoInfo.minPuntos - miPuntos : 0
-  const pctPoblacion = Math.min(
-    100,
-    (poblacionVisible / faccion.poblacionBase) * 100
-  )
+  const popularidadAliada =
+    faccion.poblacionBase > 0
+      ? (poblacionVisible / faccion.poblacionBase) * 100
+      : 0
 
   const disputaActiva = disputasActivas.find((d) => d.faccionId === faccionId)
   const esRetador = disputaActiva?.agonistIdRetador === miId
@@ -360,7 +399,11 @@ function PanelDetalle({
             de {faccion.poblacionBase.toLocaleString()} habitantes
           </span>
         </div>
-        <BarraProgreso puntos={pctPoblacion * 1.5} color={faccion.color} delay={0.15} />
+        <BarraPopularidad
+          popularidadPct={popularidadAliada}
+          color={faccion.color}
+          delay={0.15}
+        />
         {rivRango > 1 && (
           <p className="text-[11px] mt-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
             {rivalNombre.split(' ')[0]} tiene {poblacionRivVisible.toLocaleString()} aliados
@@ -549,6 +592,32 @@ export function OlimpiaClient({
   const faccionIds = Object.keys(FACCIONES) as FaccionId[]
   const sinRival = rivalAfinidad.length === 0 || rivalNombre === 'Tu rival'
 
+  const sumaAdeptosCiudad = useMemo(() => {
+    let s = 0
+    for (const id of Object.keys(FACCIONES) as FaccionId[]) {
+      const row = getAfinidad(miAfinidad, id)
+      const rango = row?.rango ?? 1
+      s += getPoblacionVisible(FACCIONES[id], rango)
+    }
+    return s
+  }, [miAfinidad])
+
+  const r5EnFaccionesGrandes = useMemo(
+    () =>
+      miAfinidad.filter(
+        (a) =>
+          a.rango === 5 &&
+          FACCIONES[a.faccionId as FaccionId].poblacionBase >= POBLACION_FACCION_GRANDE
+      ).length,
+    [miAfinidad]
+  )
+
+  /** Tier 5 (épico) del LikeButton solo si hay 2+ R5 en facciones con población base ≥ 8k */
+  const totalLikesReverberacion =
+    r5EnFaccionesGrandes >= 2
+      ? sumaAdeptosCiudad
+      : Math.min(sumaAdeptosCiudad, UMBRAL_TIER_MAX_SIN_EPICO)
+
   return (
     <div className="space-y-6">
       <div className="pt-2">
@@ -571,6 +640,18 @@ export function OlimpiaClient({
             </p>
           </div>
         )}
+
+        <div className="mt-5 flex flex-col items-center gap-1">
+          <p className="text-[10px] uppercase tracking-widest text-white/30 font-body">
+            Reverberación de la ciudad
+          </p>
+          <LikeButton
+            totalLikes={totalLikesReverberacion}
+            liked={false}
+            onLike={async () => Promise.resolve()}
+            disabled
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr_400px] gap-6 items-start">
@@ -581,7 +662,6 @@ export function OlimpiaClient({
                 faccionId={id}
                 miAfinidad={miAfinidad}
                 rivalAfinidad={rivalAfinidad}
-                agonistaNombre={agonistaNombre}
                 rivalNombre={rivalNombre}
                 seleccionada={faccionSeleccionada === id}
                 onClick={() => setFaccionSeleccionada(id)}

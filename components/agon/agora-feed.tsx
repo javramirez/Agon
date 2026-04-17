@@ -4,8 +4,14 @@ import { useState, useCallback, useEffect } from 'react'
 import { AgoraEventoCard } from './agora-evento-card'
 import type { AgoraEvento } from '@/lib/db/schema'
 
+/** Respuesta GET /api/agora + carga inicial (totalLikes opcional hasta refrescar) */
+export type AgoraEventoConLikes = AgoraEvento & {
+  likesReales?: number
+  totalLikes?: number
+}
+
 interface Props {
-  eventosIniciales: AgoraEvento[]
+  eventosIniciales: AgoraEventoConLikes[]
   aclamacionesHoy: number
   tiposPorEvento: Record<string, string>
 }
@@ -15,7 +21,7 @@ export function AgoraFeed({
   aclamacionesHoy: aclamacionesInicial,
   tiposPorEvento: tiposInicial,
 }: Props) {
-  const [eventos, setEventos] = useState(eventosIniciales)
+  const [eventos, setEventos] = useState<AgoraEventoConLikes[]>(eventosIniciales)
   const [aclamacionesHoy, setAclamacionesHoy] = useState(aclamacionesInicial)
   const [tiposPorEvento, setTiposPorEvento] = useState(tiposInicial)
   const [refrescando, setRefrescando] = useState(false)
@@ -50,7 +56,7 @@ export function AgoraFeed({
       const res = await fetch('/api/agora')
       if (res.ok) {
         const data = (await res.json()) as {
-          eventos: AgoraEvento[]
+          eventos: AgoraEventoConLikes[]
           aclamacionesHoy: number
           tiposPorEvento: Record<string, string>
         }
