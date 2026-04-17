@@ -16,6 +16,8 @@ export async function POST(req: Request) {
   const agonista = await getCurrentAgonista()
   if (!agonista)
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  if (!agonista.retoId)
+    return NextResponse.json({ error: 'Sin reto asignado' }, { status: 400 })
 
   let body: unknown
   try {
@@ -51,7 +53,7 @@ export async function POST(req: Request) {
     await guardarPuntajeTrivia(fila.id, agonista.id, agonista1Id, puntaje)
   }
 
-  void resolverCrisisVencidas().catch(() => {})
+  void resolverCrisisVencidas(agonista.retoId).catch(() => {})
 
   return NextResponse.json({ ok: true })
 }

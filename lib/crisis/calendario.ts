@@ -1,15 +1,18 @@
 import { db } from '@/lib/db'
-import { calendarioCrisis, crisisCiudad, agonistas } from '@/lib/db/schema'
+import { calendarioCrisis, crisisCiudad } from '@/lib/db/schema'
 import { CRISIS_POOL, getCrisis, type CrisisConfig } from './config'
-import { eq } from 'drizzle-orm'
-import { differenceInDays, parseISO, startOfDay } from 'date-fns'
-import { isGranAgonActivo } from '@/lib/utils'
-import { getAmbosAgonistas } from '@/lib/db/queries'
+import { and, eq } from 'drizzle-orm'
+import { getDiaDelAgan, isGranAgonActivo } from '@/lib/utils'
+import { getAmbosAgonistas, getRetoPorId } from '@/lib/db/queries'
 
 // ─── SORTEO DEL CALENDARIO ───────────────────────────────────────────────────
 
-export async function generarCalendarioCrisis(): Promise<void> {
-  const existente = await db.select().from(calendarioCrisis).limit(1)
+export async function generarCalendarioCrisis(retoId: string): Promise<void> {
+  const existente = await db
+    .select()
+    .from(calendarioCrisis)
+    .where(eq(calendarioCrisis.retoId, retoId))
+    .limit(1)
   if (existente.length > 0) return
 
   // Separar crisis con líder y sin líder para garantizar variedad
@@ -33,30 +36,20 @@ export async function generarCalendarioCrisis(): Promise<void> {
   )
 
   await db.insert(calendarioCrisis).values({
+    retoId,
     crisisSeleccionadas,
   })
 }
 
 // ─── LECTURA DEL CALENDARIO ───────────────────────────────────────────────────
 
-export async function getCalendarioCrisis() {
-  const result = await db.select().from(calendarioCrisis).limit(1)
+export async function getCalendarioCrisis(retoId: string) {
+  const result = await db
+    .select()
+    .from(calendarioCrisis)
+    .where(eq(calendarioCrisis.retoId, retoId))
+    .limit(1)
   return result[0] ?? null
-}
-
-// ─── CÁLCULO DE DÍA Y SEMANA ACTUAL ──────────────────────────────────────────
-
-export function getDiaActualReto(fechaInicio: string): number {
-  if (!fechaInicio) return 0
-  const inicio = startOfDay(parseISO(fechaInicio))
-  const hoy = startOfDay(new Date())
-  return Math.max(0, differenceInDays(hoy, inicio) + 1)
-}
-
-export function getSemanaActualReto(fechaInicio: string): number {
-  const dia = getDiaActualReto(fechaInicio)
-  if (dia <= 0) return 0
-  return Math.ceil(dia / 7)
 }
 
 // ─── VERIFICAR Y ACTIVAR CRISIS ───────────────────────────────────────────────
@@ -64,40 +57,43 @@ export function getSemanaActualReto(fechaInicio: string): number {
 // Activa la crisis de la semana actual si no existe aún
 
 export async function verificarYActivarCrisis(
+  retoId: string,
   fechaInicio: string,
-  fechaFin: string
+  modo: 'solo' | 'duelo'
 ): Promise<void> {
   try {
+    const reto = await getRetoPorId(retoId)
+    const fechaFin = reto?.fechaFin ?? ''
     if (!fechaInicio || !fechaFin) return
     if (!isGranAgonActivo(fechaInicio, fechaFin)) return
 
     const hoy = new Date()
 
-    // Generar calendario si no existe
-    await generarCalendarioCrisis()
+    await generarCalendarioCrisis(retoId)
 
-    const calendario = await getCalendarioCrisis()
+    const calendario = await getCalendarioCrisis(retoId)
     if (!calendario) return
 
-    const semanaActual = getSemanaActualReto(fechaInicio)
-    const diaActual = getDiaActualReto(fechaInicio)
+    const diaActual = getDiaDelAgan(fechaInicio)
+    const semanaActual = Math.ceil(diaActual / 7)
     if (diaActual <= 0 || semanaActual <= 0) return
 
-    // La crisis se activa el día 7 de cada semana (último día)
-    // Semana 1 → día 7, Semana 2 → día 14, etc.
     const diaActivacion = semanaActual * 7
     if (diaActual !== diaActivacion) return
 
-    // Verificar que no existe ya una crisis para esta semana
     const crisisExistente = await db
       .select({ id: crisisCiudad.id })
       .from(crisisCiudad)
-      .where(eq(crisisCiudad.semana, semanaActual))
+      .where(
+        and(
+          eq(crisisCiudad.semana, semanaActual),
+          eq(crisisCiudad.retoId, retoId)
+        )
+      )
       .limit(1)
 
     if (crisisExistente.length > 0) return
 
-    // Obtener la crisis de esta semana del calendario
     const crisisIds = calendario.crisisSeleccionadas as string[]
     const crisisId = crisisIds[semanaActual - 1]
     if (!crisisId) return
@@ -105,7 +101,12 @@ export async function verificarYActivarCrisis(
     const config = getCrisis(crisisId)
     if (!config) return
 
-    // Determinar duración — Tipo H tiene 24h, resto 48h
+    if (modo === 'solo') {
+      const mecanicasPvP = ['D', 'H', 'F']
+      const tienePvP = config.mecanicas.some((m) => mecanicasPvP.includes(m))
+      if (tienePvP) return
+    }
+
     const esH = config.mecanicas.includes('H')
     const horasExpiracion = esH ? 24 : 48
     const fechaExpiracion = new Date(
@@ -115,6 +116,7 @@ export async function verificarYActivarCrisis(
     await db.insert(crisisCiudad).values({
       crisisId,
       semana: semanaActual,
+      retoId,
       fechaExpiracion,
       resuelta: false,
       consecuenciaDiferidaAplicada: false,
@@ -134,13 +136,19 @@ export interface CrisisActivaConConfig {
 }
 
 export async function getCrisisActiva(
-  retoId?: string | null
+  retoId: string | null | undefined
 ): Promise<CrisisActivaConConfig | null> {
-  // Buscar crisis no resuelta
+  if (!retoId) return null
+
   const filas = await db
     .select()
     .from(crisisCiudad)
-    .where(eq(crisisCiudad.resuelta, false))
+    .where(
+      and(
+        eq(crisisCiudad.resuelta, false),
+        eq(crisisCiudad.retoId, retoId)
+      )
+    )
     .limit(1)
 
   const fila = filas[0]
@@ -149,26 +157,14 @@ export async function getCrisisActiva(
   const config = getCrisis(fila.crisisId)
   if (!config) return null
 
-  let agonista1Id: string
-  let agonista2Id: string
-
-  if (retoId) {
-    const ambos = await getAmbosAgonistas(retoId)
-    if (ambos.length < 2) return null
-    agonista1Id = ambos[0]!.id
-    agonista2Id = ambos[1]!.id
-  } else {
-    const ambos = await db.select({ id: agonistas.id }).from(agonistas).limit(2)
-    if (ambos.length < 2) return null
-    agonista1Id = ambos[0]!.id
-    agonista2Id = ambos[1]!.id
-  }
+  const ambos = await getAmbosAgonistas(retoId)
+  if (ambos.length < 1) return null
 
   return {
     fila,
     config,
-    agonista1Id,
-    agonista2Id,
+    agonista1Id: ambos[0]!.id,
+    agonista2Id: ambos[1]?.id ?? ambos[0]!.id,
   }
 }
 

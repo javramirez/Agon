@@ -100,7 +100,8 @@ const TERMINOS_UNIVERSO = [
   { termino: 'Kleos', significado: 'Gloria acumulada con actos reales' },
   { termino: 'Las Pruebas', significado: 'Los 7 hábitos diarios a completar' },
   { termino: 'El Altis', significado: 'El scoreboard del Gran Agon' },
-  { termino: 'La Hegemonía', significado: 'El ganador de cada semana' },
+  { termino: 'La Hegemonía', significado: 'El ganador de cada semana (modo Duelo)' },
+  { termino: 'El Modo Solo', significado: 'Tu agon contra tu propia línea base' },
   { termino: 'Las Inscripciones', significado: 'Los logros desbloqueados' },
   { termino: 'El Oráculo', significado: 'Mensaje sellado del día 1, revelado el día 29' },
   { termino: 'La Ekecheiria', significado: 'La tregua sagrada entre agonistas' },
@@ -300,8 +301,8 @@ export function LandingPage() {
             transition={{ delay: 2.4, duration: 0.7 }}
             className="text-muted-foreground font-body text-base sm:text-lg leading-relaxed max-w-xl mx-auto"
           >
-            Una plataforma de gamificación para el desafío de disciplina más exigente que dos
-            personas pueden proponerse. 29 días. 7 hábitos diarios. Los dioses del Olimpo como
+            Una plataforma de gamificación para el desafío de disciplina más exigente que existe.
+            29 días. 7 hábitos diarios. Solo o contra un antagonista. Los dioses del Olimpo como
             testigos.
           </motion.p>
 
@@ -309,13 +310,19 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 2.8, duration: 0.6 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center"
           >
             <Link
-              href="/sign-in"
+              href="/sign-up"
               className="relative px-8 py-4 bg-amber text-black font-display font-bold text-sm tracking-widest uppercase rounded-xl hover:bg-amber/90 transition-all duration-300 glow-amber hover:glow-amber-lg"
             >
-              Entrar al Agon
+              Comenzar el Agon
+            </Link>
+            <Link
+              href="/sign-in"
+              className="px-8 py-4 border border-border text-muted-foreground font-display text-sm tracking-widest uppercase rounded-xl hover:border-amber/40 hover:text-foreground transition-all duration-300"
+            >
+              Ya tengo cuenta
             </Link>
             <a
               href="#universo"
@@ -369,8 +376,9 @@ export function LandingPage() {
               className="text-muted-foreground font-body text-base leading-relaxed max-w-2xl mx-auto"
             >
               En la antigua Grecia, el agon era la competencia en que los atletas probaban su
-              excelencia ante los dioses. Esta plataforma revive ese espíritu — dos agonistas, 29
-              días, y la mirada del Olimpo sobre cada hábito completado o abandonado.
+              excelencia ante los dioses. Esta plataforma revive ese espíritu: 29 días, 7 hábitos
+              diarios, y la mirada del Olimpo sobre cada acto. Solo o en duelo, el Altis lo registra
+              todo.
             </motion.p>
           </div>
 
@@ -388,6 +396,102 @@ export function LandingPage() {
                 <p className="text-xs text-muted-foreground font-body leading-snug">{t.significado}</p>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── MODOS ── */}
+      <section className="px-6 py-24 max-w-4xl mx-auto">
+        <SectionDivider />
+        <div className="space-y-16 mt-16">
+          <div className="text-center space-y-4">
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="text-xs text-amber tracking-widest uppercase font-body"
+            >
+              El desafío
+            </motion.p>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+              className="font-display text-3xl sm:text-4xl font-bold"
+            >
+              Elige tu camino
+            </motion.h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="bg-surface-1 border border-border rounded-2xl p-8 space-y-4 hover:border-amber/30 transition-colors"
+            >
+              <span className="text-4xl block">⚡</span>
+              <div className="space-y-2">
+                <p className="font-display text-xl font-bold text-amber">Solo</p>
+                <p className="text-sm text-muted-foreground font-body leading-relaxed">
+                  La competencia más difícil: contra ti mismo. Sin rival, sin excusas. El Altis mide
+                  tu progreso contra tu propia línea base declarada el día 1.
+                </p>
+              </div>
+              <div className="space-y-1.5 pt-2">
+                {[
+                  'Benchmarks vs tu nivel anterior',
+                  'Mentor personalizado por arquetipo',
+                  'Las 7 pruebas diarias completas',
+                  'Inscripciones y niveles',
+                ].map((f) => (
+                  <p
+                    key={f}
+                    className="text-xs text-muted-foreground font-body flex items-center gap-2"
+                  >
+                    <span className="text-amber text-xs">◆</span>
+                    {f}
+                  </p>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="bg-surface-1 border border-border rounded-2xl p-8 space-y-4 hover:border-red-500/30 transition-colors"
+            >
+              <span className="text-4xl block">⚔️</span>
+              <div className="space-y-2">
+                <p className="font-display text-xl font-bold" style={{ color: '#C41E1E' }}>
+                  Duelo
+                </p>
+                <p className="text-sm text-muted-foreground font-body leading-relaxed">
+                  Invita a un antagonista. La rivalidad es el combustible. Cada hábito se convierte
+                  en un acto de guerra o de rendición ante los dioses.
+                </p>
+              </div>
+              <div className="space-y-1.5 pt-2">
+                {[
+                  'Hegemonía semanal entre agonistas',
+                  'Señalamiento y provocaciones',
+                  'Ciudad de Olimpia con facciones',
+                  'Crisis de Ciudad compartidas',
+                ].map((f) => (
+                  <p
+                    key={f}
+                    className="text-xs text-muted-foreground font-body flex items-center gap-2"
+                  >
+                    <span className="text-red-500/70 text-xs">◆</span>
+                    {f}
+                  </p>
+                ))}
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -477,8 +581,8 @@ export function LandingPage() {
               viewport={{ once: true }}
               className="text-muted-foreground font-body text-sm max-w-xl mx-auto"
             >
-              Siete dioses observan el Gran Agon. Cada uno interviene en su dominio, dejando sus
-              comentarios en el Ágora. Sus palabras no se piden — se ganan.
+              Siete dioses observan el Gran Agon — en solo o en duelo. Cada uno interviene en su
+              dominio, dejando sus palabras en el Ágora. No se piden. Se ganan.
             </motion.p>
           </div>
 
@@ -509,15 +613,23 @@ export function LandingPage() {
               <span className="text-amber">inscribir tu kleos?</span>
             </h2>
             <p className="text-muted-foreground font-body text-base">
-              El Gran Agon no espera. Cada día sin acción es un día que el Altis registra en
-              silencio.
+              El Gran Agon no espera. Elige tu modo, sella el Pacto Inicial, y que el Altis registre
+              cada acto.
             </p>
-            <Link
-              href="/sign-in"
-              className="inline-block px-10 py-5 bg-amber text-black font-display font-bold text-sm tracking-widest uppercase rounded-xl hover:bg-amber/90 transition-all duration-300 glow-amber hover:glow-amber-lg"
-            >
-              Entrar al Olimpo
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/sign-up"
+                className="inline-block px-10 py-5 bg-amber text-black font-display font-bold text-sm tracking-widest uppercase rounded-xl hover:bg-amber/90 transition-all duration-300 glow-amber hover:glow-amber-lg"
+              >
+                Comenzar ahora
+              </Link>
+              <Link
+                href="/sign-in"
+                className="inline-block px-10 py-5 border border-border text-muted-foreground font-display font-bold text-sm tracking-widest uppercase rounded-xl hover:border-amber/40 hover:text-foreground transition-all duration-300"
+              >
+                Ya tengo cuenta
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>

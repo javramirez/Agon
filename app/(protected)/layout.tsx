@@ -63,11 +63,12 @@ export default async function ProtectedLayout({
 
   void orquestarVozOlimpo(agonista.id, reto.id).catch(() => {})
   void verificarYActivarCrisis(
+    reto.id,
     reto.fechaInicio ?? '',
-    reto.fechaFin ?? ''
+    reto.modo === 'duelo' ? 'duelo' : 'solo'
   ).catch(() => {})
-  void resolverCrisisVencidas().catch(() => {})
-  void aplicarConsecuenciasDiferidas().catch(() => {})
+  void resolverCrisisVencidas(reto.id).catch(() => {})
+  void aplicarConsecuenciasDiferidas(reto.id).catch(() => {})
 
   // Procesos exclusivos de modo duelo
   if (reto.modo === 'duelo') {

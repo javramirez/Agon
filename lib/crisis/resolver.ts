@@ -19,6 +19,7 @@ import {
   crisisExpirada,
   type EscenarioCrisis,
 } from './calendario'
+import { getAmbosAgonistas } from '@/lib/db/queries'
 import type { FaccionId } from '@/lib/facciones/config'
 import { desbloquearInscripcion } from '@/lib/inscripciones/desbloquear'
 
@@ -672,35 +673,75 @@ async function resolverCrisisF(
 
 // ─── RESOLVER CRISIS PRINCIPAL ────────────────────────────────────────────────
 
-export async function resolverCrisisVencidas(): Promise<void> {
+export async function resolverCrisisVencidas(retoId: string): Promise<void> {
   try {
-    const activa = await getCrisisActiva()
+    const activa = await getCrisisActiva(retoId)
     if (!activa) return
 
     const { fila, config, agonista1Id, agonista2Id } = activa
+    const esSolo = agonista1Id === agonista2Id
 
     const d1 = fila.decisionAgonista1
     const d2 = fila.decisionAgonista2
     const expirada = crisisExpirada(fila)
     const ambasDecididas = d1 !== null && d2 !== null
+    const esPvP = (['D', 'H', 'F'] as const).some((m) =>
+      config.mecanicas.includes(m)
+    )
 
-    if (!expirada && !ambasDecididas) return
+    if (!expirada) {
+      if (esSolo) {
+        if (esPvP) {
+          if (!ambasDecididas) return
+        } else if (!config.mecanicas.includes('G')) {
+          if (d1 === null) return
+        }
+      } else {
+        if (!ambasDecididas) return
+      }
+    }
 
     if (config.mecanicas.includes('G')) {
       const t1 = fila.respuestaTextoAgonista1
       const t2 = fila.respuestaTextoAgonista2
-      if (!expirada && (!t1 || !t2)) return
+      if (!expirada) {
+        if (esSolo) {
+          if (!t1) return
+        } else if (!t1 || !t2) {
+          return
+        }
+      }
     }
 
     if (config.mecanicas.includes('H')) {
-      await resolverCrisisH(fila, config, agonista1Id, agonista2Id)
+      if (esSolo) {
+        const d = fila.decisionAgonista1
+        const consec =
+          d === 'A'
+            ? config.consecuenciaA
+            : (config.consecuenciaB ?? config.consecuenciaA)
+        if (d && consec) {
+          await aplicarConsecuencia(
+            agonista1Id,
+            fila.id,
+            fila.crisisId,
+            consec
+          )
+        }
+      } else {
+        await resolverCrisisH(fila, config, agonista1Id, agonista2Id)
+      }
     } else if (config.mecanicas.includes('D')) {
-      const escenario = determinarEscenario(fila, agonista1Id, agonista1Id)
-      if (escenario && escenario !== 'expiracion') {
-        await resolverCrisisD(fila, config, agonista1Id, agonista2Id, escenario)
+      if (!esSolo) {
+        const escenario = determinarEscenario(fila, agonista1Id, agonista1Id)
+        if (escenario && escenario !== 'expiracion') {
+          await resolverCrisisD(fila, config, agonista1Id, agonista2Id, escenario)
+        }
       }
     } else if (config.mecanicas.includes('F')) {
-      await resolverCrisisF(fila, config, agonista1Id, agonista2Id)
+      if (!esSolo) {
+        await resolverCrisisF(fila, config, agonista1Id, agonista2Id)
+      }
     } else {
       if (d1)
         await resolverCrisisIndividual(
@@ -710,7 +751,7 @@ export async function resolverCrisisVencidas(): Promise<void> {
           agonista1Id,
           d1
         )
-      if (d2)
+      if (d2 && !esSolo)
         await resolverCrisisIndividual(
           fila,
           config,
@@ -728,7 +769,9 @@ export async function resolverCrisisVencidas(): Promise<void> {
     const resolvedRows = await db
       .select({ id: crisisCiudad.id })
       .from(crisisCiudad)
-      .where(eq(crisisCiudad.resuelta, true))
+      .where(
+        and(eq(crisisCiudad.resuelta, true), eq(crisisCiudad.retoId, retoId))
+      )
     const totalResueltas = resolvedRows.length
 
     const [a1NombreRow, a2NombreRow] = await Promise.all([
@@ -740,11 +783,15 @@ export async function resolverCrisisVencidas(): Promise<void> {
 
     if (totalResueltas === 1) {
       void desbloquearInscripcion(agonista1Id, a1Nombre, 'el_forjado_en_crisis')
-      void desbloquearInscripcion(agonista2Id, a2Nombre, 'el_forjado_en_crisis')
+      if (!esSolo) {
+        void desbloquearInscripcion(agonista2Id, a2Nombre, 'el_forjado_en_crisis')
+      }
     }
     if (totalResueltas >= 4) {
       void desbloquearInscripcion(agonista1Id, a1Nombre, 'mision_imposible')
-      void desbloquearInscripcion(agonista2Id, a2Nombre, 'mision_imposible')
+      if (!esSolo) {
+        void desbloquearInscripcion(agonista2Id, a2Nombre, 'mision_imposible')
+      }
     }
 
     const tieneNotificacionesPropias =
@@ -759,12 +806,14 @@ export async function resolverCrisisVencidas(): Promise<void> {
         'La ciudad ha tomado su rumbo. El Altis lo inscribió.',
         fila.crisisId
       )
-      await notificarAgonista(
-        agonista2Id,
-        `⚡ Crisis resuelta: ${config.titulo}`,
-        'La ciudad ha tomado su rumbo. El Altis lo inscribió.',
-        fila.crisisId
-      )
+      if (!esSolo) {
+        await notificarAgonista(
+          agonista2Id,
+          `⚡ Crisis resuelta: ${config.titulo}`,
+          'La ciudad ha tomado su rumbo. El Altis lo inscribió.',
+          fila.crisisId
+        )
+      }
     }
   } catch (_error) {
     console.error('[resolverCrisisVencidas] Error:', _error)
@@ -773,7 +822,7 @@ export async function resolverCrisisVencidas(): Promise<void> {
 
 // ─── APLICAR CONSECUENCIAS DIFERIDAS (Tipo I) ─────────────────────────────────
 
-export async function aplicarConsecuenciasDiferidas(): Promise<void> {
+export async function aplicarConsecuenciasDiferidas(retoId: string): Promise<void> {
   try {
     const ahora = new Date()
 
@@ -783,9 +832,16 @@ export async function aplicarConsecuenciasDiferidas(): Promise<void> {
       .where(
         and(
           eq(crisisCiudad.resuelta, true),
-          eq(crisisCiudad.consecuenciaDiferidaAplicada, false)
+          eq(crisisCiudad.consecuenciaDiferidaAplicada, false),
+          eq(crisisCiudad.retoId, retoId)
         )
       )
+
+    const ambos = await getAmbosAgonistas(retoId)
+    if (ambos.length < 1) return
+
+    const agonista1Id = ambos[0]!.id
+    const agonista2Id = ambos[1]?.id ?? ambos[0]!.id
 
     for (const fila of crisisResueltas) {
       if (!fila.consecuenciaDiferidaFecha) continue
@@ -793,12 +849,6 @@ export async function aplicarConsecuenciasDiferidas(): Promise<void> {
 
       const config = getCrisis(fila.crisisId)
       if (!config) continue
-
-      const ambos = await db.select({ id: agonistas.id }).from(agonistas).limit(2)
-      if (ambos.length < 2) continue
-
-      const agonista1Id = ambos[0].id
-      const agonista2Id = ambos[1].id
 
       for (const { id: agonistId } of ambos) {
         const decision =
