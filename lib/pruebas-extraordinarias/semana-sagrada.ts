@@ -1,17 +1,23 @@
 import { db } from '@/lib/db'
-import { semanaSagrada, agoraEventos, calendarioAgan } from '@/lib/db/schema'
+import { semanaSagrada, agoraEventos } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { getAmbosAgonistas, getSemanaActual } from '@/lib/db/queries'
+import { getAmbosAgonistas, getSemanaActual, getSemanaRango } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
-import { format, addDays, parseISO } from 'date-fns'
+import { format } from 'date-fns'
+import { getCalendario } from '@/lib/pruebas-extraordinarias/calendario'
 
-export async function verificarYActivarSemanaSagrada(): Promise<boolean> {
-  const calendario = await db.select().from(calendarioAgan).limit(1)
+export async function verificarYActivarSemanaSagrada(
+  retoId: string,
+  fechaInicio: string
+): Promise<boolean> {
+  const calendarioRow = await getCalendario(retoId)
 
-  if (calendario.length === 0) return false
+  if (!calendarioRow) return false
 
-  const semanaSorteada = calendario[0].semanaSagradaSemana
-  const semanaActual = getSemanaActual()
+  if (!fechaInicio) return false
+
+  const semanaSorteada = calendarioRow.semanaSagradaSemana
+  const semanaActual = getSemanaActual(fechaInicio)
 
   if (semanaActual !== semanaSorteada) return false
 
@@ -23,22 +29,18 @@ export async function verificarYActivarSemanaSagrada(): Promise<boolean> {
 
   if (yaActiva.length > 0) return false
 
-  const start = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!start) return false
-
   const hoy = new Date()
-  const inicio = parseISO(start)
-  const finSemana = addDays(inicio, semanaActual * 7 - 1)
+  const { finSemana } = getSemanaRango(semanaActual, fechaInicio)
 
   await db.insert(semanaSagrada).values({
     id: crypto.randomUUID(),
     activa: true,
     fechaInicio: format(hoy, 'yyyy-MM-dd'),
-    fechaFin: format(finSemana, 'yyyy-MM-dd'),
+    fechaFin: finSemana,
     activadaEn: hoy,
   })
 
-  const ambos = await getAmbosAgonistas()
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length > 0) {
     const eventoId = crypto.randomUUID()
     await db.insert(agoraEventos).values({

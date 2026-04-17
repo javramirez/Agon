@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { getCurrentAgonista } from '@/lib/auth'
+import { getRetoPorId } from '@/lib/db/queries'
 import { NIVEL_LABELS, NIVEL_ICONOS } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
 import { UserButton } from '@clerk/nextjs'
@@ -21,12 +22,13 @@ const NAV_MAIN: NavMainLink[] = [
 const navMainIconClass = 'shrink-0 opacity-80'
 
 export async function Navbar() {
-  await auth()
+  const { userId } = await auth()
   const agonista = await getCurrentAgonista()
   if (!agonista) return null
 
-  // TODO PROMPT-01: admin ligado a CLERK_JAVIER_USER_ID eliminado (PROMPT 03)
-  const isAdmin = false
+  const reto = agonista.retoId ? await getRetoPorId(agonista.retoId) : null
+  const modo = (reto?.modo === 'duelo' ? 'duelo' : 'solo') as 'solo' | 'duelo'
+  const isAdmin = userId === process.env.ADMIN_CLERK_ID
   const nivel = agonista.nivel as NivelKey
   const nivelLabel = NIVEL_LABELS[nivel]
   const NivelIcono = NIVEL_ICONOS[nivel]
@@ -56,8 +58,8 @@ export async function Navbar() {
               </Link>
             )
           })}
-          <NavCiudadDropdown />
-          <NavAgonistaDropdown isAdmin={Boolean(isAdmin)} />
+          <NavCiudadDropdown modo={modo} />
+          <NavAgonistaDropdown isAdmin={Boolean(isAdmin)} modo={modo} />
         </div>
 
         {/* Kleos badge + UserButton */}

@@ -2,6 +2,9 @@ import { db } from '@/lib/db'
 import { calendarioCrisis, crisisCiudad, agonistas } from '@/lib/db/schema'
 import { CRISIS_POOL, getCrisis, type CrisisConfig } from './config'
 import { eq } from 'drizzle-orm'
+import { differenceInDays, parseISO, startOfDay } from 'date-fns'
+import { isGranAgonActivo } from '@/lib/utils'
+import { getAmbosAgonistas } from '@/lib/db/queries'
 
 // ─── SORTEO DEL CALENDARIO ───────────────────────────────────────────────────
 
@@ -43,23 +46,16 @@ export async function getCalendarioCrisis() {
 
 // ─── CÁLCULO DE DÍA Y SEMANA ACTUAL ──────────────────────────────────────────
 
-export function getDiaActualReto(): number {
-  const startDate = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!startDate) return 0
-
-  const inicio = new Date(startDate)
-  inicio.setHours(0, 0, 0, 0)
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
-
-  const diff = Math.floor(
-    (hoy.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)
-  )
-  return diff + 1 // día 1 = primer día del reto
+export function getDiaActualReto(fechaInicio: string): number {
+  if (!fechaInicio) return 0
+  const inicio = startOfDay(parseISO(fechaInicio))
+  const hoy = startOfDay(new Date())
+  return Math.max(0, differenceInDays(hoy, inicio) + 1)
 }
 
-export function getSemanaActualReto(): number {
-  const dia = getDiaActualReto()
+export function getSemanaActualReto(fechaInicio: string): number {
+  const dia = getDiaActualReto(fechaInicio)
+  if (dia <= 0) return 0
   return Math.ceil(dia / 7)
 }
 
@@ -67,19 +63,15 @@ export function getSemanaActualReto(): number {
 // Llamado en login — fire-and-forget
 // Activa la crisis de la semana actual si no existe aún
 
-export async function verificarYActivarCrisis(): Promise<void> {
+export async function verificarYActivarCrisis(
+  fechaInicio: string,
+  fechaFin: string
+): Promise<void> {
   try {
-    const startDate = process.env.NEXT_PUBLIC_AGON_START_DATE
-    const endDate = process.env.NEXT_PUBLIC_AGON_END_DATE
-    if (!startDate || !endDate) return
+    if (!fechaInicio || !fechaFin) return
+    if (!isGranAgonActivo(fechaInicio, fechaFin)) return
 
-    // Verificar que el reto está activo
     const hoy = new Date()
-    const inicio = new Date(startDate)
-    const fin = new Date(endDate)
-    inicio.setHours(0, 0, 0, 0)
-    fin.setHours(23, 59, 59, 999)
-    if (hoy < inicio || hoy > fin) return
 
     // Generar calendario si no existe
     await generarCalendarioCrisis()
@@ -87,8 +79,9 @@ export async function verificarYActivarCrisis(): Promise<void> {
     const calendario = await getCalendarioCrisis()
     if (!calendario) return
 
-    const semanaActual = getSemanaActualReto()
-    const diaActual = getDiaActualReto()
+    const semanaActual = getSemanaActualReto(fechaInicio)
+    const diaActual = getDiaActualReto(fechaInicio)
+    if (diaActual <= 0 || semanaActual <= 0) return
 
     // La crisis se activa el día 7 de cada semana (último día)
     // Semana 1 → día 7, Semana 2 → día 14, etc.
@@ -140,7 +133,9 @@ export interface CrisisActivaConConfig {
   agonista2Id: string
 }
 
-export async function getCrisisActiva(): Promise<CrisisActivaConConfig | null> {
+export async function getCrisisActiva(
+  retoId?: string | null
+): Promise<CrisisActivaConConfig | null> {
   // Buscar crisis no resuelta
   const filas = await db
     .select()
@@ -154,16 +149,26 @@ export async function getCrisisActiva(): Promise<CrisisActivaConConfig | null> {
   const config = getCrisis(fila.crisisId)
   if (!config) return null
 
-  // Obtener IDs de los dos agonistas en orden consistente
-  const ambos = await db.select({ id: agonistas.id }).from(agonistas).limit(2)
+  let agonista1Id: string
+  let agonista2Id: string
 
-  if (ambos.length < 2) return null
+  if (retoId) {
+    const ambos = await getAmbosAgonistas(retoId)
+    if (ambos.length < 2) return null
+    agonista1Id = ambos[0]!.id
+    agonista2Id = ambos[1]!.id
+  } else {
+    const ambos = await db.select({ id: agonistas.id }).from(agonistas).limit(2)
+    if (ambos.length < 2) return null
+    agonista1Id = ambos[0]!.id
+    agonista2Id = ambos[1]!.id
+  }
 
   return {
     fila,
     config,
-    agonista1Id: ambos[0].id,
-    agonista2Id: ambos[1].id,
+    agonista1Id,
+    agonista2Id,
   }
 }
 

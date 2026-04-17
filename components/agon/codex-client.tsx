@@ -13,7 +13,7 @@ import {
   LORE_FACCIONES,
   type EntradaLore,
 } from '@/lib/codex/lore'
-import { cn } from '@/lib/utils'
+import { cn, getDiaDelRetoRelativo } from '@/lib/utils'
 import type { Inscripcion, AgoraEvento, PactoInicial, Cronica } from '@/lib/db/schema'
 
 type TabKey =
@@ -33,6 +33,8 @@ interface Props {
   pacto: PactoInicial | null
   bitacora: AgoraEvento[]
   cronicas: Cronica[]
+  /** Inicio del reto (YYYY-MM-DD) para etiquetar días del Agon en la bitácora. */
+  fechaInicioReto: string | null
 }
 
 const TABS: { key: TabKey; label: string; personal?: boolean }[] = [
@@ -1013,9 +1015,11 @@ function PlaceholderEvento({
 function PanelBitacora({
   evento,
   onCerrar,
+  fechaInicioReto,
 }: {
   evento: AgoraEvento
   onCerrar: () => void
+  fechaInicioReto: string | null
 }) {
   const config = EVENTO_CONFIG[evento.tipo] ?? DEFAULT_EVENTO_CONFIG
 
@@ -1073,15 +1077,14 @@ function PanelBitacora({
     setMontado(true)
   }, [])
 
-  const startRaw = process.env.NEXT_PUBLIC_AGON_START_DATE ?? ''
   const diaAgonNum =
-    startRaw.trim().length > 0
-      ? Math.ceil(
-          (fecha.getTime() - new Date(startRaw).getTime()) / (1000 * 60 * 60 * 24)
-        )
+    fechaInicioReto && fechaInicioReto.trim().length > 0
+      ? getDiaDelRetoRelativo(fechaInicioReto, fecha)
       : null
   const diaAgonLabel =
-    diaAgonNum != null && Number.isFinite(diaAgonNum) ? `Día ${diaAgonNum} del Agon` : null
+    diaAgonNum != null && Number.isFinite(diaAgonNum)
+      ? `Día ${diaAgonNum} del Agon`
+      : null
 
   const contenidoPanel = (
     <div className="flex flex-col h-full relative min-h-0">
@@ -1245,7 +1248,13 @@ function PanelBitacora({
   )
 }
 
-function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
+function SeccionBitacora({
+  bitacora,
+  fechaInicioReto,
+}: {
+  bitacora: AgoraEvento[]
+  fechaInicioReto: string | null
+}) {
   const [eventoActivo, setEventoActivo] = useState<AgoraEvento | null>(null)
   const [tooltipActivo, setTooltipActivo] = useState<string | null>(null)
 
@@ -1469,6 +1478,7 @@ function SeccionBitacora({ bitacora }: { bitacora: AgoraEvento[] }) {
           <PanelBitacora
             evento={eventoActivo}
             onCerrar={() => setEventoActivo(null)}
+            fechaInicioReto={fechaInicioReto}
           />
         )}
       </AnimatePresence>
@@ -1559,6 +1569,7 @@ export function CodexClient({
   pacto,
   bitacora,
   cronicas: cronicasProp,
+  fechaInicioReto,
 }: Props) {
   const searchParams = useSearchParams()
   const [tab, setTab] = useState<TabKey>(() => parseTab(searchParams.get('seccion')))
@@ -1636,7 +1647,12 @@ export function CodexClient({
           {tab === 'inscripciones' && <SeccionInscripciones />}
           {tab === 'cronicas' && <SeccionCronicas cronicas={cronicasProp} />}
           {tab === 'contrato' && <SeccionContrato pacto={pacto} mentorAsignado={mentorAsignado} />}
-          {tab === 'bitacora' && <SeccionBitacora bitacora={bitacora} />}
+          {tab === 'bitacora' && (
+            <SeccionBitacora
+              bitacora={bitacora}
+              fechaInicioReto={fechaInicioReto}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
     </div>

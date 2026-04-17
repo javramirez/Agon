@@ -319,7 +319,13 @@ export async function POST(req: Request) {
       cambioNivel.nivelNuevo,
       NIVEL_LABELS[nk] ?? cambioNivel.nivelNuevo
     ).catch(() => {})
-    void verificarEspejoDelAgan(agonistaNuevo.id, cambioNivel.nivelNuevo).catch(() => {})
+    if (agonistaNuevo.retoId) {
+      void verificarEspejoDelAgan(
+        agonistaNuevo.id,
+        cambioNivel.nivelNuevo,
+        agonistaNuevo.retoId
+      ).catch(() => {})
+    }
   }
 
   // Notificar al antagonista que completaste una prueba
@@ -351,28 +357,32 @@ export async function POST(req: Request) {
     .limit(1)
   const pruebaDef = pruebaDefRows[0]
 
-  void getAmbosAgonistas()
-    .then((ambos) => {
-      const antagonistaOtro = ambos.find((a) => a.id !== agonistaNuevo.id)
-      return Promise.all([
-        verificarGemelosDelAgan(hoy),
-        verificarPiedraDelAgan(hoy),
-        verificarEasterEggsDuales(agonistaNuevo.id, hoy),
-        verificarRemontada(
-          agonistaNuevo.id,
-          agonistaNuevo.nombre,
-          agonistaNuevo.kleosTotal,
-          antagonistaOtro?.kleosTotal ?? 0
-        ),
-        verificarAtrapalosATodos(agonistaNuevo.id, agonistaNuevo.nombre),
-        verificarEspeciaDebeFluir(
-          agonistaNuevo.id,
-          cambioNivel?.nivelNuevo ?? '',
-          agonistaNuevo.nombre
-        ),
-      ])
-    })
-    .catch(() => {})
+  if (agonistaNuevo.retoId) {
+    const rid = agonistaNuevo.retoId
+    void getAmbosAgonistas(rid)
+      .then((ambos) => {
+        const antagonistaOtro = ambos.find((a) => a.id !== agonistaNuevo.id)
+        return Promise.all([
+          verificarGemelosDelAgan(hoy, rid),
+          verificarPiedraDelAgan(hoy, rid),
+          verificarEasterEggsDuales(agonistaNuevo.id, hoy, rid),
+          verificarRemontada(
+            agonistaNuevo.id,
+            agonistaNuevo.nombre,
+            agonistaNuevo.kleosTotal,
+            antagonistaOtro?.kleosTotal ?? 0,
+            rid
+          ),
+          verificarAtrapalosATodos(agonistaNuevo.id, agonistaNuevo.nombre),
+          verificarEspeciaDebeFluir(
+            agonistaNuevo.id,
+            cambioNivel?.nivelNuevo ?? '',
+            agonistaNuevo.nombre
+          ),
+        ])
+      })
+      .catch(() => {})
+  }
 
   return NextResponse.json({
     ok: true,

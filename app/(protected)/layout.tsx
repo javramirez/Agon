@@ -15,7 +15,9 @@ import {
   aplicarConsecuenciasDiferidas,
 } from '@/lib/crisis/resolver'
 import { consultaDisponible } from '@/lib/consulta-mediodia/config'
+import { activarRetosListos } from '@/lib/retos/activar'
 import { CrisisTrigger } from '@/components/agon/crisis-trigger'
+import { InactivityLogout } from '@/components/agon/inactivity-logout'
 import { Navbar } from '@/components/layout/navbar'
 import { MobileNav } from '@/components/layout/mobile-nav'
 
@@ -35,6 +37,7 @@ export default async function ProtectedLayout({
   // Con agonista pero sin reto asignado
   if (!agonista.retoId) redirect('/seleccionar-modo')
 
+  await activarRetosListos().catch(() => {})
   const reto = await getRetoPorId(agonista.retoId)
   if (!reto) redirect('/seleccionar-modo')
 
@@ -58,8 +61,11 @@ export default async function ProtectedLayout({
 
   // ── Reto activo — procesos fire-and-forget ──────────────────
 
-  void orquestarVozOlimpo(agonista.id).catch(() => {})
-  void verificarYActivarCrisis().catch(() => {})
+  void orquestarVozOlimpo(agonista.id, reto.id).catch(() => {})
+  void verificarYActivarCrisis(
+    reto.fechaInicio ?? '',
+    reto.fechaFin ?? ''
+  ).catch(() => {})
   void resolverCrisisVencidas().catch(() => {})
   void aplicarConsecuenciasDiferidas().catch(() => {})
 
@@ -68,7 +74,7 @@ export default async function ProtectedLayout({
     if (agonista.senalamiento_recibido) {
       void procesarSenalamientoPendiente(agonista.id)
     }
-    void detectarEventosRivalidad(agonista.id).catch(() => {})
+    void detectarEventosRivalidad(agonista.id, agonista.retoId).catch(() => {})
     void resolverDisputasVencidas().catch(() => {})
   }
 
@@ -95,12 +101,16 @@ export default async function ProtectedLayout({
 
   return (
     <div className="min-h-screen bg-background">
+      <InactivityLogout />
       <Navbar />
       <CrisisTrigger />
       <main className="max-w-4xl mx-auto px-4 pt-20 pb-28 sm:pb-10">
         {children}
       </main>
-      <MobileNav isAdmin={Boolean(isAdmin)} />
+      <MobileNav
+        isAdmin={Boolean(isAdmin)}
+        modo={reto.modo === 'duelo' ? 'duelo' : 'solo'}
+      />
     </div>
   )
 }

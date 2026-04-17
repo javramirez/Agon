@@ -6,6 +6,7 @@ import {
   getAgonistaByClerkId,
   getAntagonistaPorReto,
 } from '@/lib/db/queries'
+import { esSolo } from '@/lib/retos/guards'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { notificarProvocacion } from '@/lib/notificaciones/crear'
 import { PROVOCACIONES } from '@/lib/db/constants'
@@ -30,6 +31,12 @@ export async function POST(req: Request) {
   const agonista = await getAgonistaByClerkId(userId)
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  if (await esSolo(agonista.retoId)) {
+    return NextResponse.json(
+      { error: 'Las Provocaciones no están disponibles en modo solo' },
+      { status: 400 }
+    )
   }
 
   if (!NIVELES_PROVOCAR.includes(agonista.nivel as (typeof NIVELES_PROVOCAR)[number])) {

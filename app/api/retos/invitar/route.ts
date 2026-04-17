@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
   try {
     await resend.emails.send({
-      from: 'AGON <noreply@agon-psi.vercel.app>',
+      from: 'AGON <onboarding@resend.dev>',
       to: emailRival.trim(),
       subject: `${agonista.nombre} te desafía al Gran Agon`,
       html: `

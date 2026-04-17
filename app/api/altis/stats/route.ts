@@ -8,6 +8,7 @@ import {
   getAntagonistaPorReto,
   getStatsCompletos,
 } from '@/lib/db/queries'
+import { esSolo } from '@/lib/retos/guards'
 import { differenceInDays, parseISO } from 'date-fns'
 import type { PruebaDiaria } from '@/lib/db/schema'
 
@@ -18,6 +19,41 @@ export async function GET() {
   const agonista = await getAgonistaByClerkId(userId)
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  if (await esSolo(agonista.retoId)) {
+    const [pruebas1, kleos1, statsPropio] = await Promise.all([
+      db
+        .select()
+        .from(pruebasDiarias)
+        .where(eq(pruebasDiarias.agonistId, agonista.id))
+        .orderBy(asc(pruebasDiarias.fecha)),
+      db
+        .select()
+        .from(kleosLog)
+        .where(eq(kleosLog.agonistId, agonista.id))
+        .orderBy(asc(kleosLog.fecha), asc(kleosLog.createdAt)),
+      getStatsCompletos(agonista.id),
+    ])
+    const nombre1 = agonista.nombre
+    const nombre2 = '—'
+    return NextResponse.json({
+      esSolo: true,
+      statsAntagonista: null,
+      heatmap: generarHeatmap(pruebas1, [], nombre1, nombre2),
+      comparativaHabitos: generarComparativaHabitos(
+        pruebas1,
+        [],
+        nombre1,
+        nombre2
+      ),
+      evolucionKleos: generarEvolucionKleos(kleos1, [], nombre1, nombre2),
+      mejoresDias: generarMejoresDias(pruebas1, [], nombre1, nombre2),
+      rachaMaxima: {
+        propio: calcularMejorRachaPerfectos(pruebas1),
+        antagonista: 0,
+      },
+      statsPropio,
+    })
   }
   const antagonista = agonista.retoId
     ? await getAntagonistaPorReto(agonista.retoId, agonista.id)

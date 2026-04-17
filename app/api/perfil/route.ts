@@ -9,7 +9,7 @@ import {
   hegemonias,
 } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
-import { getAgonistaByClerkId } from '@/lib/db/queries'
+import { getAgonistaByClerkId, getRetoPorId } from '@/lib/db/queries'
 import { NIVEL_THRESHOLDS } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
 import type { PruebaDiaria } from '@/lib/db/schema'
@@ -24,32 +24,40 @@ export async function GET() {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
   }
 
-  const [
-    todasLasPruebas,
-    todasLasLlamas,
-    todasLasInscripciones,
-    kleosHistorial,
-    todasHegemonias,
-  ] = await Promise.all([
-    db
-      .select()
-      .from(pruebasDiarias)
-      .where(eq(pruebasDiarias.agonistId, agonista.id)),
-    db.select().from(llamas).where(eq(llamas.agonistId, agonista.id)),
-    db
-      .select()
-      .from(inscripciones)
-      .where(eq(inscripciones.agonistId, agonista.id)),
-    db
-      .select()
-      .from(kleosLogTable)
-      .where(eq(kleosLogTable.agonistId, agonista.id))
-      .orderBy(desc(kleosLogTable.fecha))
-      .limit(100),
-    db.select().from(hegemonias),
-  ])
+  const reto =
+    agonista.retoId != null ? await getRetoPorId(agonista.retoId) : null
+  const fechaInicioReto = reto?.fechaInicio ?? null
 
-  const kleosPorSemana = calcularKleosPorSemana(kleosHistorial)
+  const [todasLasPruebas, todasLasLlamas, todasLasInscripciones, kleosHistorial] =
+    await Promise.all([
+      db
+        .select()
+        .from(pruebasDiarias)
+        .where(eq(pruebasDiarias.agonistId, agonista.id)),
+      db.select().from(llamas).where(eq(llamas.agonistId, agonista.id)),
+      db
+        .select()
+        .from(inscripciones)
+        .where(eq(inscripciones.agonistId, agonista.id)),
+      db
+        .select()
+        .from(kleosLogTable)
+        .where(eq(kleosLogTable.agonistId, agonista.id))
+        .orderBy(desc(kleosLogTable.fecha))
+        .limit(100),
+    ])
+
+  const todasHegemonias = agonista.retoId
+    ? await db
+        .select()
+        .from(hegemonias)
+        .where(eq(hegemonias.retoId, agonista.retoId))
+    : []
+
+  const kleosPorSemana = calcularKleosPorSemana(
+    kleosHistorial,
+    fechaInicioReto
+  )
   const habitoMasCumplido = calcularHabitoMasCumplido(todasLasPruebas)
   const habitoMasFallado = calcularHabitoMasFallado(todasLasPruebas)
   const mejorRacha = Math.max(0, ...todasLasLlamas.map((l) => l.rachMaxima))
@@ -87,8 +95,9 @@ export async function GET() {
   })
 }
 
-function calcularKleosPorSemana(log: KleosLogRow[]) {
-  const inicioStr = process.env.NEXT_PUBLIC_AGON_START_DATE ?? '2026-04-06'
+function calcularKleosPorSemana(log: KleosLogRow[], fechaInicioReto: string | null) {
+  if (!fechaInicioReto) return []
+  const inicioStr = fechaInicioReto
   const inicio = new Date(inicioStr + 'T12:00:00.000Z')
   const porSemana: Record<string, number> = {}
 

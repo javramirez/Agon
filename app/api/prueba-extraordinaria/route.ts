@@ -1,4 +1,3 @@
-// TODO PROMPT-01: columnas completadaPorJavier/Matias eliminadas del schema; tracking por kleos_log (motivo prueba_extraordinaria_row:*) hasta PROMPT 14
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
@@ -14,6 +13,7 @@ import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-
 import {
   getAgonistaByClerkId,
   getSemanaActual,
+  getRetoPorId,
 } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { desbloquearInscripcion } from '@/lib/inscripciones/desbloquear'
@@ -22,7 +22,7 @@ import { TODAS_PRUEBAS_EXTRAORDINARIAS } from '@/lib/db/constants'
 const MAX_TRIPTICO_SEMANA = 2
 const MAX_DESTINO_SEMANA = 3
 
-/** Completación por agonista tras PROMPT-01 (columnas completada_por_* eliminadas). PROMPT 14: modelo por agonista_id. */
+/** Completación por agonista vía kleos_log (motivo `prueba_extraordinaria_row` + id de fila). */
 function motivoCompletacionFila(filaId: string) {
   return `prueba_extraordinaria_row:${filaId}`
 }
@@ -60,8 +60,22 @@ export async function GET() {
     })
   }
 
+  if (!agonista.retoId) {
+    return NextResponse.json({
+      triptico: {
+        disponibles: [] as unknown[],
+        completadasEstaSemana: 0,
+        maxSemana: MAX_TRIPTICO_SEMANA,
+      },
+      destino: { disponibles: [] as unknown[] },
+    })
+  }
+
   const ahora = new Date()
-  const semana = getSemanaActual()
+  const reto = await getRetoPorId(agonista.retoId)
+  const fechaInicio =
+    reto?.fechaInicio ?? new Date().toISOString().split('T')[0]!
+  const semana = getSemanaActual(fechaInicio)
 
   const activas = await db
     .select()
@@ -69,7 +83,8 @@ export async function GET() {
     .where(
       and(
         eq(pruebaExtraordinaria.activa, true),
-        gte(pruebaExtraordinaria.fechaExpira, ahora)
+        gte(pruebaExtraordinaria.fechaExpira, ahora),
+        eq(pruebaExtraordinaria.retoId, agonista.retoId)
       )
     )
 
@@ -120,9 +135,15 @@ export async function POST(req: Request) {
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
   }
+  if (!agonista.retoId) {
+    return NextResponse.json({ error: 'Sin reto asignado.' }, { status: 400 })
+  }
   const { pruebaId: filaId } = (await req.json()) as { pruebaId: string }
   const hoy = new Date().toISOString().split('T')[0]
-  const semana = getSemanaActual()
+  const reto = await getRetoPorId(agonista.retoId)
+  const fechaInicio =
+    reto?.fechaInicio ?? new Date().toISOString().split('T')[0]!
+  const semana = getSemanaActual(fechaInicio)
 
   if (!filaId) {
     return NextResponse.json({ error: 'Falta pruebaId.' }, { status: 400 })
@@ -140,6 +161,10 @@ export async function POST(req: Request) {
 
   const p = pruebaRows[0]
 
+  if (p.retoId !== agonista.retoId) {
+    return NextResponse.json({ error: 'Prueba no pertenece a tu reto.' }, { status: 403 })
+  }
+
   if (new Date(p.fechaExpira) < new Date()) {
     return NextResponse.json({ error: 'Esta prueba ya expiró.' }, { status: 400 })
   }
@@ -155,7 +180,8 @@ export async function POST(req: Request) {
       .where(
         and(
           eq(pruebaExtraordinaria.tipo, 'triptico'),
-          eq(pruebaExtraordinaria.semana, semana)
+          eq(pruebaExtraordinaria.semana, semana),
+          eq(pruebaExtraordinaria.retoId, agonista.retoId)
         )
       )
 
@@ -182,7 +208,8 @@ export async function POST(req: Request) {
       .where(
         and(
           eq(pruebaExtraordinaria.tipo, 'destino'),
-          eq(pruebaExtraordinaria.semana, semana)
+          eq(pruebaExtraordinaria.semana, semana),
+          eq(pruebaExtraordinaria.retoId, agonista.retoId)
         )
       )
 

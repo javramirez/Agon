@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { getCurrentAgonista } from '@/lib/auth'
+import { getRetoPorId } from '@/lib/db/queries'
 import { db } from '@/lib/db'
 import { pactoInicial, agoraEventos, cronicas } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -25,6 +26,9 @@ export default async function CodexPage() {
 
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
+
+  const reto =
+    agonista.retoId != null ? await getRetoPorId(agonista.retoId) : null
 
   const [pactoRows, bitacoraRows, cronicasRows] = await Promise.all([
     db.select().from(pactoInicial).where(eq(pactoInicial.agonistId, agonista.id)).limit(1),
@@ -60,6 +64,7 @@ export default async function CodexPage() {
           pacto={pactoRows[0] ?? null}
           bitacora={bitacora}
           cronicas={cronicasRows}
+          fechaInicioReto={reto?.fechaInicio ?? null}
         />
       </Suspense>
     </div>

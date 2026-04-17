@@ -7,6 +7,7 @@ import {
   getAgonistaByClerkId,
   getAntagonistaPorReto,
 } from '@/lib/db/queries'
+import { esSolo } from '@/lib/retos/guards'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { notificarSenalamiento } from '@/lib/notificaciones/crear'
 
@@ -26,6 +27,14 @@ export async function GET() {
   const agonista = await getAgonistaByClerkId(userId)
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  if (await esSolo(agonista.retoId)) {
+    return NextResponse.json({
+      usado: false,
+      recibido: false,
+      senalamiento: null,
+      senalamientoRecibido: null,
+    })
   }
 
   const comoSenalador = await db
@@ -55,6 +64,12 @@ export async function POST() {
   const agonista = await getAgonistaByClerkId(userId)
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  if (await esSolo(agonista.retoId)) {
+    return NextResponse.json(
+      { error: 'El Señalamiento no está disponible en modo solo' },
+      { status: 400 }
+    )
   }
 
   if (

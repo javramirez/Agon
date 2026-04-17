@@ -10,6 +10,8 @@ interface Props {
   pruebasCompletadas: number
   nombreAntagonista: string
   pruebasAntagonista: number
+  /** Si es false (modo solo), no se muestra el bloque del antagonista. */
+  esDuelo?: boolean
   onCerrar: () => void
 }
 
@@ -18,6 +20,7 @@ export function CierreDramatico({
   pruebasCompletadas,
   nombreAntagonista,
   pruebasAntagonista,
+  esDuelo = true,
   onCerrar,
 }: Props) {
   const { mostrar, minutosRestantes, cerrarIgual } = useCierreDramatico(diaPerfecto)
@@ -72,26 +75,28 @@ export function CierreDramatico({
           )}
         </div>
 
-        <div className="bg-surface-1 rounded-lg border border-border p-4">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-body text-muted-foreground">
-              {nombreAntagonista}
-            </span>
-            <span
-              className={cn(
-                'text-sm font-body font-semibold',
-                antagonistaYaTermino ? 'text-amber' : 'text-muted-foreground'
-              )}
-            >
-              {pruebasAntagonista}/7
-            </span>
+        {esDuelo && (
+          <div className="bg-surface-1 rounded-lg border border-border p-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-body text-muted-foreground">
+                {nombreAntagonista}
+              </span>
+              <span
+                className={cn(
+                  'text-sm font-body font-semibold',
+                  antagonistaYaTermino ? 'text-amber' : 'text-muted-foreground'
+                )}
+              >
+                {pruebasAntagonista}/7
+              </span>
+            </div>
+            {antagonistaYaTermino && (
+              <p className="text-xs text-muted-foreground font-body mt-1">
+                Tu antagonista ya cerró su agon. Hace rato.
+              </p>
+            )}
           </div>
-          {antagonistaYaTermino && (
-            <p className="text-xs text-muted-foreground font-body mt-1">
-              Tu antagonista ya cerró su agon. Hace rato.
-            </p>
-          )}
-        </div>
+        )}
       </div>
 
       <div className="w-full max-w-sm space-y-3">

@@ -9,6 +9,7 @@ import {
   consultaMediodia,
 } from '@/lib/db/schema'
 import { eq, desc, and, gte } from 'drizzle-orm'
+import { getRetoPorId } from '@/lib/db/queries'
 
 export interface SeñalDetectada {
   dios: string
@@ -31,17 +32,41 @@ export interface DatosPruebas {
   fecha: string
 }
 
-export type ContextoVozOlimpo = Awaited<ReturnType<typeof recopilarContexto>>
+export type ContextoVozOlimpo = Awaited<
+  ReturnType<typeof recopilarContexto>
+>
+
+function fechaRetoAString(fecha: string | Date): string {
+  return typeof fecha === 'string' ? fecha : fecha.toISOString().slice(0, 10)
+}
 
 // ─── Recopilación de contexto ────────────────────────────────────────────────
 
-export async function recopilarContexto(agonistId: string) {
+export async function recopilarContexto(
+  agonistId: string,
+  fechaInicioReto?: string
+) {
   const hace7Dias = new Date()
   hace7Dias.setDate(hace7Dias.getDate() - 7)
   const fechaSieteAtras = hace7Dias.toISOString().split('T')[0]!
 
-  const startDate = process.env.NEXT_PUBLIC_AGON_START_DATE ?? fechaSieteAtras
-  const fechaMin = fechaSieteAtras > startDate ? fechaSieteAtras : startDate
+  const agonistaR = await db
+    .select({ retoId: agonistas.retoId })
+    .from(agonistas)
+    .where(eq(agonistas.id, agonistId))
+    .limit(1)
+
+  let inicioEfectivo: string | null = fechaInicioReto ?? null
+  if (!inicioEfectivo && agonistaR[0]?.retoId) {
+    const reto = await getRetoPorId(agonistaR[0].retoId)
+    if (reto?.fechaInicio) {
+      inicioEfectivo = fechaRetoAString(reto.fechaInicio as string | Date)
+    }
+  }
+
+  const startDate = inicioEfectivo ?? fechaSieteAtras
+  const fechaMin =
+    fechaSieteAtras > startDate ? fechaSieteAtras : startDate
 
   const [
     ultimasPruebas,
@@ -430,9 +455,22 @@ const DOMINIO_A_SEÑAL: Record<
   },
 }
 
+const LINEAS_DOMINIO_MENTOR: Record<string, string> = {
+  sueno: '- sueno (problemas para dormir, cansancio, recuperación)',
+  cansancio: '- cansancio (agotamiento, burnout, sobrecarga)',
+  lectura: '- lectura (no leer, dificultad para concentrarse)',
+  motivacion: '- motivacion (duda, ganas de rendirse, sin energía)',
+  movimiento: '- movimiento (sedentarismo, no caminar, pasos bajos)',
+  entrenamiento:
+    '- entrenamiento (no ir al gym, lesión, parón físico)',
+  rivalidad:
+    '- rivalidad (preocupación por el rival, sentirse atrás)',
+}
+
 async function detectarSeñalMentor(
   mensajes: string[],
-  consulta: { elSacrificio: string; elMomento: string; queHaCambiado: string } | null
+  consulta: { elSacrificio: string; elMomento: string; queHaCambiado: string } | null,
+  esSolo = false
 ): Promise<SeñalDetectada | null> {
   if (mensajes.length === 0) return null
 
@@ -442,6 +480,15 @@ async function detectarSeñalMentor(
   const anthropic = new Anthropic({ apiKey })
   const textoConversaciones = mensajes
     .map((m, i) => `Mensaje ${i + 1}: "${m}"`)
+    .join('\n')
+
+  const dominiosValidos = esSolo
+    ? Object.keys(DOMINIO_A_SEÑAL).filter((d) => d !== 'rivalidad')
+    : Object.keys(DOMINIO_A_SEÑAL)
+
+  const listaDominios = dominiosValidos
+    .map((d) => LINEAS_DOMINIO_MENTOR[d])
+    .filter(Boolean)
     .join('\n')
 
   try {
@@ -456,13 +503,7 @@ async function detectarSeñalMentor(
 ${textoConversaciones}
 
 Identifica si el agonista menciona alguna de estas preocupaciones dominantes:
-- sueno (problemas para dormir, cansancio, recuperación)
-- cansancio (agotamiento, burnout, sobrecarga)
-- lectura (no leer, dificultad para concentrarse)
-- motivacion (duda, ganas de rendirse, sin energía)
-- movimiento (sedentarismo, no caminar, pasos bajos)
-- entrenamiento (no ir al gym, lesión, parón físico)
-- rivalidad (preocupación por el rival, sentirse atrás)
+${listaDominios}
 
 Responde SOLO con un JSON sin texto adicional:
 {"dominio": "nombre_del_dominio_o_null"}
@@ -482,6 +523,7 @@ Si no hay una preocupación clara, responde: {"dominio": null}`,
     const parsed = JSON.parse(sinCercas) as { dominio: string | null }
 
     if (!parsed.dominio) return null
+    if (esSolo && parsed.dominio === 'rivalidad') return null
 
     const señalConfig = DOMINIO_A_SEÑAL[parsed.dominio]
     if (!señalConfig) return null
@@ -505,9 +547,13 @@ Si no hay una preocupación clara, responde: {"dominio": null}`,
 
 // ─── Orquestador de detección ─────────────────────────────────────────────────
 
-export async function detectarSeñal(agonistId: string): Promise<SeñalDetectada | null> {
+export async function detectarSeñal(
+  agonistId: string,
+  esSolo = false,
+  fechaInicioReto?: string
+): Promise<SeñalDetectada | null> {
   const { pruebas, agonista, pacto, mensajesMentor, consulta } =
-    await recopilarContexto(agonistId)
+    await recopilarContexto(agonistId, fechaInicioReto)
 
   if (!agonista || pruebas.length === 0) return null
 
@@ -539,7 +585,7 @@ export async function detectarSeñal(agonistId: string): Promise<SeñalDetectada
   const metaSuperada = detectarMetaSuperada(pruebas)
   if (metaSuperada) return enriquecerConConsulta(metaSuperada, consulta)
 
-  const señalMentor = await detectarSeñalMentor(mensajesMentor, consulta)
+  const señalMentor = await detectarSeñalMentor(mensajesMentor, consulta, esSolo)
   if (señalMentor) return señalMentor
 
   const diaPerfecto = detectarDiaPerfecto(pruebas)

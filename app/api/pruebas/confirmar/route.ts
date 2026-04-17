@@ -17,6 +17,7 @@ import {
   getAntagonistaPorReto,
   actualizarNivel,
   getAmbosAgonistas,
+  getRetoPorId,
 } from '@/lib/db/queries'
 import {
   crearNotificacion,
@@ -50,7 +51,7 @@ import {
   verificarEspeciaDebeFluir,
 } from '@/lib/inscripciones/triggers'
 import { isUltimoDia } from '@/lib/utils'
-import { ambosConfirmaronHoy, triggerSilencioDelOlimpo } from '@/lib/dioses/silencio-olimpo'
+import { ambosConfirmaronHoy, ejecutarSilencioOlimpo } from '@/lib/dioses/silencio-olimpo'
 import type { PruebaDiaria } from '@/lib/db/schema'
 
 function calcularKleosTotal(
@@ -441,7 +442,13 @@ export async function POST(req: Request) {
       cambioNivel.nivelNuevo,
       NIVEL_LABELS[nk] ?? cambioNivel.nivelNuevo
     ).catch(() => {})
-    void verificarEspejoDelAgan(agonistaNuevo.id, cambioNivel.nivelNuevo).catch(() => {})
+    if (agonistaNuevo.retoId) {
+      void verificarEspejoDelAgan(
+        agonistaNuevo.id,
+        cambioNivel.nivelNuevo,
+        agonistaNuevo.retoId
+      ).catch(() => {})
+    }
   }
 
   if (habitosCompletados.length > 0 && agonistaNuevo.retoId) {
@@ -458,28 +465,32 @@ export async function POST(req: Request) {
     }
   }
 
-  void getAmbosAgonistas()
-    .then((ambos) => {
-      const antagonistaOtro = ambos.find((a) => a.id !== agonistaNuevo.id)
-      return Promise.all([
-        verificarGemelosDelAgan(hoy),
-        verificarPiedraDelAgan(hoy),
-        verificarEasterEggsDuales(agonistaNuevo.id, hoy),
-        verificarRemontada(
-          agonistaNuevo.id,
-          agonistaNuevo.nombre,
-          agonistaNuevo.kleosTotal,
-          antagonistaOtro?.kleosTotal ?? 0
-        ),
-        verificarAtrapalosATodos(agonistaNuevo.id, agonistaNuevo.nombre),
-        verificarEspeciaDebeFluir(
-          agonistaNuevo.id,
-          cambioNivel?.nivelNuevo ?? '',
-          agonistaNuevo.nombre
-        ),
-      ])
-    })
-    .catch(() => {})
+  if (agonistaNuevo.retoId) {
+    const rid = agonistaNuevo.retoId
+    void getAmbosAgonistas(rid)
+      .then((ambos) => {
+        const antagonistaOtro = ambos.find((a) => a.id !== agonistaNuevo.id)
+        return Promise.all([
+          verificarGemelosDelAgan(hoy, rid),
+          verificarPiedraDelAgan(hoy, rid),
+          verificarEasterEggsDuales(agonistaNuevo.id, hoy, rid),
+          verificarRemontada(
+            agonistaNuevo.id,
+            agonistaNuevo.nombre,
+            agonistaNuevo.kleosTotal,
+            antagonistaOtro?.kleosTotal ?? 0,
+            rid
+          ),
+          verificarAtrapalosATodos(agonistaNuevo.id, agonistaNuevo.nombre),
+          verificarEspeciaDebeFluir(
+            agonistaNuevo.id,
+            cambioNivel?.nivelNuevo ?? '',
+            agonistaNuevo.nombre
+          ),
+        ])
+      })
+      .catch(() => {})
+  }
 
   const agonistaDef = await getAgonistaByClerkId(userId)
   if (!agonistaDef) {
@@ -492,11 +503,16 @@ export async function POST(req: Request) {
     .limit(1)
   const pruebaDef = pruebaDefRows[0]
 
-  // Silencio del Olimpo: trigger automático el día 29
-  if (isUltimoDia()) {
-    const ambosConfirmaron = await ambosConfirmaronHoy(hoy)
-    if (ambosConfirmaron) {
-      void triggerSilencioDelOlimpo().catch(() => {})
+  // Silencio del Olimpo: trigger automático el último día del reto
+  if (agonistaNuevo.retoId) {
+    const retoSilencio = await getRetoPorId(agonistaNuevo.retoId)
+    if (retoSilencio?.fechaInicio && isUltimoDia(retoSilencio.fechaInicio)) {
+      const ambosConfirmaron = await ambosConfirmaronHoy(hoy, agonistaNuevo.retoId)
+      if (ambosConfirmaron) {
+        if (agonistaNuevo.retoId) {
+          void ejecutarSilencioOlimpo(agonistaNuevo.retoId).catch(() => {})
+        }
+      }
     }
   }
 

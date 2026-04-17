@@ -1,16 +1,30 @@
 import { getCurrentAgonista } from '@/lib/auth'
+import { getRetoPorId } from '@/lib/db/queries'
 import { redirect } from 'next/navigation'
 import { isVeredictoDay } from '@/lib/utils'
 import { VeredictoCeremonia } from '@/components/agon/veredicto-ceremonia'
 import { AgonCard } from '@/components/agon/agon-card'
 import { sleep } from '@/lib/utils/sleep'
 
+function fechaInicioAString(
+  fecha: string | Date | null | undefined
+): string | null {
+  if (fecha == null) return null
+  if (typeof fecha === 'string') return fecha
+  return fecha.toISOString().slice(0, 10)
+}
+
 export default async function VeredictPage() {
   const __pageLoadT0 = Date.now()
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
+  if (!agonista.retoId) redirect('/seleccionar-modo')
 
-  const esVeredicto = isVeredictoDay()
+  const reto = await getRetoPorId(agonista.retoId)
+  const fechaInicio = fechaInicioAString(reto?.fechaInicio)
+  if (!fechaInicio) redirect('/esperando')
+
+  const esVeredicto = isVeredictoDay(fechaInicio)
 
   await sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0)))
 
@@ -34,7 +48,7 @@ export default async function VeredictPage() {
                 El Altis no emite veredictos prematuros.
               </p>
               <p className="text-sm text-muted-foreground font-body leading-relaxed">
-                La Ceremonia del Veredicto se activa el 4 de mayo de 2026.
+                La Ceremonia del Veredicto se activa el día 29 del Gran Agon.
                 Mientras tanto, el agon continúa. Las pruebas no esperan.
               </p>
             </div>
@@ -44,5 +58,5 @@ export default async function VeredictPage() {
     )
   }
 
-  return <VeredictoCeremonia />
+  return <VeredictoCeremonia modo={reto.modo} />
 }

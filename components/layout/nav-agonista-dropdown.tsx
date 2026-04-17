@@ -3,7 +3,14 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Landmark, Settings, User, Zap, type LucideIcon } from 'lucide-react'
+import {
+  Landmark,
+  MessageSquare,
+  Settings,
+  User,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type AgonistaNavLink = {
@@ -12,6 +19,7 @@ type AgonistaNavLink = {
   Icon: LucideIcon
   desc: string
   adminOnly?: true
+  pvpOnly?: true
 }
 
 const LINKS: AgonistaNavLink[] = [
@@ -26,6 +34,14 @@ const LINKS: AgonistaNavLink[] = [
     label: 'Poderes',
     Icon: Zap,
     desc: 'Provocaciones, Señalamiento y Ekecheiria',
+    pvpOnly: true as const,
+  },
+  {
+    href: '/correspondencia',
+    label: 'Correspondencia',
+    Icon: MessageSquare,
+    desc: 'Mensajes directos con tu antagonista',
+    pvpOnly: true as const,
   },
   {
     href: '/mentor',
@@ -45,12 +61,22 @@ const LINKS: AgonistaNavLink[] = [
 const navIconTrigger = 'shrink-0 opacity-80'
 const navIconMenu = 'shrink-0 opacity-80 mt-0.5'
 
-export function NavAgonistaDropdown({ isAdmin }: { isAdmin: boolean }) {
+export function NavAgonistaDropdown({
+  isAdmin,
+  modo,
+}: {
+  isAdmin: boolean
+  modo: 'solo' | 'duelo'
+}) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
 
-  const visible = LINKS.filter((l) => !('adminOnly' in l && l.adminOnly) || isAdmin)
+  const visible = LINKS.filter((l) => {
+    if ('adminOnly' in l && l.adminOnly && !isAdmin) return false
+    if ('pvpOnly' in l && l.pvpOnly && modo === 'solo') return false
+    return true
+  })
 
   const active = visible.some((l) => pathname === l.href)
 

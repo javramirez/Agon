@@ -1,4 +1,3 @@
-// TODO PROMPT-01: completada_por_javier / completada_por_matias y CLERK_JAVIER_USER_ID eliminados; filtro por kleos_log hasta PROMPT 14
 import { db } from '@/lib/db'
 import { pruebaExtraordinaria, agoraEventos, kleosLog } from '@/lib/db/schema'
 import { and, eq, lte } from 'drizzle-orm'

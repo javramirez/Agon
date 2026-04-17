@@ -1,4 +1,5 @@
 import { getCurrentAgonista, getAntagonista } from '@/lib/auth'
+import { getRetoPorId } from '@/lib/db/queries'
 import { redirect } from 'next/navigation'
 import { NivelBadge } from '@/components/agon/nivel-badge'
 import { KleosBadge } from '@/components/agon/kleos-badge'
@@ -36,11 +37,17 @@ export default async function DashboardPage() {
   const __pageLoadT0 = Date.now()
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
+  if (!agonista.retoId) redirect('/seleccionar-modo')
 
-  const antagonista =
-    agonista.retoId != null
-      ? await getAntagonista(agonista.retoId, agonista.id)
-      : null
+  const reto = await getRetoPorId(agonista.retoId)
+  if (!reto?.fechaInicio) redirect('/esperando')
+
+  const esDuelo = reto.modo === 'duelo'
+  const fechaInicio = reto.fechaInicio
+
+  const antagonista = esDuelo
+    ? await getAntagonista(reto.id, agonista.id)
+    : null
 
   const [pruebaHoy, llamas, pruebaAntagonista, afinidades] = (await Promise.all([
     getOrCreatePruebaDiariaHoy(agonista.id),
@@ -61,13 +68,12 @@ export default async function DashboardPage() {
   const ventajasActivas = getVentajasActivas(afinidades)
   const metasEfectivas = getMetasEfectivas(ventajasActivas)
 
-  const diaActual = getDiaDelAgan()
-  const diasRestantes = getDiasRestantes()
-  const esUltimoDia = isUltimoDia()
+  const diaActual = getDiaDelAgan(fechaInicio)
+  const diasRestantes = getDiasRestantes(fechaInicio)
+  const esUltimoDiaFlag = isUltimoDia(fechaInicio)
 
   return (
     <div className="space-y-6 animate-fade-in">
-
       <div className="space-y-1 pt-2">
         <p className="text-xs text-muted-foreground tracking-widest uppercase font-body">
           Día {diaActual} · {diasRestantes} días restantes
@@ -82,8 +88,8 @@ export default async function DashboardPage() {
       </div>
 
       <SemanaSagradaBanner />
-      {esUltimoDia && <UltimoDiaBanner />}
-      <DashboardEventos />
+      {esUltimoDiaFlag && <UltimoDiaBanner />}
+      <DashboardEventos retoId={reto.id} />
 
       <div className="bg-surface-1 rounded-lg border border-border p-4 space-y-3">
         <div className="flex items-center justify-between">
@@ -97,22 +103,24 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <PulsoRealtime
-        nombrePropio={agonista.nombre}
-        nombreAntagonista={antagonista?.nombre ?? 'El Antagonista'}
-      />
+      {esDuelo && (
+        <PulsoRealtime
+          nombrePropio={agonista.nombre}
+          nombreAntagonista={antagonista?.nombre ?? 'El Antagonista'}
+        />
+      )}
 
       <PruebasDelDia
         prueba={pruebaHoy}
         llamas={llamas}
         nivel={agonista.nivel}
-        nombreAntagonista={antagonista?.nombre ?? 'El Antagonista'}
+        modo={reto.modo}
+        nombreAntagonista={antagonista?.nombre ?? null}
         pruebasAntagonista={
           pruebaAntagonista ? pruebasCompletadasAntagonista(pruebaAntagonista) : {}
         }
         metasEfectivas={metasEfectivas}
       />
-
     </div>
   )
 }

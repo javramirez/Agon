@@ -1,43 +1,48 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import { differenceInDays, isSameDay, parseISO, startOfDay } from 'date-fns'
+import { differenceInDays, parseISO, startOfDay } from 'date-fns'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getDiaDelAgan(): number {
-  const inicio = parseISO(process.env.NEXT_PUBLIC_AGON_START_DATE!)
-  const hoy = new Date()
+/** Día 1 = `fechaInicio` del reto; acotado a 1–29. */
+export function getDiaDelAgan(fechaInicio: string): number {
+  const inicio = startOfDay(parseISO(fechaInicio))
+  const hoy = startOfDay(new Date())
   const diff = differenceInDays(hoy, inicio) + 1
   return Math.max(1, Math.min(diff, 29))
 }
 
-export function getDiasRestantes(): number {
-  const fin = parseISO(process.env.NEXT_PUBLIC_AGON_END_DATE!)
-  const hoy = new Date()
-  return Math.max(0, differenceInDays(fin, hoy))
+/** Día del reto (1–29) para una fecha concreta respecto al inicio del reto. */
+export function getDiaDelRetoRelativo(fechaInicio: string, fecha: Date): number {
+  const inicio = startOfDay(parseISO(fechaInicio))
+  const ref = startOfDay(fecha)
+  const diff = differenceInDays(ref, inicio) + 1
+  return Math.max(1, Math.min(diff, 29))
 }
 
-export function isGranAgonActivo(): boolean {
-  const inicio = parseISO(process.env.NEXT_PUBLIC_AGON_START_DATE!)
-  const fin = parseISO(process.env.NEXT_PUBLIC_AGON_END_DATE!)
-  const hoy = new Date()
+/** Días hasta el día 29 del Gran Agon (anclado a `fechaInicio`). */
+export function getDiasRestantes(fechaInicio: string): number {
+  const dia = getDiaDelAgan(fechaInicio)
+  return Math.max(0, 29 - dia)
+}
+
+export function isGranAgonActivo(fechaInicio: string, fechaFin: string): boolean {
+  const inicio = startOfDay(parseISO(fechaInicio))
+  const fin = startOfDay(parseISO(fechaFin))
+  const hoy = startOfDay(new Date())
   return hoy >= inicio && hoy <= fin
 }
 
-/** Día de La Ceremonia del Veredicto — activa desde el día 29 en adelante. */
-export function isVeredictoDay(): boolean {
-  const fin = parseISO(process.env.NEXT_PUBLIC_AGON_END_DATE!)
-  const hoy = startOfDay(new Date())
-  return hoy >= startOfDay(fin)
+/** Ceremonia del Veredicto: día 29 en adelante (índice del Agon desde `fechaInicio`). */
+export function isVeredictoDay(fechaInicio: string): boolean {
+  return getDiaDelAgan(fechaInicio) >= 29
 }
 
-/** Retorna true únicamente el día 29 del Gran Agon. */
-export function isUltimoDia(): boolean {
-  const fin = parseISO(process.env.NEXT_PUBLIC_AGON_END_DATE!)
-  const hoy = new Date()
-  return isSameDay(startOfDay(hoy), startOfDay(fin))
+/** Último día del periodo de 29 días (día 29 del Agon). */
+export function isUltimoDia(fechaInicio: string): boolean {
+  return getDiaDelAgan(fechaInicio) === 29
 }
 
 export function formatKleos(cantidad: number): string {

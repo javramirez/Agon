@@ -1,14 +1,14 @@
 import { db } from '@/lib/db'
 import {
-  agonistas,
   agoraEventos,
   comentariosAgora,
   pruebasDiarias,
   hegemonias,
 } from '@/lib/db/schema'
-import { and, desc, eq, gte, like } from 'drizzle-orm'
+import { and, desc, eq, gte, inArray, like, or } from 'drizzle-orm'
 import { DIOSES, getDiosesParaEvento, getDelayDios } from './config'
 import { actualizarPuntosDisputaEvento } from '@/lib/facciones/disputa'
+import { getAmbosAgonistas, getRetoPorId } from '@/lib/db/queries'
 
 type TipoRivalidad =
   | 'rivalidad_kleos'
@@ -36,9 +36,15 @@ function buildContextoRivalidad(
   }
 }
 
-export async function detectarEventosRivalidad(agonistaId: string): Promise<void> {
+export async function detectarEventosRivalidad(
+  agonistaId: string,
+  retoId: string
+): Promise<void> {
   try {
-    const ambos = await db.select().from(agonistas).limit(2)
+    const reto = await getRetoPorId(retoId)
+    if (!reto || reto.modo === 'solo') return
+
+    const ambos = await getAmbosAgonistas(retoId)
     if (ambos.length < 2) return
 
     const yo = ambos.find((a) => a.id === agonistaId)
@@ -77,7 +83,12 @@ export async function detectarEventosRivalidad(agonistaId: string): Promise<void
       const pruebasHoy = await db
         .select()
         .from(pruebasDiarias)
-        .where(eq(pruebasDiarias.fecha, hoy))
+        .where(
+          and(
+            eq(pruebasDiarias.fecha, hoy),
+            inArray(pruebasDiarias.agonistId, [yo.id, rival.id])
+          )
+        )
 
       const yoPerfecto = pruebasHoy.find((p) => p.agonistId === yo.id)?.diaPerfecto
       const rivalPerfecto = pruebasHoy.find((p) => p.agonistId === rival.id)?.diaPerfecto
@@ -91,6 +102,7 @@ export async function detectarEventosRivalidad(agonistaId: string): Promise<void
       const ultimas = await db
         .select()
         .from(hegemonias)
+        .where(eq(hegemonias.retoId, retoId))
         .orderBy(desc(hegemonias.semana))
         .limit(2)
 
@@ -109,7 +121,12 @@ export async function detectarEventosRivalidad(agonistaId: string): Promise<void
     const eventoReciente = await db
       .select()
       .from(agoraEventos)
-      .where(gte(agoraEventos.createdAt, inicioDia))
+      .where(
+        and(
+          gte(agoraEventos.createdAt, inicioDia),
+          or(eq(agoraEventos.agonistId, yo.id), eq(agoraEventos.agonistId, rival.id))
+        )
+      )
       .orderBy(desc(agoraEventos.createdAt))
       .limit(1)
 

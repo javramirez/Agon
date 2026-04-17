@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Decisión inválida' }, { status: 400 })
   }
 
-  const activa = await getCrisisActiva()
+  const activa = await getCrisisActiva(agonista.retoId)
   if (!activa)
     return NextResponse.json({ error: 'No hay crisis activa' }, { status: 404 })
 

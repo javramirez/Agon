@@ -6,7 +6,7 @@ import { useEventosDestino } from '@/hooks/use-eventos-destino'
 import { EventoDestinoOverlay } from './evento-destino-overlay'
 import { PruebasExtraordinariasPanel } from './pruebas-extraordinarias-panel'
 
-export function DashboardEventos() {
+export function DashboardEventos({ retoId }: { retoId: string }) {
   const router = useRouter()
   const [panelKey, setPanelKey] = useState(0)
   const {
@@ -44,7 +44,7 @@ export function DashboardEventos() {
 
   return (
     <>
-      <PruebasExtraordinariasPanel key={panelKey} />
+      <PruebasExtraordinariasPanel key={`${retoId}-${panelKey}`} />
 
       <EventoDestinoOverlay
         pruebaId={eventoActivado ? pruebaDestinoId : null}

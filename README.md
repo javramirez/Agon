@@ -112,8 +112,8 @@ Las variables críticas son:
 - `DATABASE_URL`: Neon Direct Connection URL
 - `BLOB_READ_WRITE_TOKEN`: Vercel Blob token
 - `ANTHROPIC_API_KEY`: Para La Crónica del Período
-- `NEXT_PUBLIC_AGON_START_DATE`: Fecha inicio (YYYY-MM-DD)
-- `NEXT_PUBLIC_AGON_END_DATE`: Fecha fin (YYYY-MM-DD)
+
+Las fechas de inicio y fin del Gran Agon viven en la tabla `retos` (`fecha_inicio`, `fecha_fin`), no en variables de entorno públicas.
 
 ---
 

@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { getAgonistaByClerkId, getAntagonistaPorReto } from '@/lib/db/queries'
+import { esSolo } from '@/lib/retos/guards'
 import { db } from '@/lib/db'
 import { pruebasDiarias } from '@/lib/db/schema'
 import { eq, and } from 'drizzle-orm'
@@ -12,6 +13,9 @@ export async function GET() {
   const agonista = await getAgonistaByClerkId(userId)
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  if (await esSolo(agonista.retoId)) {
+    return NextResponse.json({ esSolo: true, datos: null })
   }
   const hoy = new Date().toISOString().split('T')[0]
 

@@ -14,7 +14,7 @@ export async function GET() {
   const agonista = await getCurrentAgonista()
   if (!agonista) return NextResponse.json({ crisis: null })
 
-  const activa = await getCrisisActiva()
+  const activa = await getCrisisActiva(agonista.retoId)
   if (!activa) return NextResponse.json({ crisis: null })
 
   const { fila, config, agonista1Id } = activa

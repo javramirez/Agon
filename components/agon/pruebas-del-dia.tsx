@@ -465,7 +465,8 @@ interface Props {
   prueba: PruebaDiaria
   llamas: Llama[]
   nivel: string
-  nombreAntagonista?: string
+  modo: 'solo' | 'duelo'
+  nombreAntagonista?: string | null
   pruebasAntagonista?: Record<string, boolean>
   metasEfectivas?: {
     pasos: number
@@ -480,11 +481,14 @@ export function PruebasDelDia({
   prueba,
   llamas,
   nivel,
-  nombreAntagonista = 'El Antagonista',
+  modo,
+  nombreAntagonista = null,
   pruebasAntagonista = {},
   metasEfectivas,
 }: Props) {
   const router = useRouter()
+  const esDuelo = modo === 'duelo'
+  const nombreRival = nombreAntagonista ?? 'El Antagonista'
 
   const metasUmbral = useMemo<MetasUmbralHabito>(
     () => ({
@@ -774,7 +778,11 @@ export function PruebasDelDia({
             onFotoSubida={() => router.refresh()}
             onChange={handleChange}
             disabled={confirmando}
-            antagonistaCompletó={pruebasAntagonista[p.id] ?? false}
+            antagonistaCompletó={
+              esDuelo && nombreAntagonista
+                ? (pruebasAntagonista[p.id] ?? false)
+                : false
+            }
           />
         ))}
       </div>
@@ -782,8 +790,9 @@ export function PruebasDelDia({
       <CierreDramatico
         diaPerfecto={diaPerfecto && !hayCambios}
         pruebasCompletadas={completados}
-        nombreAntagonista={nombreAntagonista}
+        nombreAntagonista={nombreRival}
         pruebasAntagonista={Object.values(pruebasAntagonista).filter(Boolean).length}
+        esDuelo={esDuelo}
         onCerrar={() => {}}
       />
 

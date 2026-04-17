@@ -4,63 +4,52 @@ import { db } from '@/lib/db'
 import {
   pruebasDiarias,
   inscripciones,
-  hegemonias,
   mentorConversaciones,
-  agoraEventos,
   faccionesAfinidad,
   kleosLog,
 } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
-import { getAmbosAgonistas } from '@/lib/db/queries'
+import type { Agonista, PruebaDiaria } from '@/lib/db/schema'
+import { and, eq, gte } from 'drizzle-orm'
+import {
+  getAgonistaByClerkId,
+  getAmbosAgonistas,
+  getAgoraEventos,
+  getHegemonias,
+  getRetoPorId,
+} from '@/lib/db/queries'
 import { NIVEL_LABELS, INSCRIPCIONES } from '@/lib/db/constants'
 import type { NivelKey } from '@/lib/db/constants'
+
+type InscripcionRow = typeof inscripciones.$inferSelect
+type MentorConvRow = typeof mentorConversaciones.$inferSelect
+type FaccionAfinidadRow = typeof faccionesAfinidad.$inferSelect
+type KleosLogRow = typeof kleosLog.$inferSelect
 
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const ambos = await getAmbosAgonistas()
-  if (ambos.length < 2) {
-    return NextResponse.json({ error: 'Faltan agonistas' }, { status: 400 })
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista?.retoId) {
+    return NextResponse.json({ error: 'Sin reto asignado' }, { status: 400 })
   }
 
-  const [a1, a2] = ambos
+  const retoExport = await getRetoPorId(agonista.retoId)
+  if (!retoExport) {
+    return NextResponse.json({ error: 'Reto no encontrado' }, { status: 404 })
+  }
 
-  const [
-    pruebas1,
-    pruebas2,
-    inscripciones1,
-    inscripciones2,
-    todasHegemonias,
-    conversaciones1,
-    conversaciones2,
-    eventosAgora,
-    afinidad1,
-    afinidad2,
-    kleosLog1,
-    kleosLog2,
-  ] = await Promise.all([
-    db.select().from(pruebasDiarias).where(eq(pruebasDiarias.agonistId, a1.id)),
-    db.select().from(pruebasDiarias).where(eq(pruebasDiarias.agonistId, a2.id)),
-    db.select().from(inscripciones).where(eq(inscripciones.agonistId, a1.id)),
-    db.select().from(inscripciones).where(eq(inscripciones.agonistId, a2.id)),
-    db.select().from(hegemonias),
-    db.select().from(mentorConversaciones).where(eq(mentorConversaciones.agonistId, a1.id)),
-    db.select().from(mentorConversaciones).where(eq(mentorConversaciones.agonistId, a2.id)),
-    db.select().from(agoraEventos),
-    db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, a1.id)),
-    db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, a2.id)),
-    db.select().from(kleosLog).where(eq(kleosLog.agonistId, a1.id)),
-    db.select().from(kleosLog).where(eq(kleosLog.agonistId, a2.id)),
-  ])
+  const fechaInicioExport = retoExport.fechaInicio ?? ''
+  const fechaFinExport = retoExport.fechaFin ?? ''
+  const fechaInicioFiltro = retoExport.fechaInicio ?? '2000-01-01'
 
   function buildAgonistaExport(
-    agonista: typeof a1,
-    pruebas: typeof pruebas1,
-    insc: typeof inscripciones1,
-    conversaciones: typeof conversaciones1,
-    afinidad: typeof afinidad1,
-    logs: typeof kleosLog1
+    ag: Agonista,
+    pruebas: PruebaDiaria[],
+    insc: InscripcionRow[],
+    conversaciones: MentorConvRow[],
+    afinidad: FaccionAfinidadRow[],
+    logs: KleosLogRow[]
   ) {
     const inscripcionesDetalle = insc.map((i) => {
       const catalogo = INSCRIPCIONES.find((c) => c.id === i.inscripcionId)
@@ -73,11 +62,11 @@ export async function GET() {
     })
 
     return {
-      nombre: agonista.nombre,
-      nivel: NIVEL_LABELS[agonista.nivel as NivelKey],
-      kleosTotal: agonista.kleosTotal,
-      mentorAsignado: agonista.mentorAsignado,
-      oraculo: agonista.oraculoMensaje,
+      nombre: ag.nombre,
+      nivel: NIVEL_LABELS[ag.nivel as NivelKey],
+      kleosTotal: ag.kleosTotal,
+      mentorAsignado: ag.mentorAsignado,
+      oraculo: ag.oraculoMensaje,
       stats: {
         diasRegistrados: pruebas.length,
         diasPerfectos: pruebas.filter((p) => p.diaPerfecto).length,
@@ -105,11 +94,96 @@ export async function GET() {
     }
   }
 
+  const pruebaDesdeInicio = (agonistId: string) =>
+    and(
+      eq(pruebasDiarias.agonistId, agonistId),
+      gte(pruebasDiarias.fecha, fechaInicioFiltro)
+    )
+
+  if (retoExport.modo === 'solo') {
+    const [pruebasSolo, inscripcionesSolo, conversacionesSolo, eventosAgora, afinidadSolo, kleosLogSolo] =
+      await Promise.all([
+        db.select().from(pruebasDiarias).where(pruebaDesdeInicio(agonista.id)),
+        db.select().from(inscripciones).where(eq(inscripciones.agonistId, agonista.id)),
+        db.select().from(mentorConversaciones).where(eq(mentorConversaciones.agonistId, agonista.id)),
+        getAgoraEventos(agonista.retoId, 5000),
+        db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, agonista.id)),
+        db.select().from(kleosLog).where(eq(kleosLog.agonistId, agonista.id)),
+      ])
+
+    const datos = {
+      modo: 'solo' as const,
+      exportadoEn: new Date().toISOString(),
+      granAgon: {
+        inicio: fechaInicioExport,
+        fin: fechaFinExport,
+        duracionDias: 29,
+      },
+      eventosAgora: eventosAgora.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      ),
+      agonistas: [
+        buildAgonistaExport(
+          agonista,
+          pruebasSolo,
+          inscripcionesSolo,
+          conversacionesSolo,
+          afinidadSolo,
+          kleosLogSolo
+        ),
+      ],
+    }
+
+    return new NextResponse(JSON.stringify(datos, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': 'attachment; filename="gran-agon-datos.json"',
+      },
+    })
+  }
+
+  const ambos = await getAmbosAgonistas(agonista.retoId)
+  if (ambos.length < 2) {
+    return NextResponse.json({ error: 'Faltan agonistas' }, { status: 400 })
+  }
+
+  const [a1, a2] = ambos
+
+  const [
+    pruebas1,
+    pruebas2,
+    inscripciones1,
+    inscripciones2,
+    todasHegemonias,
+    conversaciones1,
+    conversaciones2,
+    eventosAgora,
+    afinidad1,
+    afinidad2,
+    kleosLog1,
+    kleosLog2,
+  ] = await Promise.all([
+    db.select().from(pruebasDiarias).where(pruebaDesdeInicio(a1.id)),
+    db.select().from(pruebasDiarias).where(pruebaDesdeInicio(a2.id)),
+    db.select().from(inscripciones).where(eq(inscripciones.agonistId, a1.id)),
+    db.select().from(inscripciones).where(eq(inscripciones.agonistId, a2.id)),
+    getHegemonias(agonista.retoId),
+    db.select().from(mentorConversaciones).where(eq(mentorConversaciones.agonistId, a1.id)),
+    db.select().from(mentorConversaciones).where(eq(mentorConversaciones.agonistId, a2.id)),
+    getAgoraEventos(agonista.retoId, 5000),
+    db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, a1.id)),
+    db.select().from(faccionesAfinidad).where(eq(faccionesAfinidad.agonistId, a2.id)),
+    db.select().from(kleosLog).where(eq(kleosLog.agonistId, a1.id)),
+    db.select().from(kleosLog).where(eq(kleosLog.agonistId, a2.id)),
+  ])
+
   const datos = {
+    modo: 'duelo' as const,
     exportadoEn: new Date().toISOString(),
     granAgon: {
-      inicio: process.env.NEXT_PUBLIC_AGON_START_DATE,
-      fin: process.env.NEXT_PUBLIC_AGON_END_DATE,
+      inicio: fechaInicioExport,
+      fin: fechaFinExport,
       duracionDias: 29,
     },
     ganador:
@@ -138,4 +212,3 @@ export async function GET() {
     },
   })
 }
-

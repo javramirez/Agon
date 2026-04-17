@@ -28,8 +28,20 @@ const isOnboardingRoute = createRouteMatcher([
   '/esperando(.*)',
 ])
 
+/** Clerk: login y registro siempre públicos (no exigen sesión previa). */
+const isPublicAuthRoute = createRouteMatcher([
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+])
+
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
+
+  if (isPublicAuthRoute(req)) {
+    const requestHeaders = new Headers(req.headers)
+    requestHeaders.set('x-pathname', req.nextUrl.pathname)
+    return NextResponse.next({ request: { headers: requestHeaders } })
+  }
 
   if (isProtectedRoute(req) || isOnboardingRoute(req)) {
     if (!userId) {

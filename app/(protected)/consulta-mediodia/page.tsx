@@ -6,6 +6,7 @@ import { ConsultaMediadiaClient } from '@/components/agon/consulta-mediodia-clie
 import { db } from '@/lib/db'
 import { pactoInicial } from '@/lib/db/schema'
 import { asc, eq } from 'drizzle-orm'
+import { getRetoPorId } from '@/lib/db/queries'
 
 export default async function ConsultaMediadiaPage() {
   const { userId } = await auth()
@@ -14,7 +15,9 @@ export default async function ConsultaMediadiaPage() {
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
-  const startDate = process.env.NEXT_PUBLIC_AGON_START_DATE ?? ''
+  const reto =
+    agonista.retoId != null ? await getRetoPorId(agonista.retoId) : null
+  const startDate = reto?.fechaInicio ?? ''
   const disponible = consultaDisponible(
     startDate,
     agonista.consultaMediaCompleta ?? false

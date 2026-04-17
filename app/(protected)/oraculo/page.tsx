@@ -1,6 +1,7 @@
 import { getCurrentAgonista } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { isVeredictoDay } from '@/lib/utils'
+import { getRetoPorId } from '@/lib/db/queries'
 import { sleep } from '@/lib/utils/sleep'
 
 export default async function OraculoPage() {
@@ -8,7 +9,8 @@ export default async function OraculoPage() {
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
-  const veredicto = isVeredictoDay()
+  const reto = agonista.retoId ? await getRetoPorId(agonista.retoId) : null
+  const veredicto = reto?.fechaInicio ? isVeredictoDay(reto.fechaInicio) : false
   const sellado = agonista.oraculoSellado
   const mensaje = agonista.oraculoMensaje
 

@@ -6,6 +6,7 @@ import {
   postsDioses,
   likesAgora,
   agoraEventos,
+  agonistas,
 } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { notificarComentarioDios } from '@/lib/notificaciones/crear'
@@ -202,8 +203,26 @@ No uses hashtags ni formato especial. Habla en primera persona como dios.`
       })
       .returning()
 
+    let retoFanOut: string | null = null
+    if (eventoRelacionadoId) {
+      const ev = await db
+        .select({ agonistId: agoraEventos.agonistId })
+        .from(agoraEventos)
+        .where(eq(agoraEventos.id, eventoRelacionadoId))
+        .limit(1)
+      if (ev[0]) {
+        const ag = await db
+          .select({ retoId: agonistas.retoId })
+          .from(agonistas)
+          .where(eq(agonistas.id, ev[0].agonistId))
+          .limit(1)
+        retoFanOut = ag[0]?.retoId ?? null
+      }
+    }
+
     const { getAmbosAgonistas } = await import('@/lib/db/queries')
-    const ambos = await getAmbosAgonistas()
+    const ambos =
+      retoFanOut != null ? await getAmbosAgonistas(retoFanOut) : []
     if (ambos.length > 0 && post[0]) {
       await db.insert(agoraEventos).values({
         id: crypto.randomUUID(),

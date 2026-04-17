@@ -24,10 +24,20 @@ export function usePulso(intervaloMs = 8000) {
       const res = await fetch('/api/pulso')
       if (!res.ok) return
 
-      const nuevo = (await res.json()) as PulsoData
+      const nuevo = (await res.json()) as
+        | PulsoData
+        | { esSolo: true; datos: null }
 
-      if (nuevo.antagonista) {
-        const kleosNuevo = nuevo.antagonista.kleosTotal
+      if ('esSolo' in nuevo && nuevo.esSolo) {
+        setData(null)
+        setUltimaActualizacion(new Date())
+        return
+      }
+
+      const pulsoDuelo = nuevo as PulsoData
+
+      if (pulsoDuelo.antagonista) {
+        const kleosNuevo = pulsoDuelo.antagonista.kleosTotal
         const anterior = kleosAntagonistaPrev.current
         if (anterior !== null && kleosNuevo > anterior) {
           setAntagonistaActivo(true)
@@ -36,7 +46,7 @@ export function usePulso(intervaloMs = 8000) {
         kleosAntagonistaPrev.current = kleosNuevo
       }
 
-      setData(nuevo)
+      setData(pulsoDuelo)
       setUltimaActualizacion(new Date())
     } catch {
       // Silencioso — no interrumpir la UI por fallos de polling

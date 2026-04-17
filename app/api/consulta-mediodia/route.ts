@@ -12,6 +12,7 @@ import {
 import { MENTORES } from '@/lib/mentor/config'
 import { crearNotificacion } from '@/lib/notificaciones/crear'
 import type { ArquetipoKey } from '@/lib/db/schema'
+import { getRetoPorId } from '@/lib/db/queries'
 
 export async function POST(req: Request) {
   const { userId } = await auth()
@@ -24,7 +25,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Consulta ya completada' }, { status: 400 })
   }
 
-  const startDate = process.env.NEXT_PUBLIC_AGON_START_DATE ?? ''
+  const reto =
+    agonista.retoId != null ? await getRetoPorId(agonista.retoId) : null
+  const startDate = reto?.fechaInicio ?? ''
   if (!consultaDisponible(startDate, Boolean(agonista.consultaMediaCompleta))) {
     return NextResponse.json({ error: 'Consulta no disponible' }, { status: 400 })
   }

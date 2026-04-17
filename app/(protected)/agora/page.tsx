@@ -4,6 +4,7 @@ import {
   getAgoraEventos,
   getAclamacionesHoy,
   getTiposAclamacionHoyPorEvento,
+  getRetoPorId,
 } from '@/lib/db/queries'
 import { AgoraConTriggerClient } from '@/components/agon/agora-con-trigger-client'
 import { sleep } from '@/lib/utils/sleep'
@@ -15,8 +16,12 @@ export default async function AgoraPage() {
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
 
+  if (!agonista.retoId) redirect('/esperando')
+  const reto = await getRetoPorId(agonista.retoId)
+  if (!reto) redirect('/esperando')
+
   const [eventos, aclamacionesHoy, tiposPorEvento] = (await Promise.all([
-    getAgoraEventos(50),
+    getAgoraEventos(reto.id, 50),
     getAclamacionesHoy(agonista.id),
     getTiposAclamacionHoyPorEvento(agonista.id),
     sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0))),

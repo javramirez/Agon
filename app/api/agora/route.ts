@@ -15,8 +15,11 @@ export async function GET() {
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
   }
+  if (!agonista.retoId) {
+    return NextResponse.json({ eventos: [], aclamacionesHoy: 0, tiposPorEvento: {} })
+  }
   const [eventos, aclamacionesHoy, tiposPorEvento] = await Promise.all([
-    getAgoraEventos(50),
+    getAgoraEventos(agonista.retoId, 50),
     getAclamacionesHoy(agonista.id),
     getTiposAclamacionHoyPorEvento(agonista.id),
   ])

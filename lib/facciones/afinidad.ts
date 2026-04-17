@@ -120,6 +120,13 @@ export async function actualizarAfinidadHabitos(
   pruebaAnterior: PruebaAnteriorAfinidad | null,
   extras: ExtrasAfinidad
 ): Promise<void> {
+  const [agRow] = await db
+    .select({ retoId: agonistas.retoId })
+    .from(agonistas)
+    .where(eq(agonistas.id, agonistId))
+    .limit(1)
+  const retoIdAgonista = agRow?.retoId ?? null
+
   const afinidades = await db
     .select()
     .from(faccionesAfinidad)
@@ -225,7 +232,8 @@ export async function actualizarAfinidadHabitos(
           : (actual?.rachaMilestoneMaximo ?? 0),
       traicionCount: actual?.traicionCount ?? 0,
     })
-    if (subioACampeon) void detectarDisputaCampeon(agonistId, faccionId)
+    if (subioACampeon)
+      void detectarDisputaCampeon(agonistId, faccionId, retoIdAgonista)
     if (esRedencion) hayRedencion = true
   }
 
@@ -249,6 +257,13 @@ export async function actualizarAfinidadEvento(
   agonistId: string,
   tipo: TipoEventoAfinidad
 ): Promise<void> {
+  const [agRow] = await db
+    .select({ retoId: agonistas.retoId })
+    .from(agonistas)
+    .where(eq(agonistas.id, agonistId))
+    .limit(1)
+  const retoIdAgonista = agRow?.retoId ?? null
+
   const mapeo: Record<
     TipoEventoAfinidad,
     { faccionId: FaccionId; puntos: number }
@@ -312,7 +327,8 @@ export async function actualizarAfinidadEvento(
     rachaMilestoneNuevo: actual?.rachaMilestoneMaximo ?? 0,
     traicionCount: actual?.traicionCount ?? 0,
   })
-  if (subioACampeon) void detectarDisputaCampeon(agonistId, faccionId)
+  if (subioACampeon)
+    void detectarDisputaCampeon(agonistId, faccionId, retoIdAgonista)
 
   const agonistaNombreRow = await db
     .select({ nombre: agonistas.nombre })

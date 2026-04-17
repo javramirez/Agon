@@ -6,10 +6,11 @@ import {
   pruebasDiarias,
   llamas,
   consultaMediodia,
+  pactoInicial,
 } from '@/lib/db/schema'
-import { eq, asc, and } from 'drizzle-orm'
+import { eq, asc, and, gte } from 'drizzle-orm'
 import { getCurrentAgonista } from '@/lib/auth'
-import { getAntagonistaPorReto } from '@/lib/db/queries'
+import { getAntagonistaPorReto, getRetoPorId } from '@/lib/db/queries'
 import { getMentor } from '@/lib/mentor/config'
 import { crearNotificacion } from '@/lib/notificaciones/crear'
 import Anthropic from '@anthropic-ai/sdk'
@@ -134,11 +135,22 @@ export async function POST(req: Request) {
 
   const hoy = new Date().toISOString().split('T')[0]
 
-  const rival = agonista.retoId
-    ? await getAntagonistaPorReto(agonista.retoId, agonista.id)
-    : null
+  const reto = agonista.retoId ? await getRetoPorId(agonista.retoId) : null
+  const esSolo = reto?.modo === 'solo'
 
-  const [pruebaHoyRows, llamasAgonista, historialPrevio, consultaRows] =
+  const rival =
+    !esSolo && agonista.retoId
+      ? await getAntagonistaPorReto(agonista.retoId, agonista.id)
+      : null
+
+  const fechaInicioStr =
+    reto?.fechaInicio == null
+      ? null
+      : typeof reto.fechaInicio === 'string'
+        ? reto.fechaInicio
+        : (reto.fechaInicio as Date).toISOString().slice(0, 10)
+
+  const [pruebaHoyRows, llamasAgonista, historialPrevio, consultaRows, pactoRows, pruebasBenchmarkRows] =
     await Promise.all([
     db
       .select()
@@ -161,6 +173,29 @@ export async function POST(req: Request) {
       .from(consultaMediodia)
       .where(eq(consultaMediodia.agonistId, agonista.id))
       .limit(1),
+    esSolo
+      ? db
+          .select()
+          .from(pactoInicial)
+          .where(
+            and(
+              eq(pactoInicial.agonistId, agonista.id),
+              eq(pactoInicial.acto, 1)
+            )
+          )
+          .limit(1)
+      : Promise.resolve([]),
+    esSolo && fechaInicioStr
+      ? db
+          .select()
+          .from(pruebasDiarias)
+          .where(
+            and(
+              eq(pruebasDiarias.agonistId, agonista.id),
+              gte(pruebasDiarias.fecha, fechaInicioStr)
+            )
+          )
+      : Promise.resolve([]),
     ])
 
   const pruebaHoy = pruebaHoyRows[0]
@@ -176,6 +211,47 @@ Reflexiones del agonista en la Consulta del Mediodía (día 15):
 - Lo que cambió en él: "${consulta.queHaCambiado}"`
     : ''
 
+  const pacto = esSolo ? (pactoRows[0] ?? null) : null
+
+  const contextoRivalidad = esSolo
+    ? `- Modo: Solo (sin antagonista — la competencia es consigo mismo)`
+    : `- Antagonista: ${rival?.nombre ?? 'desconocido'} con ${rival?.kleosTotal ?? 0} kleos
+- Diferencia de kleos: ${agonista.kleosTotal - (rival?.kleosTotal ?? 0)} (positivo = va ganando)`
+
+  const contextoPacto = pacto
+    ? `
+Perfil declarado en el Pacto Inicial:
+- Objetivo: "${pacto.objetivo}"
+- Arquetipo: ${pacto.arquetipo}
+- Punto de partida: ${pacto.puntoPartida}
+- Compromiso (escala 1-5): ${pacto.compromisoEscala}
+- Línea base gym: ${pacto.lineaBaseGym}x/sem → meta 4x/sem
+- Línea base cardio: ${pacto.lineaBaseCardio}x/sem → meta 3x/sem
+- Línea base lectura: ${pacto.lineaBasePaginas} pág/día → meta 10 pág/día
+- Sombra principal: ${pacto.sombraTipo}
+- Apuesta si gana: "${pacto.apuestaGanas}"
+- Apuesta si pierde: "${pacto.apuestaPierdes}"`
+    : ''
+
+  const pruebasBench = pruebasBenchmarkRows
+  const diasBench = pruebasBench.length
+  const tdBench = diasBench || 1
+  const contextoBenchmarks =
+    esSolo && diasBench > 0
+      ? `
+Benchmarks propios desde el inicio del reto (${diasBench} día${diasBench !== 1 ? 's' : ''} registrados, promedios):
+- Gym: ${Math.round(((pruebasBench.reduce((s, p) => s + p.sesionesGym, 0) / tdBench) * 7) * 10) / 10} ses/sem (meta 4)
+- Cardio: ${Math.round(((pruebasBench.reduce((s, p) => s + p.sesionesCardio, 0) / tdBench) * 7) * 10) / 10} ses/sem (meta 3)
+- Lectura: ${Math.round((pruebasBench.reduce((s, p) => s + p.paginasLeidas, 0) / tdBench) * 10) / 10} pág/día (meta 10)
+- Pasos: ${Math.round(pruebasBench.reduce((s, p) => s + p.pasos, 0) / tdBench)} / día (meta 10000)
+- Sueño: ${Math.round((pruebasBench.reduce((s, p) => s + p.horasSueno, 0) / tdBench) * 10) / 10} h/noche (meta 7)
+- Solo agua: ${Math.round((pruebasBench.filter((p) => p.soloAgua).length / tdBench) * 100)}% de días (meta cumplir la prueba)
+- Sin comida rápida: ${Math.round((pruebasBench.filter((p) => p.sinComidaRapida).length / tdBench) * 100)}% de días`
+      : esSolo
+        ? `
+Benchmarks: aún sin días registrados desde el inicio del reto; no compares hábitos con medias hasta que haya datos.`
+        : ''
+
   const contextoAgonista = `
 Datos del agonista que mentorizas:
 - Nombre: ${agonista.nombre}
@@ -184,9 +260,10 @@ Datos del agonista que mentorizas:
 - Días perfectos: ${agonista.diasPerfectos}
 - Racha actual (mejor hábito): ${rachaActual} días
 - Racha máxima histórica: ${rachaMaxima} días
-- Antagonista: ${rival?.nombre ?? 'desconocido'} con ${rival?.kleosTotal ?? 0} kleos
-- Diferencia de kleos: ${agonista.kleosTotal - (rival?.kleosTotal ?? 0)} (positivo = va ganando)
+${contextoRivalidad}
 ${pruebaHoy ? `- Hoy (${hoy}): ${pruebaHoy.diaPerfecto ? 'día perfecto ✓' : `kleos ganados: ${pruebaHoy.kleosGanado}`}` : `- Hoy (${hoy}): sin registro aún`}
+${contextoPacto}
+${contextoBenchmarks}
 ${contextoConsulta}
 `.trim()
 

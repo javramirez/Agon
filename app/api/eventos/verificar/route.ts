@@ -12,6 +12,7 @@ import {
   desactivarSemanaSagradaSiTermino,
 } from '@/lib/pruebas-extraordinarias/semana-sagrada'
 import { getDiaDelAgan, isGranAgonActivo } from '@/lib/utils'
+import { getAgonistaByClerkId, getRetoPorId } from '@/lib/db/queries'
 import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
 import {
   generarTextoComentario,
@@ -152,7 +153,13 @@ export async function GET() {
 
   const comentariosNuevos = comentariosNuevosCount > 0
 
-  if (!isGranAgonActivo()) {
+  const agonista = await getAgonistaByClerkId(userId)
+  const reto =
+    agonista?.retoId != null ? await getRetoPorId(agonista.retoId) : null
+  const fi = reto?.fechaInicio
+  const ff = reto?.fechaFin
+
+  if (!fi || !ff || !isGranAgonActivo(fi, ff) || !reto?.id) {
     return NextResponse.json({
       tripticoActivado: false,
       destinoLatente: null,
@@ -161,10 +168,10 @@ export async function GET() {
     })
   }
 
-  const diaActual = getDiaDelAgan()
-  const resultado = await verificarYActivarPruebas(diaActual)
+  const diaActual = getDiaDelAgan(fi)
+  const resultado = await verificarYActivarPruebas(diaActual, fi, reto.id)
 
-  const semanaSagradaActivada = await verificarYActivarSemanaSagrada()
+  const semanaSagradaActivada = await verificarYActivarSemanaSagrada(reto.id, fi)
 
   await desactivarSemanaSagradaSiTermino()
 
@@ -185,7 +192,13 @@ export async function POST(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  if (!isGranAgonActivo()) {
+  const agonista = await getAgonistaByClerkId(userId)
+  const reto =
+    agonista?.retoId != null ? await getRetoPorId(agonista.retoId) : null
+  const fi = reto?.fechaInicio
+  const ff = reto?.fechaFin
+
+  if (!fi || !ff || !isGranAgonActivo(fi, ff) || !reto?.id) {
     return NextResponse.json({ activado: false })
   }
 
@@ -194,8 +207,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Falta pruebaId' }, { status: 400 })
   }
 
-  const diaActual = getDiaDelAgan()
-  const activado = await activarEventoDestino(pruebaId, diaActual)
+  const diaActual = getDiaDelAgan(fi)
+  const activado = await activarEventoDestino(pruebaId, diaActual, fi, reto.id)
 
   return NextResponse.json({ activado })
 }

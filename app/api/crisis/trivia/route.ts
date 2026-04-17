@@ -1,5 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import { getCurrentAgonista } from '@/lib/auth'
 import { getCrisisActiva } from '@/lib/crisis/calendario'
 import { sortearPreguntasTrivia, getPreguntasTrivia } from '@/lib/crisis/trivia'
 import { db } from '@/lib/db'
@@ -11,12 +12,16 @@ export async function GET(req: Request) {
   if (!userId)
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+  const agonista = await getCurrentAgonista()
+  if (!agonista)
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+
   const { searchParams } = new URL(req.url)
   const crisisId = searchParams.get('crisisId')
   if (!crisisId)
     return NextResponse.json({ error: 'crisisId requerido' }, { status: 400 })
 
-  const activa = await getCrisisActiva()
+  const activa = await getCrisisActiva(agonista.retoId)
   if (!activa)
     return NextResponse.json({ error: 'No hay crisis activa' }, { status: 404 })
 

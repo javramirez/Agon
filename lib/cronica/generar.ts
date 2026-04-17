@@ -43,9 +43,13 @@ interface DatosAgonista {
   inscripcionesNuevas: number
 }
 
-export async function generarCronica(semana?: number): Promise<string> {
-  const semanaNum = semana ?? getSemanaActual()
-  const datos = await recopilarDatosSemana(semanaNum)
+export async function generarCronica(
+  retoId: string,
+  fechaInicio: string,
+  semana?: number
+): Promise<string> {
+  const semanaNum = semana ?? getSemanaActual(fechaInicio)
+  const datos = await recopilarDatosSemana(semanaNum, fechaInicio, retoId)
 
   const prompt = construirPrompt(datos)
 
@@ -61,7 +65,9 @@ export async function generarCronica(semana?: number): Promise<string> {
     .join('')
     .trim()
 
-  await db.delete(cronicas).where(eq(cronicas.semana, semanaNum))
+  await db
+    .delete(cronicas)
+    .where(and(eq(cronicas.semana, semanaNum), eq(cronicas.retoId, retoId)))
 
   await db.insert(cronicas).values({
     id: crypto.randomUUID(),
@@ -70,9 +76,10 @@ export async function generarCronica(semana?: number): Promise<string> {
     fechaFin: datos.fechaFin,
     relato,
     metadata: datos as unknown as Record<string, unknown>,
+    retoId,
   })
 
-  const ambos = await getAmbosAgonistas()
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length > 0) {
     const eventoId = crypto.randomUUID()
     await db.insert(agoraEventos).values({
@@ -98,48 +105,28 @@ export async function generarCronica(semana?: number): Promise<string> {
   return relato
 }
 
-/** Igual que getSemanaRango pero con fecha de inicio del Gran Agon explícita (p. ej. primera fecha con datos en DB). */
-function rangoSemanaDesdeFechaInicio(
-  fechaInicioGranAgon: string,
-  semana: number
-): { inicioStr: string; finStr: string } {
-  const inicio = new Date(fechaInicioGranAgon)
-  const inicioSemana = new Date(inicio)
-  inicioSemana.setDate(inicio.getDate() + (semana - 1) * 7)
-  const finSemana = new Date(inicioSemana)
-  finSemana.setDate(inicioSemana.getDate() + 6)
-
-  return {
-    inicioStr: inicioSemana.toISOString().split('T')[0],
-    finStr: finSemana.toISOString().split('T')[0],
-  }
-}
-
-async function recopilarDatosSemana(semana: number): Promise<DatosSemana> {
-  const { inicioSemana: inicioStr, finSemana: finStr } = getSemanaRango(semana)
-  return recopilarDatosEnRango(semana, inicioStr, finStr)
-}
-
-async function recopilarDatosSemanaConFecha(
+async function recopilarDatosSemana(
   semana: number,
-  fechaInicioGranAgon: string
+  fechaInicio: string,
+  retoId: string
 ): Promise<DatosSemana> {
-  const { inicioStr, finStr } = rangoSemanaDesdeFechaInicio(
-    fechaInicioGranAgon,
-    semana
+  const { inicioSemana: inicioStr, finSemana: finStr } = getSemanaRango(
+    semana,
+    fechaInicio
   )
-  return recopilarDatosEnRango(semana, inicioStr, finStr)
+  return recopilarDatosEnRango(semana, inicioStr, finStr, retoId)
 }
 
 async function recopilarDatosEnRango(
   semana: number,
   inicioStr: string,
-  finStr: string
+  finStr: string,
+  retoId: string
 ): Promise<DatosSemana> {
   const inicioDia = new Date(inicioStr + 'T12:00:00.000Z')
   const finDia = new Date(finStr + 'T23:59:59.999Z')
 
-  const ambos = await getAmbosAgonistas()
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length < 2) throw new Error('No hay suficientes agonistas')
 
   const [a1, a2] = ambos
@@ -189,7 +176,9 @@ async function recopilarDatosEnRango(
       db
         .select()
         .from(hegemonias)
-        .where(eq(hegemonias.semana, semana))
+        .where(
+          and(eq(hegemonias.semana, semana), eq(hegemonias.retoId, retoId))
+        )
         .limit(1),
       db
         .select()
@@ -274,9 +263,10 @@ async function recopilarDatosEnRango(
 
 export async function generarCronicaConFecha(
   semana: number,
-  fechaInicioOverride: string
+  fechaInicioOverride: string,
+  retoId: string
 ): Promise<string> {
-  const datos = await recopilarDatosSemanaConFecha(semana, fechaInicioOverride)
+  const datos = await recopilarDatosSemana(semana, fechaInicioOverride, retoId)
 
   const prompt = construirPrompt(datos)
 
@@ -292,7 +282,9 @@ export async function generarCronicaConFecha(
     .join('')
     .trim()
 
-  await db.delete(cronicas).where(eq(cronicas.semana, semana))
+  await db
+    .delete(cronicas)
+    .where(and(eq(cronicas.semana, semana), eq(cronicas.retoId, retoId)))
 
   await db.insert(cronicas).values({
     id: crypto.randomUUID(),
@@ -301,9 +293,10 @@ export async function generarCronicaConFecha(
     fechaFin: datos.fechaFin,
     relato,
     metadata: datos as unknown as Record<string, unknown>,
+    retoId,
   })
 
-  const ambos = await getAmbosAgonistas()
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length > 0) {
     const eventoId = crypto.randomUUID()
     await db.insert(agoraEventos).values({

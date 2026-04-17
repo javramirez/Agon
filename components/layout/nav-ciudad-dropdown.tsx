@@ -3,7 +3,15 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Building2, Scale, Trophy, Users, type LucideIcon } from 'lucide-react'
+import {
+  BookOpen,
+  Building2,
+  MessageSquare,
+  Scale,
+  Trophy,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const LINKS: Array<{
@@ -11,6 +19,7 @@ const LINKS: Array<{
   label: string
   Icon: LucideIcon
   desc: string
+  pvpOnly?: true
 }> = [
   {
     href: '/olimpia',
@@ -36,16 +45,26 @@ const LINKS: Array<{
     Icon: Trophy,
     desc: 'La Ceremonia del Gran Agon',
   },
+  {
+    href: '/correspondencia',
+    label: 'Correspondencia',
+    Icon: MessageSquare,
+    desc: 'Mensajes directos con tu antagonista',
+    pvpOnly: true,
+  },
 ]
 
 const navIconTrigger = 'shrink-0 opacity-80'
 const navIconMenu = 'shrink-0 opacity-80 mt-0.5'
 
-export function NavCiudadDropdown() {
+export function NavCiudadDropdown({ modo }: { modo: 'solo' | 'duelo' }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
-  const active = LINKS.some((l) => pathname === l.href)
+  const visible = LINKS.filter(
+    (l) => !('pvpOnly' in l && l.pvpOnly) || modo === 'duelo'
+  )
+  const active = visible.some((l) => pathname === l.href)
 
   useEffect(() => {
     function handle(e: MouseEvent) {
@@ -83,7 +102,7 @@ export function NavCiudadDropdown() {
             boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(245,158,11,0.06)',
           }}
         >
-          {LINKS.map((link) => {
+          {visible.map((link) => {
             const Icon = link.Icon
             return (
               <Link

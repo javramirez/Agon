@@ -19,7 +19,25 @@ interface DatosAgonista {
   oraculo: string | null
 }
 
-interface Veredicto {
+interface DatosAgonistaSolo {
+  nombre: string
+  nivel: string
+  kleosTotal: number
+  diasPerfectos: number
+  totalDias: number
+  inscripciones: number
+  cumplioContrato: boolean
+  oraculo: string | null
+}
+
+interface VeredictoSolo {
+  modo: 'solo'
+  agonista: DatosAgonistaSolo
+  fraseVeredicto: string
+}
+
+interface VeredictoCompleto {
+  modo: 'duelo'
   agonista1: DatosAgonista
   agonista2: DatosAgonista
   ganador: string | null
@@ -27,6 +45,8 @@ interface Veredicto {
   totalHegemonias: number
   fraseVeredicto: string
 }
+
+type Veredicto = VeredictoSolo | VeredictoCompleto
 
 type Fase = 'cargando' | 'intro' | 'stats' | 'oraculo' | 'veredicto'
 
@@ -36,15 +56,11 @@ function BarraComparativa({
   label,
   valor1,
   valor2,
-  nombre1,
-  nombre2,
   delay = 0,
 }: {
   label: string
   valor1: number
   valor2: number
-  nombre1: string
-  nombre2: string
   delay?: number
 }) {
   const total = valor1 + valor2
@@ -112,10 +128,10 @@ function TarjetaAgonista({
   esGanador: boolean
   delay?: number
 }) {
-  // Buscar el nivel key a partir del label
   const nivelKey =
-    (Object.keys(NIVEL_LABELS) as NivelKey[]).find((k) => NIVEL_LABELS[k] === agonista.nivel) ??
-    'aspirante'
+    (Object.keys(NIVEL_LABELS) as NivelKey[]).find(
+      (k) => NIVEL_LABELS[k] === agonista.nivel
+    ) ?? 'aspirante'
   const NivelIcon = NIVEL_ICONOS[nivelKey]
 
   return (
@@ -150,7 +166,12 @@ function TarjetaAgonista({
           <NivelIcon size={18} className={esGanador ? 'text-amber' : 'text-muted-foreground'} />
         </div>
         <div>
-          <p className={cn('font-display text-base font-bold', esGanador ? 'text-amber' : 'text-foreground')}>
+          <p
+            className={cn(
+              'font-display text-base font-bold',
+              esGanador ? 'text-amber' : 'text-foreground'
+            )}
+          >
             {agonista.nombre}
           </p>
           <p className="text-xs text-muted-foreground font-body">{agonista.nivel}</p>
@@ -176,7 +197,6 @@ function TarjetaAgonista({
           {
             label: 'Contrato',
             valor: agonista.cumplioContrato ? '✓' : '✗',
-            esTexto: true,
             color: agonista.cumplioContrato ? 'text-amber' : 'text-danger',
           },
         ].map((m) => (
@@ -185,7 +205,7 @@ function TarjetaAgonista({
             <p
               className={cn(
                 'font-medium',
-                m.color ?? (esGanador ? 'text-amber' : 'text-foreground')
+                'color' in m && m.color ? m.color : esGanador ? 'text-amber' : 'text-foreground'
               )}
             >
               {m.valor}
@@ -218,7 +238,7 @@ function BotonAccion({ onClick, children }: { onClick: () => void; children: Rea
 
 // ─── CEREMONIA PRINCIPAL ──────────────────────────────────────────────────────
 
-export function VeredictoCeremonia() {
+export function VeredictoCeremonia({ modo }: { modo: 'solo' | 'duelo' }) {
   const [veredicto, setVeredicto] = useState<Veredicto | null>(null)
   const [fase, setFase] = useState<Fase>('cargando')
   const [error, setError] = useState<string | null>(null)
@@ -227,9 +247,14 @@ export function VeredictoCeremonia() {
   useEffect(() => {
     fetch('/api/veredicto')
       .then(async (r) => {
-        const d = await r.json()
+        const d = (await r.json()) as Veredicto & { error?: string }
         if (!r.ok) {
           setError(typeof d.error === 'string' ? d.error : 'Error al cargar')
+          setFase('intro')
+          return
+        }
+        if (d.modo !== modo) {
+          setError('Los datos no coinciden con el modo del reto.')
           setFase('intro')
           return
         }
@@ -240,7 +265,7 @@ export function VeredictoCeremonia() {
         setError('No se pudo cargar el veredicto.')
         setFase('intro')
       })
-  }, [])
+  }, [modo])
 
   async function exportarDatos() {
     setExportando(true)
@@ -287,12 +312,278 @@ export function VeredictoCeremonia() {
 
   if (!veredicto) return null
 
-  const ganador1 = veredicto.ganador === veredicto.agonista1.nombre
-  const ganador2 = veredicto.ganador === veredicto.agonista2.nombre
+  // ── MODO SOLO ──────────────────────────────────────────────────────────────
+  if (veredicto.modo === 'solo') {
+    const nivelKey =
+      (Object.keys(NIVEL_LABELS) as NivelKey[]).find(
+        (k) => NIVEL_LABELS[k] === veredicto.agonista.nivel
+      ) ?? 'aspirante'
+    const NivelIcon = NIVEL_ICONOS[nivelKey]
+
+    return (
+      <div className="space-y-8 pb-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          className="pt-2 text-center space-y-3"
+        >
+          <p className="text-xs text-amber tracking-widest uppercase font-body">
+            El Gran Agon ha concluido
+          </p>
+          <h1 className="font-display text-3xl font-bold tracking-wide">
+            29 días. El Altis emite su veredicto.
+          </h1>
+          <p className="text-sm text-muted-foreground font-body">
+            Solo tú. Solo el Altis. Solo los resultados.
+          </p>
+        </motion.div>
+
+        <div className="h-px bg-gradient-to-r from-transparent via-amber/30 to-transparent" />
+
+        <AnimatePresence>
+          {(fase === 'stats' || fase === 'oraculo' || fase === 'veredicto') && (
+            <motion.div
+              key="stats-solo"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
+              <p className="text-xs text-muted-foreground tracking-widest uppercase font-body text-center">
+                El registro del Altis
+              </p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="rounded-2xl border border-amber/50 bg-surface-1 p-6 space-y-5 relative overflow-hidden"
+              >
+                <motion.div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse at top, rgba(245,158,11,0.06) 0%, transparent 70%)',
+                  }}
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                />
+
+                <div className="flex items-center gap-3 relative">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center border border-amber/30 bg-amber/10">
+                    <NivelIcon size={20} className="text-amber" />
+                  </div>
+                  <div>
+                    <p className="font-display text-xl font-bold text-amber">
+                      {veredicto.agonista.nombre}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body">
+                      {veredicto.agonista.nivel}
+                    </p>
+                  </div>
+                  <motion.span
+                    className="ml-auto text-2xl"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    🏛️
+                  </motion.span>
+                </div>
+
+                <KleosBadge cantidad={veredicto.agonista.kleosTotal} size="lg" />
+
+                <div className="grid grid-cols-2 gap-2 text-xs font-body relative">
+                  {(
+                    [
+                      { label: 'Días perfectos', valor: veredicto.agonista.diasPerfectos },
+                      { label: 'Total días', valor: veredicto.agonista.totalDias },
+                      {
+                        label: 'Inscripciones',
+                        valor: veredicto.agonista.inscripciones,
+                      },
+                      {
+                        label: 'Contrato',
+                        valor: veredicto.agonista.cumplioContrato ? '✓' : '✗',
+                        color: veredicto.agonista.cumplioContrato
+                          ? 'text-amber'
+                          : 'text-danger',
+                      },
+                    ] as const
+                  ).map((m) => (
+                    <div key={m.label} className="bg-surface-2 rounded-lg px-3 py-2 space-y-0.5">
+                      <p className="text-muted-foreground/70">{m.label}</p>
+                      <p
+                        className={cn(
+                          'font-medium',
+                          'color' in m ? m.color : 'text-amber'
+                        )}
+                      >
+                        {m.valor}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {(fase === 'oraculo' || fase === 'veredicto') && (
+            <motion.div
+              key="oraculo-solo"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-px bg-border flex-1" />
+                <p className="text-xs text-amber tracking-widest uppercase font-body">
+                  El Oráculo habla
+                </p>
+                <div className="h-px bg-border flex-1" />
+              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.5 }}
+                className="bg-surface-1 rounded-xl border border-amber/20 p-5 space-y-2"
+              >
+                <p className="text-xs text-amber/60 font-body tracking-widest uppercase">
+                  {veredicto.agonista.nombre} escribió el día 1:
+                </p>
+                <p className="text-sm font-body text-foreground leading-relaxed italic">
+                  &ldquo;{veredicto.agonista.oraculo ?? 'El Oráculo permanece en silencio.'}&rdquo;
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {fase === 'veredicto' && (
+            <motion.div
+              key="veredicto-solo"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-px bg-border flex-1" />
+                <p className="text-xs text-amber tracking-widest uppercase font-body">
+                  El Veredicto del Altis
+                </p>
+                <div className="h-px bg-border flex-1" />
+              </div>
+
+              <motion.div
+                className="relative rounded-2xl border border-amber/40 bg-surface-1 p-8 text-center space-y-6 overflow-hidden"
+                initial={{ scale: 0.95 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+              >
+                <motion.div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background:
+                      'radial-gradient(ellipse at center, rgba(245,158,11,0.08) 0%, transparent 70%)',
+                  }}
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                />
+
+                <div className="space-y-4 relative">
+                  <motion.span
+                    className="text-6xl block"
+                    initial={{ scale: 0, rotate: -20 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 16, delay: 0.2 }}
+                  >
+                    🏛️
+                  </motion.span>
+                  <div className="space-y-1">
+                    <p className="text-xs text-amber/70 tracking-widest uppercase font-body">
+                      El Altis inscribe en piedra
+                    </p>
+                    <motion.p
+                      className="font-display text-3xl font-bold text-amber"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4, duration: 0.6 }}
+                    >
+                      {veredicto.agonista.nombre}
+                    </motion.p>
+                    <motion.p
+                      className="text-sm text-muted-foreground font-body"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.7, duration: 0.5 }}
+                    >
+                      completó el Gran Agon.
+                    </motion.p>
+                  </div>
+                </div>
+
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.9, duration: 0.7 }}
+                  className="pt-4 border-t border-border/60 space-y-1"
+                >
+                  <p className="text-xs text-muted-foreground/40 tracking-widest uppercase font-body">
+                    El Altis inscribe
+                  </p>
+                  <p className="text-sm text-muted-foreground/80 font-body italic leading-relaxed">
+                    &ldquo;{veredicto.fraseVeredicto}&rdquo;
+                  </p>
+                </motion.div>
+              </motion.div>
+
+              <motion.button
+                type="button"
+                onClick={exportarDatos}
+                disabled={exportando}
+                className="w-full py-3 rounded-xl border border-border text-xs text-muted-foreground font-body font-medium tracking-widest uppercase hover:border-amber/30 hover:text-foreground transition-all disabled:opacity-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.2 }}
+              >
+                {exportando ? 'Exportando...' : 'Exportar datos del Gran Agon'}
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence mode="wait">
+          {fase === 'intro' && (
+            <BotonAccion key="btn-stats" onClick={() => setFase('stats')}>
+              Ver los resultados del Gran Agon
+            </BotonAccion>
+          )}
+          {fase === 'stats' && (
+            <BotonAccion key="btn-oraculo" onClick={() => setFase('oraculo')}>
+              Revelar el Oráculo
+            </BotonAccion>
+          )}
+          {fase === 'oraculo' && (
+            <BotonAccion key="btn-veredicto" onClick={() => setFase('veredicto')}>
+              El Altis emite su veredicto
+            </BotonAccion>
+          )}
+        </AnimatePresence>
+      </div>
+    )
+  }
+
+  // ── MODO DUELO ───────────────────────────────────────────────────────────────
+  const vd = veredicto
+  const ganador1 = vd.ganador === vd.agonista1.nombre
+  const ganador2 = vd.ganador === vd.agonista2.nombre
 
   return (
     <div className="space-y-8 pb-12">
-      {/* ─── HEADER ─────────────────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -308,7 +599,6 @@ export function VeredictoCeremonia() {
 
       <div className="h-px bg-gradient-to-r from-transparent via-amber/30 to-transparent" />
 
-      {/* ─── FASE STATS ─────────────────────────────────────────────── */}
       <AnimatePresence>
         {(fase === 'stats' || fase === 'oraculo' || fase === 'veredicto') && (
           <motion.div
@@ -322,41 +612,33 @@ export function VeredictoCeremonia() {
             </p>
 
             <div className="grid grid-cols-2 gap-3">
-              <TarjetaAgonista agonista={veredicto.agonista1} esGanador={ganador1} delay={0.1} />
-              <TarjetaAgonista agonista={veredicto.agonista2} esGanador={ganador2} delay={0.2} />
+              <TarjetaAgonista agonista={vd.agonista1} esGanador={ganador1} delay={0.1} />
+              <TarjetaAgonista agonista={vd.agonista2} esGanador={ganador2} delay={0.2} />
             </div>
 
             <div className="space-y-4 px-1">
               <BarraComparativa
                 label="Kleos"
-                valor1={veredicto.agonista1.kleosTotal}
-                valor2={veredicto.agonista2.kleosTotal}
-                nombre1={veredicto.agonista1.nombre}
-                nombre2={veredicto.agonista2.nombre}
+                valor1={vd.agonista1.kleosTotal}
+                valor2={vd.agonista2.kleosTotal}
                 delay={0.3}
               />
               <BarraComparativa
                 label="Días perfectos"
-                valor1={veredicto.agonista1.diasPerfectos}
-                valor2={veredicto.agonista2.diasPerfectos}
-                nombre1={veredicto.agonista1.nombre}
-                nombre2={veredicto.agonista2.nombre}
+                valor1={vd.agonista1.diasPerfectos}
+                valor2={vd.agonista2.diasPerfectos}
                 delay={0.4}
               />
               <BarraComparativa
                 label="Hegemonías"
-                valor1={veredicto.agonista1.hegemonias}
-                valor2={veredicto.agonista2.hegemonias}
-                nombre1={veredicto.agonista1.nombre}
-                nombre2={veredicto.agonista2.nombre}
+                valor1={vd.agonista1.hegemonias}
+                valor2={vd.agonista2.hegemonias}
                 delay={0.5}
               />
               <BarraComparativa
                 label="Inscripciones"
-                valor1={veredicto.agonista1.inscripciones}
-                valor2={veredicto.agonista2.inscripciones}
-                nombre1={veredicto.agonista1.nombre}
-                nombre2={veredicto.agonista2.nombre}
+                valor1={vd.agonista1.inscripciones}
+                valor2={vd.agonista2.inscripciones}
                 delay={0.6}
               />
             </div>
@@ -364,7 +646,6 @@ export function VeredictoCeremonia() {
         )}
       </AnimatePresence>
 
-      {/* ─── FASE ORÁCULO ───────────────────────────────────────────── */}
       <AnimatePresence>
         {(fase === 'oraculo' || fase === 'veredicto') && (
           <motion.div
@@ -380,7 +661,7 @@ export function VeredictoCeremonia() {
               <div className="h-px bg-border flex-1" />
             </div>
 
-            {[veredicto.agonista1, veredicto.agonista2].map((a, i) => (
+            {[vd.agonista1, vd.agonista2].map((a, i) => (
               <motion.div
                 key={a.nombre}
                 initial={{ opacity: 0, x: i === 0 ? -16 : 16 }}
@@ -400,7 +681,6 @@ export function VeredictoCeremonia() {
         )}
       </AnimatePresence>
 
-      {/* ─── FASE VEREDICTO ─────────────────────────────────────────── */}
       <AnimatePresence>
         {fase === 'veredicto' && (
           <motion.div
@@ -422,7 +702,6 @@ export function VeredictoCeremonia() {
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             >
-              {/* Halo de fondo */}
               <motion.div
                 className="absolute inset-0 pointer-events-none"
                 style={{
@@ -433,7 +712,7 @@ export function VeredictoCeremonia() {
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               />
 
-              {veredicto.empate ? (
+              {vd.empate ? (
                 <div className="space-y-4 relative">
                   <motion.span
                     className="text-6xl block"
@@ -443,9 +722,7 @@ export function VeredictoCeremonia() {
                     ⚖️
                   </motion.span>
                   <div className="space-y-2">
-                    <p className="font-display text-2xl font-bold text-foreground">
-                      El Altis no puede decidir.
-                    </p>
+                    <p className="font-display text-2xl font-bold text-foreground">El Altis no puede decidir.</p>
                     <p className="text-sm text-muted-foreground font-body leading-relaxed">
                       Ambos agonistas terminaron igualados. El Gran Agon los forjó por igual.
                     </p>
@@ -471,7 +748,7 @@ export function VeredictoCeremonia() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.4, duration: 0.6 }}
                     >
-                      {veredicto.ganador}
+                      {vd.ganador}
                     </motion.p>
                     <motion.p
                       className="text-sm text-muted-foreground font-body"
@@ -485,7 +762,6 @@ export function VeredictoCeremonia() {
                 </div>
               )}
 
-              {/* Frase generada por Claude */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -496,12 +772,11 @@ export function VeredictoCeremonia() {
                   El Altis inscribe
                 </p>
                 <p className="text-sm text-muted-foreground/80 font-body italic leading-relaxed">
-                  &ldquo;{veredicto.fraseVeredicto}&rdquo;
+                  &ldquo;{vd.fraseVeredicto}&rdquo;
                 </p>
               </motion.div>
             </motion.div>
 
-            {/* Botón exportar */}
             <motion.button
               type="button"
               onClick={exportarDatos}
@@ -517,7 +792,6 @@ export function VeredictoCeremonia() {
         )}
       </AnimatePresence>
 
-      {/* ─── BOTONES DE AVANCE ──────────────────────────────────────── */}
       <AnimatePresence mode="wait">
         {fase === 'intro' && (
           <BotonAccion key="btn-stats" onClick={() => setFase('stats')}>

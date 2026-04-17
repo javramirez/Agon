@@ -13,8 +13,12 @@ import { notificarPruebaExtraordinaria } from '@/lib/notificaciones/crear'
 
 type CalendarioRow = typeof calendarioAgan.$inferSelect
 
-export async function generarCalendarioAgan(): Promise<void> {
-  const existente = await db.select().from(calendarioAgan).limit(1)
+export async function generarCalendarioAgan(retoId: string): Promise<void> {
+  const existente = await db
+    .select()
+    .from(calendarioAgan)
+    .where(eq(calendarioAgan.retoId, retoId))
+    .limit(1)
   if (existente.length > 0) {
     return
   }
@@ -61,6 +65,7 @@ export async function generarCalendarioAgan(): Promise<void> {
 
   await db.insert(calendarioAgan).values({
     id: crypto.randomUUID(),
+    retoId,
     semanaSagradaSemana,
     tripticoOrden,
     destinoOrden,
@@ -68,22 +73,29 @@ export async function generarCalendarioAgan(): Promise<void> {
   })
 }
 
-export async function getCalendario() {
-  const result = await db.select().from(calendarioAgan).limit(1)
+export async function getCalendario(retoId: string) {
+  const result = await db
+    .select()
+    .from(calendarioAgan)
+    .where(eq(calendarioAgan.retoId, retoId))
+    .limit(1)
   return result[0] ?? null
 }
 
-export async function verificarYActivarPruebas(diaActual: number): Promise<{
+export async function verificarYActivarPruebas(
+  diaActual: number,
+  fechaInicio: string,
+  retoId: string
+): Promise<{
   tripticoActivado: boolean
   destinoLatente: string | null
 }> {
-  const calendario = await getCalendario()
+  const calendario = await getCalendario(retoId)
   if (!calendario) return { tripticoActivado: false, destinoLatente: null }
 
-  const start = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!start) return { tripticoActivado: false, destinoLatente: null }
+  if (!fechaInicio) return { tripticoActivado: false, destinoLatente: null }
 
-  const inicio = parseISO(start)
+  const inicio = parseISO(fechaInicio)
   const fecha = format(addDays(inicio, diaActual - 1), 'yyyy-MM-dd')
   const semana = Math.ceil(diaActual / 7)
   const diaDeLaSemana = ((diaActual - 1) % 7) + 1
@@ -96,7 +108,8 @@ export async function verificarYActivarPruebas(diaActual: number): Promise<{
       diaDeLaSemana,
       semana,
       fecha,
-      calendario
+      calendario,
+      retoId
     )
   }
 
@@ -104,7 +117,8 @@ export async function verificarYActivarPruebas(diaActual: number): Promise<{
     diaActual,
     fecha,
     semana,
-    calendario
+    calendario,
+    retoId
   )
 
   return { tripticoActivado, destinoLatente }
@@ -115,7 +129,8 @@ async function insertarTripticoSiCorresponde(
   diaDeLaSemana: number,
   semana: number,
   fecha: string,
-  calendario: CalendarioRow
+  calendario: CalendarioRow,
+  retoId: string
 ): Promise<boolean> {
   const tripticoOrden = calendario.tripticoOrden as string[]
   const indiceBase = (semana - 1) * 3
@@ -128,7 +143,12 @@ async function insertarTripticoSiCorresponde(
   const yaExiste = await db
     .select()
     .from(pruebaExtraordinaria)
-    .where(eq(pruebaExtraordinaria.pruebaId, pruebaId))
+    .where(
+      and(
+        eq(pruebaExtraordinaria.pruebaId, pruebaId),
+        eq(pruebaExtraordinaria.retoId, retoId)
+      )
+    )
     .limit(1)
 
   if (yaExiste.length > 0) return false
@@ -143,7 +163,8 @@ async function insertarTripticoSiCorresponde(
       and(
         eq(pruebaExtraordinaria.dia, diaActual),
         eq(pruebaExtraordinaria.tipo, 'triptico'),
-        eq(pruebaExtraordinaria.fecha, fecha)
+        eq(pruebaExtraordinaria.fecha, fecha),
+        eq(pruebaExtraordinaria.retoId, retoId)
       )
     )
     .limit(1)
@@ -154,7 +175,6 @@ async function insertarTripticoSiCorresponde(
   const fechaBase = parseISO(fecha)
   const fechaExpira = endOfDay(addDays(fechaBase, diasHastaDomingo))
 
-  // TODO PROMPT-01: insert ya no incluye completada_por_javier/matias (columnas eliminadas)
   await db.insert(pruebaExtraordinaria).values({
     id: crypto.randomUUID(),
     semana,
@@ -167,14 +187,16 @@ async function insertarTripticoSiCorresponde(
     dificultad: config.dificultad,
     activa: true,
     fechaExpira,
+    retoId,
   })
 
   await publicarEnAgora(
     `📜 El Altis lanza una nueva prueba del Tríptico Semanal: "${config.descripcion}" Vale ${config.kleos} kleos. Disponible hasta el domingo.`,
-    { tipo: 'triptico', pruebaId, semana }
+    { tipo: 'triptico', pruebaId, semana },
+    retoId
   )
 
-  void notificarAmbosPruebaExtra(config.descripcion, config.kleos)
+  void notificarAmbosPruebaExtra(config.descripcion, config.kleos, retoId)
 
   return true
 }
@@ -183,7 +205,8 @@ async function getEventoDestinoLatente(
   diaActual: number,
   _fecha: string,
   _semana: number,
-  calendario: CalendarioRow
+  calendario: CalendarioRow,
+  retoId: string
 ): Promise<string | null> {
   const destinoHorarios = calendario.destinoHorarios as Record<
     string,
@@ -199,7 +222,12 @@ async function getEventoDestinoLatente(
   const yaExiste = await db
     .select()
     .from(pruebaExtraordinaria)
-    .where(eq(pruebaExtraordinaria.pruebaId, pruebaIdHoy))
+    .where(
+      and(
+        eq(pruebaExtraordinaria.pruebaId, pruebaIdHoy),
+        eq(pruebaExtraordinaria.retoId, retoId)
+      )
+    )
     .limit(1)
 
   if (yaExiste.length > 0) return null
@@ -209,22 +237,28 @@ async function getEventoDestinoLatente(
 
 export async function activarEventoDestino(
   pruebaId: string,
-  diaActual: number
+  diaActual: number,
+  fechaInicio: string,
+  retoId: string
 ): Promise<boolean> {
-  const calendario = await getCalendario()
+  const calendario = await getCalendario(retoId)
   if (!calendario) return false
 
-  const start = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!start) return false
+  if (!fechaInicio) return false
 
-  const inicio = parseISO(start)
+  const inicio = parseISO(fechaInicio)
   const fecha = format(addDays(inicio, diaActual - 1), 'yyyy-MM-dd')
   const semana = Math.ceil(diaActual / 7)
 
   const yaExiste = await db
     .select()
     .from(pruebaExtraordinaria)
-    .where(eq(pruebaExtraordinaria.pruebaId, pruebaId))
+    .where(
+      and(
+        eq(pruebaExtraordinaria.pruebaId, pruebaId),
+        eq(pruebaExtraordinaria.retoId, retoId)
+      )
+    )
     .limit(1)
 
   if (yaExiste.length > 0) return false
@@ -247,7 +281,6 @@ export async function activarEventoDestino(
   finDelDia.setHours(23, 59, 59, 999)
   const expiraFinal = fechaExpira > finDelDia ? finDelDia : fechaExpira
 
-  // TODO PROMPT-01: sin completada_por_javier/matias (columnas eliminadas)
   await db.insert(pruebaExtraordinaria).values({
     id: crypto.randomUUID(),
     semana,
@@ -260,24 +293,27 @@ export async function activarEventoDestino(
     dificultad: config.dificultad,
     activa: true,
     fechaExpira: expiraFinal,
+    retoId,
   })
 
   await publicarEnAgora(
     `⚡ El Altis desencadena un Evento del Destino: "${config.descripcion}" Vale ${config.kleos} kleos. El tiempo corre.`,
-    { tipo: 'destino', pruebaId, semana }
+    { tipo: 'destino', pruebaId, semana },
+    retoId
   )
 
-  void notificarAmbosPruebaExtra(config.descripcion, config.kleos)
+  void notificarAmbosPruebaExtra(config.descripcion, config.kleos, retoId)
 
   return true
 }
 
 async function notificarAmbosPruebaExtra(
   descripcion: string,
-  kleosBonus: number
+  kleosBonus: number,
+  retoId: string
 ) {
   try {
-    const ambos = await getAmbosAgonistas()
+    const ambos = await getAmbosAgonistas(retoId)
     await Promise.all(
       ambos.map((a) =>
         notificarPruebaExtraordinaria(a.id, descripcion, kleosBonus)
@@ -290,9 +326,10 @@ async function notificarAmbosPruebaExtra(
 
 async function publicarEnAgora(
   contenido: string,
-  metadata: object
+  metadata: object,
+  retoId: string
 ): Promise<void> {
-  const ambos = await getAmbosAgonistas()
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length === 0) return
 
   const eventoId = crypto.randomUUID()

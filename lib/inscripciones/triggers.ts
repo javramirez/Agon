@@ -10,7 +10,7 @@ import {
 import { eq, and, gte, asc } from 'drizzle-orm'
 import type { Agonista, PruebaDiaria } from '@/lib/db/schema'
 import { getDiaDelAgan } from '@/lib/utils'
-import { getAmbosAgonistas } from '@/lib/db/queries'
+import { getAmbosAgonistas, getRetoPorId } from '@/lib/db/queries'
 import { getVentajasActivas, getMetasEfectivas } from '@/lib/facciones/afinidad'
 import { desbloquearInscripcion, yaDesbloqueada } from './desbloquear'
 
@@ -49,10 +49,16 @@ export async function verificarInscripciones(
   pruebaNueva: PruebaDiaria
 ): Promise<string[]> {
   const desbloqueadas: string[] = []
+  if (!agonista.retoId) return desbloqueadas
+
+  const retoIns = await getRetoPorId(agonista.retoId)
+  const fechaInicioReto = retoIns?.fechaInicio
+  if (!fechaInicioReto) return desbloqueadas
+
   const horaActual = new Date().getHours()
   const minutosActual = new Date().getMinutes()
   const horaDecimal = horaActual + minutosActual / 60
-  const diaActual = getDiaDelAgan()
+  const diaActual = getDiaDelAgan(fechaInicioReto)
 
   async function desbloquear(id: string) {
     const exito = await desbloquearInscripcion(agonista.id, agonista.nombre, id)
@@ -402,21 +408,19 @@ export async function verificarInscripciones(
 
   // ¿Cuál es la Primera Regla del Agon?: sin publicar en el Ágora los primeros 7 días
   if (diaActual <= 8 && pruebaNueva.diaPerfecto) {
-    const startRaw = process.env.NEXT_PUBLIC_AGON_START_DATE
+    const inicioGranAgon = new Date(`${fechaInicioReto}T12:00:00`)
     const eventosPropio = await db
       .select()
       .from(agoraEventos)
       .where(eq(agoraEventos.agonistId, agonista.id))
 
-    const tienePublicaciones =
-      !startRaw ||
-      eventosPropio.some((e) => {
-        const diaEvento = Math.ceil(
-          (new Date(e.createdAt).getTime() - new Date(startRaw).getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
-        return diaEvento <= 7
-      })
+    const tienePublicaciones = eventosPropio.some((e) => {
+      const diaEvento = Math.ceil(
+        (new Date(e.createdAt).getTime() - inicioGranAgon.getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+      return diaEvento <= 7
+    })
 
     if (!tienePublicaciones) {
       const primerosNDias = todasLasPruebas
@@ -481,8 +485,14 @@ export async function verificarInscripcionesAfinidad(
 // ─── TRIGGERS EXTERNOS (llamados desde otras rutas) ────────────────────────────
 
 // Gemelos del Agon: ambos completan día perfecto el mismo día
-export async function verificarGemelosDelAgan(hoy: string): Promise<void> {
-  const ambos = await getAmbosAgonistas()
+export async function verificarGemelosDelAgan(
+  hoy: string,
+  retoId: string
+): Promise<void> {
+  const reto = await getRetoPorId(retoId)
+  if (!reto || reto.modo === 'solo') return
+
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length < 2) return
 
   const [a1, a2] = ambos
@@ -508,8 +518,14 @@ export async function verificarGemelosDelAgan(hoy: string): Promise<void> {
 }
 
 // La Piedra del Agon: ambos fallan la misma prueba el mismo día
-export async function verificarPiedraDelAgan(hoy: string): Promise<void> {
-  const ambos = await getAmbosAgonistas()
+export async function verificarPiedraDelAgan(
+  hoy: string,
+  retoId: string
+): Promise<void> {
+  const reto = await getRetoPorId(retoId)
+  if (!reto || reto.modo === 'solo') return
+
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length < 2) return
 
   const [a1, a2] = ambos
@@ -578,9 +594,13 @@ export async function verificarPiedraDelAgan(hoy: string): Promise<void> {
 // El Espejo: ambos alcanzan el mismo nivel el mismo día
 export async function verificarEspejoDelAgan(
   agonistId: string,
-  nivelNuevo: string
+  nivelNuevo: string,
+  retoId: string
 ): Promise<void> {
-  const ambos = await getAmbosAgonistas()
+  const reto = await getRetoPorId(retoId)
+  if (!reto || reto.modo === 'solo') return
+
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length < 2) return
 
   const antagonista = ambos.find((a) => a.id !== agonistId)
@@ -598,9 +618,13 @@ export async function verificarEspejoDelAgan(
 // se verifica por separado porque son inscripciones distintas
 export async function verificarEasterEggsDuales(
   agonistId: string,
-  hoy: string
+  hoy: string,
+  retoId: string
 ): Promise<void> {
-  const ambos = await getAmbosAgonistas()
+  const reto = await getRetoPorId(retoId)
+  if (!reto || reto.modo === 'solo') return
+
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length < 2) return
 
   const yo = ambos.find((a) => a.id === agonistId)
@@ -678,12 +702,13 @@ export async function verificarRemontada(
   agonistId: string,
   agonistaNombre: string,
   kleosActual: number,
-  kleosAntagonista: number
+  kleosAntagonista: number,
+  retoId: string
 ): Promise<void> {
   if (kleosActual <= kleosAntagonista) return
   if (await yaDesbloqueada(agonistId, 'la_remontada')) return
 
-  const ambos = await getAmbosAgonistas()
+  const ambos = await getAmbosAgonistas(retoId)
   const antagonista = ambos.find((a) => a.id !== agonistId)
   if (!antagonista) return
 

@@ -17,25 +17,51 @@ const LINKS_CIUDAD = [
   { href: '/codex', label: 'El Códex', icon: '📜', desc: 'La biblioteca del Gran Agon' },
   { href: '/oraculo', label: 'El Oráculo', icon: '⚖️', desc: 'Tu mensaje sellado del día 1' },
   { href: '/veredicto', label: 'El Veredicto', icon: '🏆', desc: 'La Ceremonia del Gran Agon' },
+  {
+    href: '/correspondencia',
+    label: 'Correspondencia',
+    icon: '✉️',
+    desc: 'Mensajes directos con tu antagonista',
+    pvpOnly: true as const,
+  },
 ]
 
 const LINKS_AGONISTA = [
   { href: '/perfil', label: 'Mi Perfil', icon: '👤', desc: 'Tu nivel, stats y llamas' },
-  { href: '/poderes', label: 'Poderes', icon: '⚡', desc: 'Provocaciones, Señalamiento y Ekecheiria' },
+  {
+    href: '/poderes',
+    label: 'Poderes',
+    icon: '⚡',
+    desc: 'Provocaciones, Señalamiento y Ekecheiria',
+    pvpOnly: true as const,
+  },
   { href: '/mentor', label: 'El Mentor', icon: '🏛️', desc: 'Conversación con tu guía asignado' },
   { href: '/admin', label: 'Altis Admin', icon: '⚙️', desc: 'Panel de administración', adminOnly: true as const },
 ]
 
-export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
+export function MobileNav({
+  isAdmin,
+  modo,
+}: {
+  isAdmin: boolean
+  modo: 'solo' | 'duelo'
+}) {
   const pathname = usePathname()
   const [ciudadOpen, setCiudadOpen] = useState(false)
   const [agonistOpen, setAgonistOpen] = useState(false)
 
-  const agonistaVisible = LINKS_AGONISTA.filter(
-    (l) => !('adminOnly' in l && l.adminOnly) || isAdmin
-  )
+  const agonistaVisible = LINKS_AGONISTA.filter((l) => {
+    if ('adminOnly' in l && l.adminOnly && !isAdmin) return false
+    if ('pvpOnly' in l && l.pvpOnly && modo === 'solo') return false
+    return true
+  })
 
-  const isCiudadActive = LINKS_CIUDAD.some((l) => l.href === pathname)
+  const ciudadVisible = LINKS_CIUDAD.filter((l) => {
+    if ('pvpOnly' in l && l.pvpOnly && modo === 'solo') return false
+    return true
+  })
+
+  const isCiudadActive = ciudadVisible.some((l) => l.href === pathname)
   const isAgonistaActive = agonistaVisible.some((l) => l.href === pathname)
 
   return (
@@ -166,7 +192,7 @@ export function MobileNav({ isAdmin }: { isAdmin: boolean }) {
                   La Ciudad
                 </p>
                 <div className="space-y-2">
-                  {LINKS_CIUDAD.map((link, i) => (
+                  {ciudadVisible.map((link, i) => (
                     <motion.div
                       key={link.href}
                       initial={{ opacity: 0, x: -16 }}

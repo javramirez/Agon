@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '@/lib/utils'
 import {
   AreaChart,
   Area,
@@ -33,11 +34,18 @@ function CustomTooltip({
   label,
   nombre1,
   nombre2,
-}: TooltipProps<number, string> & { nombre1: string; nombre2: string }) {
+  solo,
+}: TooltipProps<number, string> & {
+  nombre1: string
+  nombre2: string
+  solo: boolean
+}) {
   if (!active || !payload?.length) return null
 
   const v1 = payload.find((p) => p.dataKey === nombre1)?.value ?? 0
-  const v2 = payload.find((p) => p.dataKey === nombre2)?.value ?? 0
+  const v2 = solo
+    ? 0
+    : (payload.find((p) => p.dataKey === nombre2)?.value ?? 0)
 
   return (
     <div
@@ -58,18 +66,22 @@ function CustomTooltip({
           {(v1 as number).toLocaleString()}
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 shrink-0" />
-        <span className="text-muted-foreground truncate max-w-[80px]">{nombre2}</span>
-        <span className="text-zinc-400 font-semibold tabular-nums ml-auto">
-          {(v2 as number).toLocaleString()}
-        </span>
-      </div>
+      {!solo && (
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 shrink-0" />
+          <span className="text-muted-foreground truncate max-w-[80px]">{nombre2}</span>
+          <span className="text-zinc-400 font-semibold tabular-nums ml-auto">
+            {(v2 as number).toLocaleString()}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
 
 export function EvolucionKleosChart({ datos, nombre1, nombre2 }: Props) {
+  const solo = !nombre2.trim()
+
   if (datos.length === 0) {
     return (
       <div className="text-center py-8">
@@ -83,8 +95,11 @@ export function EvolucionKleosChart({ datos, nombre1, nombre2 }: Props) {
   const ultimo = datos[datos.length - 1]
   const kleosUltimo1 =
     typeof ultimo?.[nombre1] === 'number' ? (ultimo[nombre1] as number) : 0
-  const kleosUltimo2 =
-    typeof ultimo?.[nombre2] === 'number' ? (ultimo[nombre2] as number) : 0
+  const kleosUltimo2 = solo
+    ? 0
+    : typeof ultimo?.[nombre2] === 'number'
+      ? (ultimo[nombre2] as number)
+      : 0
 
   const datosFormateados = datos.map((d) => ({
     ...d,
@@ -139,7 +154,9 @@ export function EvolucionKleosChart({ datos, nombre1, nombre2 }: Props) {
             />
 
             <Tooltip
-              content={<CustomTooltip nombre1={nombre1} nombre2={nombre2} />}
+              content={
+                <CustomTooltip nombre1={nombre1} nombre2={nombre2} solo={solo} />
+              }
               cursor={{
                 stroke: 'hsl(43 96% 56%)',
                 strokeWidth: 1,
@@ -148,16 +165,17 @@ export function EvolucionKleosChart({ datos, nombre1, nombre2 }: Props) {
               }}
             />
 
-            {/* Antagonista debajo para que el ámbar quede encima */}
-            <Area
-              type="monotone"
-              dataKey={nombre2}
-              stroke="hsl(0 0% 28%)"
-              strokeWidth={1.5}
-              fill="url(#gradGris)"
-              dot={false}
-              activeDot={{ r: 3, fill: 'hsl(0 0% 50%)', strokeWidth: 0 }}
-            />
+            {!solo && (
+              <Area
+                type="monotone"
+                dataKey={nombre2}
+                stroke="hsl(0 0% 28%)"
+                strokeWidth={1.5}
+                fill="url(#gradGris)"
+                dot={false}
+                activeDot={{ r: 3, fill: 'hsl(0 0% 50%)', strokeWidth: 0 }}
+              />
+            )}
             <Area
               type="monotone"
               dataKey={nombre1}
@@ -176,8 +194,12 @@ export function EvolucionKleosChart({ datos, nombre1, nombre2 }: Props) {
         </ResponsiveContainer>
       </div>
 
-      {/* Leyenda */}
-      <div className="flex justify-between text-xs font-body gap-2 flex-wrap pt-1 border-t border-border/40">
+      <div
+        className={cn(
+          'flex text-xs font-body gap-2 flex-wrap pt-1 border-t border-border/40',
+          solo ? 'justify-start' : 'justify-between'
+        )}
+      >
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-2 h-2 rounded-full bg-amber shrink-0" />
           <span className="text-muted-foreground truncate">{nombre1}</span>
@@ -185,13 +207,15 @@ export function EvolucionKleosChart({ datos, nombre1, nombre2 }: Props) {
             {kleosUltimo1.toLocaleString()} kleos
           </span>
         </div>
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-2 h-2 rounded-full bg-zinc-600 shrink-0" />
-          <span className="text-muted-foreground truncate">{nombre2}</span>
-          <span className="text-zinc-400 font-semibold tabular-nums">
-            {kleosUltimo2.toLocaleString()} kleos
-          </span>
-        </div>
+        {!solo && (
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-2 h-2 rounded-full bg-zinc-600 shrink-0" />
+            <span className="text-muted-foreground truncate">{nombre2}</span>
+            <span className="text-zinc-400 font-semibold tabular-nums">
+              {kleosUltimo2.toLocaleString()} kleos
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )

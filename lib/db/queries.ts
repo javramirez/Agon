@@ -10,7 +10,7 @@ import {
   hegemonias,
   inscripciones,
 } from './schema'
-import { eq, and, gte, lte, desc, count, not } from 'drizzle-orm'
+import { eq, and, gte, lte, desc, count, not, inArray } from 'drizzle-orm'
 import {
   NIVEL_THRESHOLDS,
   NIVEL_LABELS,
@@ -35,8 +35,11 @@ export async function getAgonistaByClerkId(clerkId: string) {
   return result[0] ?? null
 }
 
-export async function getAmbosAgonistas() {
-  return db.select().from(agonistas)
+export async function getAmbosAgonistas(retoId: string) {
+  return db
+    .select()
+    .from(agonistas)
+    .where(eq(agonistas.retoId, retoId))
 }
 
 /**
@@ -159,11 +162,12 @@ export async function getPruebaDiariaAntagonista(antagonistId: string) {
   return result[0] ?? null
 }
 
-export async function getKleosSemanaActual(agonistId: string) {
-  const hoy = new Date()
-  const inicioSemana = new Date(hoy)
-  inicioSemana.setDate(hoy.getDate() - hoy.getDay())
-  const inicioStr = inicioSemana.toISOString().split('T')[0]
+export async function getKleosSemanaActual(
+  agonistId: string,
+  fechaInicio: string
+) {
+  const semana = getSemanaActual(fechaInicio)
+  const { inicioSemana } = getSemanaRango(semana, fechaInicio)
 
   const result = await db
     .select()
@@ -171,7 +175,7 @@ export async function getKleosSemanaActual(agonistId: string) {
     .where(
       and(
         eq(kleosLog.agonistId, agonistId),
-        gte(kleosLog.fecha, inicioStr)
+        gte(kleosLog.fecha, inicioSemana)
       )
     )
 
@@ -189,14 +193,17 @@ export async function getLlamasAgonista(agonistId: string) {
 
 // ─── ÁGORA ────────────────────────────────────────────
 
-export async function getAgoraEventos(limit = 30) {
-  const eventos = await db
+export async function getAgoraEventos(retoId: string, limit = 30) {
+  const agonistasReto = await getAmbosAgonistas(retoId)
+  const ids = agonistasReto.map((a) => a.id)
+  if (ids.length === 0) return []
+
+  return db
     .select()
     .from(agoraEventos)
+    .where(inArray(agoraEventos.agonistId, ids))
     .orderBy(desc(agoraEventos.createdAt))
     .limit(limit)
-
-  return eventos
 }
 
 export async function getAclamacionesPorEvento(eventoId: string) {
@@ -272,15 +279,20 @@ export async function getStatsCompletos(agonistId: string) {
 
 // ─── HEGEMONÍA ────────────────────────────────────────
 
-export async function getHegemonias() {
+export async function getHegemonias(retoId: string) {
   return db
     .select()
     .from(hegemonias)
+    .where(eq(hegemonias.retoId, retoId))
     .orderBy(desc(hegemonias.semana))
 }
 
-export async function getKleosPorSemana(agonistId: string, semana: number) {
-  const { inicioSemana, finSemana } = getSemanaRango(semana)
+export async function getKleosPorSemana(
+  agonistId: string,
+  semana: number,
+  fechaInicio: string
+) {
+  const { inicioSemana, finSemana } = getSemanaRango(semana, fechaInicio)
 
   const result = await db
     .select()
@@ -296,17 +308,21 @@ export async function getKleosPorSemana(agonistId: string, semana: number) {
   return result.reduce((sum, r) => sum + r.cantidad, 0)
 }
 
-export async function calcularYGuardarHegemonia(semana: number) {
-  const { inicioSemana, finSemana } = getSemanaRango(semana)
+export async function calcularYGuardarHegemonia(
+  semana: number,
+  retoId: string,
+  fechaInicio: string
+) {
+  const { inicioSemana, finSemana } = getSemanaRango(semana, fechaInicio)
 
-  const ambos = await getAmbosAgonistas()
+  const ambos = await getAmbosAgonistas(retoId)
   if (ambos.length < 2) return null
 
   const [a1, a2] = ambos
 
   const [kleos1, kleos2] = await Promise.all([
-    getKleosPorSemana(a1.id, semana),
-    getKleosPorSemana(a2.id, semana),
+    getKleosPorSemana(a1.id, semana, fechaInicio),
+    getKleosPorSemana(a2.id, semana, fechaInicio),
   ])
 
   const empate = kleos1 === kleos2
@@ -315,7 +331,7 @@ export async function calcularYGuardarHegemonia(semana: number) {
   const existing = await db
     .select()
     .from(hegemonias)
-    .where(eq(hegemonias.semana, semana))
+    .where(and(eq(hegemonias.semana, semana), eq(hegemonias.retoId, retoId)))
     .limit(1)
 
   if (existing.length > 0) {
@@ -327,7 +343,7 @@ export async function calcularYGuardarHegemonia(semana: number) {
         kleosRival: Math.min(kleos1, kleos2),
         empate,
       })
-      .where(eq(hegemonias.semana, semana))
+      .where(and(eq(hegemonias.semana, semana), eq(hegemonias.retoId, retoId)))
       .returning()
     if (!empate && ganadorId) {
       void actualizarPuntosDisputaEvento(ganadorId, 'nike_hegemonia').catch(() => {})
@@ -340,6 +356,7 @@ export async function calcularYGuardarHegemonia(semana: number) {
     .values({
       id: crypto.randomUUID(),
       semana,
+      retoId,
       fechaInicio: inicioSemana,
       fechaFin: finSemana,
       ganadorId,
@@ -370,27 +387,21 @@ export async function calcularYGuardarHegemonia(semana: number) {
   return nueva[0]
 }
 
-export function getSemanaRango(semana: number) {
-  const start = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!start) throw new Error('NEXT_PUBLIC_AGON_START_DATE no está definida')
-
-  const inicio = new Date(start)
+export function getSemanaRango(semana: number, fechaInicio: string) {
+  const inicio = new Date(`${fechaInicio}T12:00:00`)
   const inicioSemana = new Date(inicio)
   inicioSemana.setDate(inicio.getDate() + (semana - 1) * 7)
   const finSemana = new Date(inicioSemana)
   finSemana.setDate(inicioSemana.getDate() + 6)
 
   return {
-    inicioSemana: inicioSemana.toISOString().split('T')[0],
-    finSemana: finSemana.toISOString().split('T')[0],
+    inicioSemana: inicioSemana.toISOString().split('T')[0]!,
+    finSemana: finSemana.toISOString().split('T')[0]!,
   }
 }
 
-export function getSemanaActual(): number {
-  const start = process.env.NEXT_PUBLIC_AGON_START_DATE
-  if (!start) return 1
-
-  const inicio = new Date(start)
+export function getSemanaActual(fechaInicio: string): number {
+  const inicio = new Date(`${fechaInicio}T12:00:00`)
   const hoy = new Date()
   const diff = Math.floor(
     (hoy.getTime() - inicio.getTime()) / (7 * 24 * 60 * 60 * 1000)

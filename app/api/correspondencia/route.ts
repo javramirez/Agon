@@ -4,10 +4,22 @@ import { db } from '@/lib/db'
 import { correspondencia } from '@/lib/db/schema'
 import { desc, eq } from 'drizzle-orm'
 import { getAgonistaByClerkId } from '@/lib/db/queries'
+import { esSolo } from '@/lib/retos/guards'
 
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const agonista = await getAgonistaByClerkId(userId)
+  if (!agonista) {
+    return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  if (await esSolo(agonista.retoId)) {
+    return NextResponse.json(
+      { error: 'La Correspondencia no está disponible en modo solo' },
+      { status: 400 }
+    )
+  }
 
   const mensajes = await db
     .select()
@@ -25,6 +37,12 @@ export async function POST(req: Request) {
   const agonista = await getAgonistaByClerkId(userId)
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  if (await esSolo(agonista.retoId)) {
+    return NextResponse.json(
+      { error: 'La Correspondencia no está disponible en modo solo' },
+      { status: 400 }
+    )
   }
   let body: unknown
   try {
@@ -68,6 +86,12 @@ export async function PATCH(req: Request) {
   const agonista = await getAgonistaByClerkId(userId)
   if (!agonista) {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
+  }
+  if (await esSolo(agonista.retoId)) {
+    return NextResponse.json(
+      { error: 'La Correspondencia no está disponible en modo solo' },
+      { status: 400 }
+    )
   }
   let body: unknown
   try {

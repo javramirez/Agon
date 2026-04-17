@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import { postsDioses, pruebasDiarias } from '@/lib/db/schema'
 import { and, eq } from 'drizzle-orm'
 import { DIOSES } from '@/lib/dioses/config'
-import { getAmbosAgonistas } from '@/lib/db/queries'
+import { getAmbosAgonistas, getRetoPorId } from '@/lib/db/queries'
 
 function getAnthropicClient() {
   const key = process.env.ANTHROPIC_API_KEY
@@ -48,9 +48,12 @@ Sin guion largo. Sin hashtags. Sin emojis. Máximo 25 palabras.`
   }
 }
 
-export async function triggerSilencioDelOlimpo(): Promise<void> {
+export async function triggerSilencioDelOlimpo(retoId: string): Promise<void> {
   try {
-    const ambos = await getAmbosAgonistas()
+    const reto = await getRetoPorId(retoId)
+    if (!reto || reto.modo === 'solo') return
+
+    const ambos = await getAmbosAgonistas(retoId)
     if (ambos.length < 2) return
 
     const [a1, a2] = ambos
@@ -123,9 +126,15 @@ export async function triggerSilencioDelOlimpo(): Promise<void> {
   }
 }
 
-export async function ambosConfirmaronHoy(hoy: string): Promise<boolean> {
+/** Alias explícito para orquestación desde rutas (misma implementación que el trigger). */
+export const ejecutarSilencioOlimpo = triggerSilencioDelOlimpo
+
+export async function ambosConfirmaronHoy(
+  hoy: string,
+  retoId: string
+): Promise<boolean> {
   try {
-    const ambos = await getAmbosAgonistas()
+    const ambos = await getAmbosAgonistas(retoId)
     if (ambos.length < 2) return false
 
     const [p1, p2] = await Promise.all([

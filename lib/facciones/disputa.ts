@@ -9,6 +9,7 @@ import {
 import { and, eq, lte, or, sql } from 'drizzle-orm'
 import { FACCIONES, type FaccionId } from './config'
 import { desbloquearInscripcion } from '@/lib/inscripciones/desbloquear'
+import { getRetoPorId } from '@/lib/db/queries'
 
 // ─── Mensajes de inicio del duelo — voz del dios de la facción ──────────────
 
@@ -32,9 +33,14 @@ const MENSAJES_INICIO_DUELO: Record<string, string> = {
 
 export async function detectarDisputaCampeon(
   agonistId: string,
-  faccionId: FaccionId
+  faccionId: FaccionId,
+  retoId: string | null | undefined
 ): Promise<void> {
   try {
+    if (!retoId) return
+    const reto = await getRetoPorId(retoId)
+    if (!reto || reto.modo === 'solo') return
+
     const disputaActiva = await db
       .select({ id: disputasCampeon.id })
       .from(disputasCampeon)
