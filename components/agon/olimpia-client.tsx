@@ -11,13 +11,7 @@ import {
 } from '@/lib/facciones/config'
 import { faccionesAfinidad, type DisputaCampeon } from '@/lib/db/schema'
 import type { InferSelectModel } from 'drizzle-orm'
-import { LikeButton } from './like-button'
-
 type AfinidadRow = InferSelectModel<typeof faccionesAfinidad>
-
-/** Población base mínima para contar como "facción grande" (tier épico) */
-const POBLACION_FACCION_GRANDE = 8000
-const UMBRAL_TIER_MAX_SIN_EPICO = 23_999
 
 function getAfinidad(afinidades: AfinidadRow[], faccionId: FaccionId) {
   return afinidades.find((a) => a.faccionId === faccionId)
@@ -30,6 +24,7 @@ interface Props {
   miAfinidad: AfinidadRow[]
   rivalAfinidad: AfinidadRow[]
   disputasActivas: DisputaCampeon[]
+  esSolo: boolean
 }
 
 function RangoBadge({ rango, nombre }: { rango: number; nombre: string }) {
@@ -111,6 +106,7 @@ function FaccionCard({
   rivalNombre,
   seleccionada,
   onClick,
+  esSolo,
 }: {
   faccionId: FaccionId
   miAfinidad: AfinidadRow[]
@@ -118,6 +114,7 @@ function FaccionCard({
   rivalNombre: string
   seleccionada: boolean
   onClick: () => void
+  esSolo: boolean
 }) {
   const faccion = FACCIONES[faccionId]
   const Icono = faccion.icono
@@ -127,11 +124,8 @@ function FaccionCard({
   const miPuntos = miData?.puntosAfinidad ?? 0
   const rivPuntos = rivData?.puntosAfinidad ?? 0
   const miRango = miData?.rango ?? 1
-  const esCampeon = miRango === 5
-
-  const adeptosActuales = getPoblacionVisible(faccion, miRango)
-  const popularidad =
-    faccion.poblacionBase > 0 ? (adeptosActuales / faccion.poblacionBase) * 100 : 0
+  const miEsCampeon = miRango === 5
+  const rivalEsCampeon = (rivData?.rango ?? 1) === 5
 
   return (
     <motion.button
@@ -164,7 +158,7 @@ function FaccionCard({
             <span className="text-sm font-medium text-white/90 leading-tight">
               {faccion.nombre}
             </span>
-            {esCampeon && (
+            {miEsCampeon && (
               <span
                 className="text-[9px] uppercase tracking-widest font-semibold px-1.5 py-0.5 rounded"
                 style={{
@@ -182,18 +176,9 @@ function FaccionCard({
           >
             {faccion.dios} · {faccion.lider}
           </div>
-          <p
-            className="text-[11px] mt-1.5 font-medium tabular-nums"
-            style={{ color: faccion.color }}
-          >
-            {adeptosActuales.toLocaleString()} adeptos
-          </p>
-          <div className="mt-2">
-            <BarraPopularidad popularidadPct={popularidad} color={faccion.color} />
-          </div>
         </div>
 
-        <div className="text-right shrink-0">
+        <div className="text-right shrink-0 flex flex-col items-end gap-1">
           <div
             className="text-sm font-medium"
             style={{
@@ -202,10 +187,23 @@ function FaccionCard({
           >
             {miPuntos}
           </div>
-          {rivPuntos > 0 && (
+          {!esSolo && rivPuntos > 0 && (
             <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
               {rivalNombre.split(' ')[0]}: {rivPuntos}
             </div>
+          )}
+          {miEsCampeon && (
+            <span
+              className="text-[9px] uppercase tracking-widest font-semibold px-1.5 py-0.5 rounded"
+              style={{ backgroundColor: `${faccion.color}22`, color: faccion.color }}
+            >
+              ★ tú
+            </span>
+          )}
+          {!esSolo && rivalEsCampeon && !miEsCampeon && (
+            <span className="text-[9px] uppercase tracking-widest font-semibold px-1.5 py-0.5 rounded bg-white/5 text-white/30">
+              ★ rival
+            </span>
           )}
         </div>
       </div>
@@ -263,6 +261,7 @@ function PanelDetalle({
   rivalNombre,
   miId,
   disputasActivas,
+  esSolo,
 }: {
   faccionId: FaccionId
   miAfinidad: AfinidadRow[]
@@ -271,6 +270,7 @@ function PanelDetalle({
   rivalNombre: string
   miId: string
   disputasActivas: DisputaCampeon[]
+  esSolo: boolean
 }) {
   const faccion = FACCIONES[faccionId]
   const Icono = faccion.icono
@@ -359,57 +359,127 @@ function PanelDetalle({
           className="text-[10px] uppercase tracking-widest mb-5"
           style={{ color: 'rgba(255,255,255,0.25)' }}
         >
-          Estado en esta facción
+          {esSolo ? 'Tu posición' : 'Estado en esta facción'}
         </p>
-        <div className="flex items-start justify-around gap-4">
-          <AvatarAfinidad
-            inicial={(agonistaNombre[0] ?? '?').toUpperCase()}
-            puntos={miPuntos}
-            rango={miRango}
-            nombre={agonistaNombre}
-            color={faccion.color}
-          />
-          <div className="text-xs pt-4" style={{ color: 'rgba(255,255,255,0.12)' }}>
-            vs
+        {esSolo ? (
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-base font-medium shrink-0"
+                style={{
+                  border: `1.5px solid ${miRango > 1 ? faccion.color : 'rgba(255,255,255,0.1)'}`,
+                  color: miRango > 1 ? faccion.color : 'rgba(255,255,255,0.25)',
+                  backgroundColor: miRango > 1 ? `${faccion.color}0F` : 'transparent',
+                }}
+              >
+                {(agonistaNombre[0] ?? '?').toUpperCase()}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white/80">{agonistaNombre}</p>
+                <div className="mt-1.5">
+                  <RangoBadge
+                    rango={miRango}
+                    nombre={
+                      RANGOS_AFINIDAD.find((r) => r.rango === miRango)?.nombre ?? 'Desconocido'
+                    }
+                  />
+                </div>
+              </div>
+              <div className="text-right">
+                <p
+                  className="text-2xl font-semibold tabular-nums"
+                  style={{ color: faccion.color }}
+                >
+                  {miPuntos}
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  puntos
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-baseline gap-2">
+                <span
+                  className="text-2xl font-semibold tabular-nums"
+                  style={{ color: faccion.color }}
+                >
+                  {poblacionVisible.toLocaleString()}
+                </span>
+                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                  de {faccion.poblacionBase.toLocaleString()} habitantes
+                </span>
+              </div>
+              <BarraPopularidad
+                popularidadPct={popularidadAliada}
+                color={faccion.color}
+                delay={0.15}
+              />
+              <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                {popularidadAliada < 1
+                  ? 'Aún no te conocen en esta facción'
+                  : popularidadAliada < 25
+                    ? 'Empiezas a ganar presencia'
+                    : popularidadAliada < 70
+                      ? 'Tu nombre circula entre sus filas'
+                      : 'Dominas esta facción'}
+              </p>
+            </div>
           </div>
-          <AvatarAfinidad
-            inicial={(rivalNombre[0] ?? '?').toUpperCase()}
-            puntos={rivPuntos}
-            rango={rivRango}
-            nombre={rivalNombre}
-            color={faccion.color}
-          />
-        </div>
-      </div>
-
-      <div className="h-px w-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
-
-      <div>
-        <p
-          className="text-[10px] uppercase tracking-widest mb-4"
-          style={{ color: 'rgba(255,255,255,0.25)' }}
-        >
-          Población aliada
-        </p>
-        <div className="flex items-baseline gap-2 mb-3">
-          <span className="text-3xl font-semibold" style={{ color: faccion.color }}>
-            {poblacionVisible.toLocaleString()}
-          </span>
-          <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            de {faccion.poblacionBase.toLocaleString()} habitantes
-          </span>
-        </div>
-        <BarraPopularidad
-          popularidadPct={popularidadAliada}
-          color={faccion.color}
-          delay={0.15}
-        />
-        {rivRango > 1 && (
-          <p className="text-[11px] mt-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
-            {rivalNombre.split(' ')[0]} tiene {poblacionRivVisible.toLocaleString()} aliados
-          </p>
+        ) : (
+          <div className="flex items-start justify-around gap-4">
+            <AvatarAfinidad
+              inicial={(agonistaNombre[0] ?? '?').toUpperCase()}
+              puntos={miPuntos}
+              rango={miRango}
+              nombre={agonistaNombre}
+              color={faccion.color}
+            />
+            <div className="text-xs pt-4" style={{ color: 'rgba(255,255,255,0.12)' }}>
+              vs
+            </div>
+            <AvatarAfinidad
+              inicial={(rivalNombre[0] ?? '?').toUpperCase()}
+              puntos={rivPuntos}
+              rango={rivRango}
+              nombre={rivalNombre}
+              color={faccion.color}
+            />
+          </div>
         )}
       </div>
+
+      {!esSolo && (
+        <>
+          <div className="h-px w-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
+          <div>
+            <p
+              className="text-[10px] uppercase tracking-widest mb-4"
+              style={{ color: 'rgba(255,255,255,0.25)' }}
+            >
+              Población aliada
+            </p>
+            <div className="flex items-baseline gap-2 mb-3">
+              <span className="text-3xl font-semibold" style={{ color: faccion.color }}>
+                {poblacionVisible.toLocaleString()}
+              </span>
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                de {faccion.poblacionBase.toLocaleString()} habitantes
+              </span>
+            </div>
+            <BarraPopularidad
+              popularidadPct={popularidadAliada}
+              color={faccion.color}
+              delay={0.15}
+            />
+            {rivRango > 1 && (
+              <p className="text-[11px] mt-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                {rivalNombre.split(' ')[0]} tiene {poblacionRivVisible.toLocaleString()} aliados
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="h-px w-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
 
@@ -436,6 +506,49 @@ function PanelDetalle({
               ⚠️ Esta facción recuerda tu traición — los puntos que acumulas aquí se
               reducen un {(miData?.traicionCount ?? 0) * 15}%.
             </p>
+          )}
+        </div>
+      ) : esSolo ? (
+        <div className="flex flex-col gap-3">
+          <div
+            className="rounded-xl p-4 text-center"
+            style={{
+              backgroundColor: `${faccion.color}0F`,
+              border: `1px solid ${faccion.color}33`,
+            }}
+          >
+            <p className="text-sm font-semibold" style={{ color: faccion.color }}>
+              ★ Campeón de {faccion.dios}
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Has conquistado esta facción. {faccion.dios} reconoce tu dominio.
+            </p>
+          </div>
+
+          {VENTAJAS_CAMPEON[faccionId] && (
+            <div
+              className="rounded-xl p-4"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.07)',
+              }}
+            >
+              <p
+                className="text-[10px] uppercase tracking-widest mb-2"
+                style={{ color: 'rgba(255,255,255,0.25)' }}
+              >
+                Ventaja activa
+              </p>
+              <p className="text-xs font-medium text-white/70 mb-1">
+                {VENTAJAS_CAMPEON[faccionId]!.titulo}
+              </p>
+              <p
+                className="text-xs leading-relaxed"
+                style={{ color: 'rgba(255,255,255,0.35)' }}
+              >
+                {VENTAJAS_CAMPEON[faccionId]!.descripcion}
+              </p>
+            </div>
           )}
         </div>
       ) : (
@@ -579,6 +692,67 @@ function PanelDetalle({
   )
 }
 
+const POBLACION_TOTAL_OLIMPIA = Object.values(FACCIONES).reduce(
+  (sum, f) => sum + f.poblacionBase,
+  0
+) // 47,400
+
+function BarraOlimpia({ miAfinidad }: { miAfinidad: AfinidadRow[] }) {
+  const segmentos = (Object.keys(FACCIONES) as FaccionId[]).map((id) => {
+    const faccion = FACCIONES[id]
+    const row = miAfinidad.find((a) => a.faccionId === id)
+    const rango = row?.rango ?? 1
+    const adeptos = getPoblacionVisible(faccion, rango)
+    const pct = (adeptos / POBLACION_TOTAL_OLIMPIA) * 100
+    return { id, color: faccion.color, pct, adeptos, nombre: faccion.nombre }
+  })
+
+  const totalAdeptos = segmentos.reduce((s, x) => s + x.adeptos, 0)
+
+  return (
+    <div className="w-full mt-3 space-y-1.5">
+      <div className="flex w-full h-2 rounded-full overflow-hidden gap-[1px]">
+        {segmentos.map((s) =>
+          s.pct > 0 ? (
+            <motion.div
+              key={s.id}
+              className="h-full shrink-0 rounded-sm"
+              style={{ backgroundColor: s.color }}
+              initial={{ width: 0 }}
+              animate={{ width: `${s.pct}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
+              title={`${s.nombre}: ${s.adeptos.toLocaleString()}`}
+            />
+          ) : null
+        )}
+        {/* Población no conquistada */}
+        <div
+          className="h-full flex-1 rounded-sm min-w-0"
+          style={{ backgroundColor: 'rgba(255,255,255,0.07)' }}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          {totalAdeptos.toLocaleString()} de{' '}
+          {POBLACION_TOTAL_OLIMPIA.toLocaleString()} habitantes
+        </p>
+        <div className="flex items-center gap-2">
+          {segmentos
+            .filter((s) => s.adeptos > 0)
+            .map((s) => (
+              <div key={s.id} className="flex items-center gap-1">
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
+              </div>
+            ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function OlimpiaClient({
   agonistaNombre,
   rivalNombre,
@@ -586,11 +760,12 @@ export function OlimpiaClient({
   miAfinidad,
   rivalAfinidad,
   disputasActivas,
+  esSolo,
 }: Props) {
   const [faccionSeleccionada, setFaccionSeleccionada] =
     useState<FaccionId>('guardia_hierro')
   const faccionIds = Object.keys(FACCIONES) as FaccionId[]
-  const sinRival = rivalAfinidad.length === 0 || rivalNombre === 'Tu rival'
+  const sinRival = !esSolo && (rivalAfinidad.length === 0 || rivalNombre === 'Tu rival')
 
   const sumaAdeptosCiudad = useMemo(() => {
     let s = 0
@@ -601,22 +776,6 @@ export function OlimpiaClient({
     }
     return s
   }, [miAfinidad])
-
-  const r5EnFaccionesGrandes = useMemo(
-    () =>
-      miAfinidad.filter(
-        (a) =>
-          a.rango === 5 &&
-          FACCIONES[a.faccionId as FaccionId].poblacionBase >= POBLACION_FACCION_GRANDE
-      ).length,
-    [miAfinidad]
-  )
-
-  /** Tier 5 (épico) del LikeButton solo si hay 2+ R5 en facciones con población base ≥ 8k */
-  const totalLikesReverberacion =
-    r5EnFaccionesGrandes >= 2
-      ? sumaAdeptosCiudad
-      : Math.min(sumaAdeptosCiudad, UMBRAL_TIER_MAX_SIN_EPICO)
 
   return (
     <div className="space-y-6">
@@ -641,16 +800,16 @@ export function OlimpiaClient({
           </div>
         )}
 
-        <div className="mt-5 flex flex-col items-center gap-1">
-          <p className="text-[10px] uppercase tracking-widest text-white/30 font-body">
-            Reverberación de la ciudad
-          </p>
-          <LikeButton
-            totalLikes={totalLikesReverberacion}
-            liked={false}
-            onLike={async () => Promise.resolve()}
-            disabled
-          />
+        <div className="mt-5 space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] uppercase tracking-widest text-white/30 font-body">
+              Adeptos totales
+            </p>
+            <p className="text-sm font-semibold text-white/70 tabular-nums">
+              {sumaAdeptosCiudad.toLocaleString()}
+            </p>
+          </div>
+          <BarraOlimpia miAfinidad={miAfinidad} />
         </div>
       </div>
 
@@ -665,6 +824,7 @@ export function OlimpiaClient({
                 rivalNombre={rivalNombre}
                 seleccionada={faccionSeleccionada === id}
                 onClick={() => setFaccionSeleccionada(id)}
+                esSolo={esSolo}
               />
             ))}
           </div>
@@ -686,6 +846,7 @@ export function OlimpiaClient({
                 rivalNombre={rivalNombre}
                 miId={miId}
                 disputasActivas={disputasActivas}
+                esSolo={esSolo}
               />
             </AnimatePresence>
           </div>

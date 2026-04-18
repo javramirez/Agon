@@ -2,7 +2,6 @@ import { getCurrentAgonista } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import {
   getAgoraEventos,
-  getAclamacionesHoy,
   getTiposAclamacionHoyPorEvento,
   getRetoPorId,
 } from '@/lib/db/queries'
@@ -20,19 +19,15 @@ export default async function AgoraPage() {
   const reto = await getRetoPorId(agonista.retoId)
   if (!reto) redirect('/esperando')
 
-  const [eventos, aclamacionesHoy, tiposPorEvento] = (await Promise.all([
+  const [eventos, tiposPorEvento] = (await Promise.all([
     getAgoraEventos(reto.id, 50),
-    getAclamacionesHoy(agonista.id),
     getTiposAclamacionHoyPorEvento(agonista.id),
     sleep(Math.max(0, 4000 - (Date.now() - __pageLoadT0))),
   ])) as [
     Awaited<ReturnType<typeof getAgoraEventos>>,
-    number,
     Awaited<ReturnType<typeof getTiposAclamacionHoyPorEvento>>,
     void,
   ]
-
-  const usadas = aclamacionesHoy
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -49,18 +44,12 @@ export default async function AgoraPage() {
         </p>
       </div>
 
-      <div className="flex items-center justify-between px-1">
-        <p className="text-xs text-muted-foreground font-body">
-          {eventos.length} eventos en el Gran Agon
-        </p>
-        <p className="text-xs text-amber font-body">
-          {5 - usadas} aclamaciones disponibles hoy
-        </p>
-      </div>
+      <p className="text-xs text-muted-foreground font-body px-1">
+        {eventos.length} eventos en el Gran Agon
+      </p>
 
       <AgoraConTriggerClient
         eventosIniciales={eventos}
-        aclamacionesHoy={usadas}
         tiposPorEvento={tiposPorEvento}
       />
     </div>

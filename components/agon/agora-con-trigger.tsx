@@ -10,13 +10,11 @@ import type { AgoraEvento } from '@/lib/db/schema'
 
 interface Props {
   eventosIniciales: AgoraEvento[]
-  aclamacionesHoy: number
   tiposPorEvento: Record<string, string>
 }
 
 export function AgoraConTrigger({
   eventosIniciales,
-  aclamacionesHoy,
   tiposPorEvento,
 }: Props) {
   const router = useRouter()
@@ -82,7 +80,6 @@ export function AgoraConTrigger({
       ) : (
         <AgoraFeed
           eventosIniciales={eventosIniciales}
-          aclamacionesHoy={aclamacionesHoy}
           tiposPorEvento={tiposPorEvento}
         />
       )}

@@ -171,15 +171,29 @@ function DetalleLore({ entrada, onClose }: { entrada: EntradaLore; onClose?: () 
                       className="overflow-hidden"
                     >
                       <div className="pt-3 space-y-3">
-                        {/* Placeholder imagen líder */}
-                        <div className="w-full aspect-[16/9] rounded-xl bg-surface-2 flex items-center justify-center border border-border/40">
-                          <span className={cn('text-7xl opacity-15', entrada.color)}>
-                            {lider.avatar}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground/50 font-body italic text-center">
-                          El retrato del líder llegará pronto al Códex.
-                        </p>
+                        {lider.imagen ? (
+                          <div className="w-full aspect-[16/9] rounded-xl overflow-hidden border border-border/40">
+                            <Image
+                              src={lider.imagen}
+                              alt={lider.nombre}
+                              width={600}
+                              height={338}
+                              className="w-full h-full object-cover object-top"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <>
+                            <div className="w-full aspect-[16/9] rounded-xl bg-surface-2 flex items-center justify-center border border-border/40">
+                              <span className={cn('text-7xl opacity-15', entrada.color)}>
+                                {lider.avatar}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground/50 font-body italic text-center">
+                              El retrato del líder llegará pronto al Códex.
+                            </p>
+                          </>
+                        )}
                         <div className="space-y-3 pt-1">
                           {lider.lore.split('\n\n').map((parrafo, i) => (
                             <p
@@ -955,6 +969,16 @@ const DEFAULT_EVENTO_CONFIG: EventoBitacoraConfig = {
   lucideIcon: 'Circle',
 }
 
+const BITACORA_IMAGENES: Record<string, string> = {
+  dia_perfecto: '/bitacora/dia_perfecto.png',
+  nivel_subido: '/bitacora/nivel_subido.png',
+  inscripcion_desbloqueada: '/bitacora/inscripcion_desbloqueada.png',
+  hegemonia_ganada: '/bitacora/hegemonia_ganada.png',
+  prueba_extraordinaria: '/bitacora/prueba_extraordinaria.png',
+  senalamiento: '/bitacora/senalamiento.png',
+  cronica_semanal: '/bitacora/cronica_semanal.png',
+}
+
 function PlaceholderEvento({
   tipo,
   config,
@@ -962,28 +986,44 @@ function PlaceholderEvento({
   tipo: string
   config: EventoBitacoraConfig
 }) {
+  const imagenSrc = BITACORA_IMAGENES[tipo]
+
+  if (imagenSrc) {
+    return (
+      <div
+        className="w-full h-full relative overflow-hidden"
+        style={{ backgroundColor: config.svgColor }}
+      >
+        <Image
+          src={imagenSrc}
+          alt={tipo}
+          fill
+          className="object-cover object-top"
+          unoptimized
+        />
+        <div
+          className="absolute inset-x-0 bottom-0 h-16"
+          style={{
+            background: `linear-gradient(to top, ${config.svgColor}, transparent)`,
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div
       className="w-full h-full flex items-center justify-center relative overflow-hidden"
       style={{ backgroundColor: config.svgColor }}
     >
-      <svg
-        className="absolute inset-0 w-full h-full opacity-10"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+      <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <pattern
-            id={`grid-${tipo}`}
-            width="32"
-            height="32"
-            patternUnits="userSpaceOnUse"
-          >
+          <pattern id={`grid-${tipo}`} width="32" height="32" patternUnits="userSpaceOnUse">
             <path d="M 32 0 L 0 0 0 32" fill="none" stroke="white" strokeWidth="0.5" />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill={`url(#grid-${tipo})`} />
       </svg>
-
       <div className="relative z-10 flex flex-col items-center gap-3">
         <div
           className="w-20 h-20 rounded-full flex items-center justify-center text-4xl"
@@ -1001,12 +1041,9 @@ function PlaceholderEvento({
           {EVENTO_LABELS[tipo] ?? tipo}
         </p>
       </div>
-
       <div
         className="absolute bottom-0 left-0 right-0 h-16"
-        style={{
-          background: `linear-gradient(to top, ${config.svgColor}, transparent)`,
-        }}
+        style={{ background: `linear-gradient(to top, ${config.svgColor}, transparent)` }}
       />
     </div>
   )
@@ -1100,7 +1137,7 @@ function PanelBitacora({
         ✕
       </button>
 
-      <div className="h-48 relative flex-shrink-0">
+      <div className="relative flex-shrink-0 aspect-[16/9] w-full">
         <PlaceholderEvento tipo={evento.tipo} config={config} />
       </div>
 

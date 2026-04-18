@@ -12,17 +12,14 @@ export type AgoraEventoConLikes = AgoraEvento & {
 
 interface Props {
   eventosIniciales: AgoraEventoConLikes[]
-  aclamacionesHoy: number
   tiposPorEvento: Record<string, string>
 }
 
 export function AgoraFeed({
   eventosIniciales,
-  aclamacionesHoy: aclamacionesInicial,
   tiposPorEvento: tiposInicial,
 }: Props) {
   const [eventos, setEventos] = useState<AgoraEventoConLikes[]>(eventosIniciales)
-  const [aclamacionesHoy, setAclamacionesHoy] = useState(aclamacionesInicial)
   const [tiposPorEvento, setTiposPorEvento] = useState(tiposInicial)
   const [refrescando, setRefrescando] = useState(false)
   const [comentarioCounts, setComentarioCounts] = useState<
@@ -31,9 +28,8 @@ export function AgoraFeed({
 
   useEffect(() => {
     setEventos(eventosIniciales)
-    setAclamacionesHoy(aclamacionesInicial)
     setTiposPorEvento(tiposInicial)
-  }, [eventosIniciales, aclamacionesInicial, tiposInicial])
+  }, [eventosIniciales, tiposInicial])
 
   useEffect(() => {
     if (eventos.length === 0) return
@@ -57,11 +53,9 @@ export function AgoraFeed({
       if (res.ok) {
         const data = (await res.json()) as {
           eventos: AgoraEventoConLikes[]
-          aclamacionesHoy: number
           tiposPorEvento: Record<string, string>
         }
         setEventos(data.eventos)
-        setAclamacionesHoy(data.aclamacionesHoy)
         setTiposPorEvento(data.tiposPorEvento)
       }
     } finally {
@@ -84,7 +78,6 @@ export function AgoraFeed({
         <AgoraEventoCard
           key={evento.id}
           evento={evento}
-          aclamacionesUsadas={aclamacionesHoy}
           miAclamacion={tiposPorEvento[evento.id] ?? null}
           comentarioCountInicial={comentarioCounts[evento.id] ?? 0}
         />

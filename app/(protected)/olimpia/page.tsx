@@ -1,6 +1,11 @@
 import { redirect } from 'next/navigation'
 import { db } from '@/lib/db'
-import { faccionesAfinidad, agonistas, disputasCampeon } from '@/lib/db/schema'
+import {
+  faccionesAfinidad,
+  agonistas,
+  disputasCampeon,
+  retos,
+} from '@/lib/db/schema'
 import { getCurrentAgonista, getAntagonista } from '@/lib/auth'
 import { eq } from 'drizzle-orm'
 import { OlimpiaClient } from '@/components/agon/olimpia-client'
@@ -11,6 +16,17 @@ import { sleep } from '@/lib/utils/sleep'
 async function OlimpiaData() {
   const agonista = await getCurrentAgonista()
   if (!agonista) redirect('/sign-in')
+
+  const reto = agonista.retoId
+    ? await db
+        .select()
+        .from(retos)
+        .where(eq(retos.id, agonista.retoId))
+        .limit(1)
+        .then((r) => r[0] ?? null)
+    : null
+
+  const esSolo = reto?.modo === 'solo'
 
   const antagonista =
     agonista.retoId != null
@@ -42,6 +58,7 @@ async function OlimpiaData() {
       miAfinidad={miAfinidad}
       rivalAfinidad={rivalAfinidad}
       disputasActivas={disputasActivas}
+      esSolo={esSolo}
     />
   )
 }

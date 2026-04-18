@@ -305,6 +305,7 @@ Si vienes de inactividad, lesión, o abandono de algo que antes tenías, si est�
 export const LORE_FACCIONES: EntradaLore[] = [
   {
     id: 'guardia_hierro',
+    imagen: '/facciones/guardia_hierro.png',
     nombre: 'La Guardia de Hierro',
     subtitulo: 'Dios tutelar: Ares · Líder: Diomedes',
     avatar: '⚔️',
@@ -319,6 +320,7 @@ Diomedes la lidera porque fue el único mortal en la Ilíada que hirió a dos di
 El gimnasio y el cardio son las pruebas que la Guardia observa. No el esfuerzo declarado, el esfuerzo registrado.`,
     lider: {
       id: 'diomedes',
+      imagen: '/lideres/diomedes.png',
       nombre: 'Diomedes',
       subtitulo: 'Líder de la Guardia de Hierro',
       avatar: '⚔️',
@@ -335,6 +337,7 @@ No busca admiración. Busca agonistas que no necesiten ser motivados porque ya e
   },
   {
     id: 'escuela_logos',
+    imagen: '/facciones/escuela_logos.png',
     nombre: 'La Escuela del Logos',
     subtitulo: 'Dios tutelar: Apolo · Líder: Pitágoras',
     avatar: '📚',
@@ -349,6 +352,7 @@ La Escuela del Logos aplica ese rigor a la lectura. No páginas acumuladas por a
 Los que alcanzan rango Aliado en la Escuela comienzan a ver el Gran Agon de manera diferente: no como una competencia de hábitos físicos, sino como una demostración de carácter integral.`,
     lider: {
       id: 'pitagoras',
+      imagen: '/lideres/pitagoras.png',
       nombre: 'Pitágoras',
       subtitulo: 'Líder de la Escuela del Logos',
       avatar: '📐',
@@ -365,6 +369,7 @@ Sus decretos durante las Crisis de Ciudad son los más controversiales. También
   },
   {
     id: 'gremio_tierra',
+    imagen: '/facciones/gremio_tierra.png',
     nombre: 'El Gremio de la Tierra',
     subtitulo: 'Dios tutelar: Deméter · Líder: Triptólemo',
     avatar: '🌾',
@@ -379,6 +384,7 @@ El Gremio de la Tierra entiende esta cadena de causalidad mejor que nadie. La hi
 Deméter no perdona el desprecio hacia la nutrición. Lo registra. Y cobra.`,
     lider: {
       id: 'triptolemo',
+      imagen: '/lideres/triptolemo.png',
       nombre: 'Triptólemo',
       subtitulo: 'Líder del Gremio de la Tierra',
       avatar: '🌾',
@@ -395,6 +401,7 @@ Es el líder más paciente de Olimpia. También el más inflexible cuando la bas
   },
   {
     id: 'hermandad_caos',
+    imagen: '/facciones/hermandad_caos.png',
     nombre: 'La Hermandad del Caos',
     subtitulo: 'Dios tutelar: Eris · Líder: Tersites',
     avatar: '🌀',
@@ -409,6 +416,7 @@ La Hermandad del Caos opera en los márgenes del Gran Agon. No observa el esfuer
 Ser Campeón de la Hermandad es ambiguo por diseño. La facción que premia la discordia no puede tener un campeón que no genere discordia. Tersites lo entendería.`,
     lider: {
       id: 'tersites',
+      imagen: '/lideres/tersites.png',
       nombre: 'Tersites',
       subtitulo: 'Líder de la Hermandad del Caos',
       avatar: '🌀',
@@ -425,6 +433,7 @@ Su presencia en las Crisis de Ciudad es siempre perturbadora. Exactamente como d
   },
   {
     id: 'corredores_alba',
+    imagen: '/facciones/corredores_alba.png',
     nombre: 'Los Corredores del Alba',
     subtitulo: 'Dios tutelar: Hermes · Líder: Feidípides',
     avatar: '👟',
@@ -439,6 +448,7 @@ Los Corredores del Alba observan los pasos diarios con la precisión de Hermes c
 El nombre de la facción no es metafórico. Los que caminan antes del amanecer son los que más rápido ascienden en su lealtad.`,
     lider: {
       id: 'feidipides',
+      imagen: '/lideres/feidipides.png',
       nombre: 'Feidípides',
       subtitulo: 'Líder de los Corredores del Alba',
       avatar: '🏃',
@@ -454,6 +464,7 @@ Feidípides no habría entendido a alguien que se detiene a mitad del camino por
   },
   {
     id: 'concilio_sombras',
+    imagen: '/facciones/concilio_sombras.png',
     nombre: 'El Concilio de las Sombras',
     subtitulo: 'Dios tutelar: Morfeo · Líder: Endimión',
     avatar: '🌙',
@@ -468,6 +479,7 @@ El Concilio de las Sombras no ve el sueño como pasividad. Ve el sueño como la 
 Morfeo observa las horas de sueño con la misma seriedad con que Ares observa las repeticiones en el gimnasio. La diferencia es que Morfeo nunca grita. Solo anota. Y la facción recuerda quién respetó el descanso sagrado y quién lo sacrificó creyendo que eso era disciplina.`,
     lider: {
       id: 'endimion',
+      imagen: '/lideres/endimion.png',
       nombre: 'Endimión',
       subtitulo: 'Líder del Concilio de las Sombras',
       avatar: '🌙',
@@ -484,6 +496,7 @@ Cuando Morfeo cobra su precio a quienes no honraron el descanso, lo hace en nomb
   },
   {
     id: 'tribunal_kleos',
+    imagen: '/facciones/tribunal_kleos.png',
     nombre: 'El Tribunal del Kleos',
     subtitulo: 'Dios tutelar: Nike · Líder: Milcíades',
     avatar: '🏆',
@@ -498,6 +511,7 @@ El Tribunal del Kleos lleva su nombre porque Milcíades entendía lo que la vict
 Ser Campeón del Tribunal del Kleos es la declaración más explícita que el Gran Agon permite: este agonista no solo participó. Exigió la excelencia de sí mismo de manera consistente, y el Tribunal lo reconoce.`,
     lider: {
       id: 'milciades',
+      imagen: '/lideres/milciades.png',
       nombre: 'Milcíades',
       subtitulo: 'Líder del Tribunal del Kleos',
       avatar: '🏆',

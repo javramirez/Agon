@@ -68,7 +68,6 @@ export const KLEOS_POR_PRUEBA = {
 export const KLEOS_DIA_PERFECTO = 30
 export const KLEOS_DIA_PERFECTO_NIVEL_9 = 50
 export const KLEOS_SENALAMIENTO_PENALIDAD = 50
-export const ACLAMACIONES_POR_DIA = 5
 export const MAX_NIVEL_POR_DIA = 1
 
 // Inscripciones del Agon (40 públicas + 20 secretas + 25 easter eggs)

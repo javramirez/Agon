@@ -41,7 +41,6 @@ const TIPO_ICONOS: Record<string, string> = {
 
 interface Props {
   evento: AgoraEvento
-  aclamacionesUsadas: number
   miAclamacion?: string | null
   /** Total de comentarios (batch desde AgoraFeed) */
   comentarioCountInicial?: number
@@ -49,13 +48,11 @@ interface Props {
 
 export function AgoraEventoCard({
   evento,
-  aclamacionesUsadas,
   miAclamacion,
   comentarioCountInicial = 0,
 }: Props) {
   const router = useRouter()
   const [aclamacion, setAclamacion] = useState(miAclamacion ?? null)
-  const [usadas, setUsadas] = useState(aclamacionesUsadas)
   const [cargando, setCargando] = useState(false)
   const [mostrarAcciones, setMostrarAcciones] = useState(false)
   const [mostrarComentarios, setMostrarComentarios] = useState(false)
@@ -89,8 +86,16 @@ export function AgoraEventoCard({
     likesAdeptos?: number
   } | null
 
+  const eventoConLikes = evento as AgoraEvento & {
+    totalLikes?: number
+    likesReales?: number
+  }
   const likesAdeptos =
-    metadata != null && typeof metadata.likesAdeptos === 'number' ? metadata.likesAdeptos : 0
+    metadata != null && typeof metadata.likesAdeptos === 'number'
+      ? metadata.likesAdeptos
+      : eventoConLikes.totalLikes != null && eventoConLikes.likesReales != null
+        ? eventoConLikes.totalLikes - eventoConLikes.likesReales
+        : 0
 
   const esDios = metadata?.esDios === true
   const diosNombre = metadata?.diosNombre
@@ -179,10 +184,6 @@ export function AgoraEventoCard({
   }, [miAclamacion])
 
   useEffect(() => {
-    setUsadas(aclamacionesUsadas)
-  }, [aclamacionesUsadas])
-
-  useEffect(() => {
     if (isCronica) return
     setComentariosCount(comentarioCountInicial)
     setVistos(comentarioCountInicial)
@@ -262,17 +263,66 @@ export function AgoraEventoCard({
 
   useEffect(() => {
     if (isCronica) return
+    let cancelled = false
     async function cargarLikes() {
       const res = await fetch(`/api/likes?eventoId=${evento.id}`)
+      if (cancelled) return
       if (res.ok) {
         const data = (await res.json()) as { total: number; miLike: boolean }
-        setLikes(data.total)
         setMiLike(data.miLike)
+        setLikesCargados(true)
+
+        const adeptos = likesAdeptos
+        const inicio = data.total
+        const destino = data.total + adeptos
+
+        if (adeptos === 0) {
+          setLikes(inicio)
+          return
+        }
+
+        // Animación orgánica: incrementos aleatorios hasta el destino
+        let actual = inicio
+        setLikes(actual)
+
+        function tick() {
+          if (cancelled) return
+          const restante = destino - actual
+          if (restante <= 0) return
+
+          const progreso = (actual - inicio) / adeptos // 0 → 1
+
+          // Incremento decrece exponencialmente al acercarse al final
+          const factorVelocidad = Math.pow(1 - progreso, 2) // 1 → 0 cuadrático
+          const tasaBase = 0.08 + factorVelocidad * 0.12 // rápido al inicio, lento al final
+          const incremento = Math.min(
+            restante,
+            Math.max(1, Math.floor(restante * tasaBase))
+          )
+          actual += incremento
+          setLikes(actual)
+
+          if (actual < destino) {
+            // Delay crece exponencialmente al final — casi se detiene antes de llegar
+            const delayBase = 30 + Math.pow(progreso, 2) * 300
+            const jitter = Math.random() * 40
+            setTimeout(tick, delayBase + jitter)
+          }
+        }
+
+        // Pequeño delay inicial antes de que "arranquen" los adeptos
+        setTimeout(() => {
+          if (!cancelled) tick()
+        }, 800)
+      } else {
+        setLikesCargados(true)
       }
-      setLikesCargados(true)
     }
     void cargarLikes()
-  }, [evento.id, isCronica])
+    return () => {
+      cancelled = true
+    }
+  }, [evento.id, isCronica, likesAdeptos])
 
   async function toggleLike() {
     if (isCronica) return
@@ -289,7 +339,7 @@ export function AgoraEventoCard({
   }
 
   async function aclamar(tipo: string) {
-    if (aclamacion || usadas >= 5 || cargando) return
+    if (aclamacion || cargando) return
     setCargando(true)
 
     const res = await fetch('/api/aclamaciones', {
@@ -300,7 +350,6 @@ export function AgoraEventoCard({
 
     if (res.ok) {
       setAclamacion(tipo)
-      setUsadas((prev) => prev + 1)
       router.refresh()
     }
 
@@ -437,7 +486,7 @@ export function AgoraEventoCard({
           )}
         >
           <LikeButton
-            totalLikes={likes + likesAdeptos}
+            totalLikes={likes}
             liked={miLike}
             onLike={toggleLike}
             disabled={!likesCargados}
@@ -488,13 +537,7 @@ export function AgoraEventoCard({
               <button
                 type="button"
                 onClick={() => setMostrarAcciones(!mostrarAcciones)}
-                disabled={usadas >= 5}
-                className={cn(
-                  'text-xs font-body transition-colors',
-                  usadas >= 5
-                    ? 'text-muted-foreground/30 cursor-not-allowed'
-                    : 'text-muted-foreground hover:text-amber'
-                )}
+                className="text-xs font-body transition-colors text-muted-foreground hover:text-amber"
               >
                 + Aclamar
               </button>
@@ -509,7 +552,7 @@ export function AgoraEventoCard({
                 key={a.tipo}
                 type="button"
                 onClick={() => void aclamar(a.tipo)}
-                disabled={!!aclamacion || usadas >= 5}
+                disabled={!!aclamacion}
                 title={a.label}
                 className="text-base opacity-40 hover:opacity-100 transition-opacity active:scale-95"
               >
@@ -527,12 +570,6 @@ export function AgoraEventoCard({
           </div>
         )}
       </div>
-
-      {!esDios && (
-        <p className="text-xs text-muted-foreground/50 font-body text-right">
-          {5 - usadas} aclamaciones restantes hoy
-        </p>
-      )}
 
       {mostrarAcciones && !aclamacion && !esDios && (
         <div className="grid grid-cols-2 gap-2 pt-2 sm:flex sm:flex-wrap">

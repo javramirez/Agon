@@ -6,7 +6,6 @@ import { agoraEventos, likesAgora } from '@/lib/db/schema'
 import type { AgoraEvento } from '@/lib/db/schema'
 import {
   getAgoraEventos,
-  getAclamacionesHoy,
   getTiposAclamacionHoyPorEvento,
   getAgonistaByClerkId,
 } from '@/lib/db/queries'
@@ -64,11 +63,10 @@ export async function GET() {
     return NextResponse.json({ error: 'Agonista no encontrado' }, { status: 404 })
   }
   if (!agonista.retoId) {
-    return NextResponse.json({ eventos: [], aclamacionesHoy: 0, tiposPorEvento: {} })
+    return NextResponse.json({ eventos: [], tiposPorEvento: {} })
   }
-  const [eventosRaw, aclamacionesHoy, tiposPorEvento] = await Promise.all([
+  const [eventosRaw, tiposPorEvento] = await Promise.all([
     getAgoraEventos(agonista.retoId, 50),
-    getAclamacionesHoy(agonista.id),
     getTiposAclamacionHoyPorEvento(agonista.id),
   ])
 
@@ -81,6 +79,12 @@ export async function GET() {
       meta != null && typeof meta.likesAdeptos === 'number'
         ? meta.likesAdeptos
         : 0
+
+    // Si no tiene likesAdeptos cacheados, disparar persist en background
+    if (likesAdeptos === 0 && evento.tipo !== 'cronica_semanal') {
+      void persistLikesAdeptosParaEvento(evento.id).catch(() => {})
+    }
+
     const likesReales = conteos[evento.id] ?? 0
     return {
       ...evento,
@@ -89,7 +93,7 @@ export async function GET() {
     }
   })
 
-  return NextResponse.json({ eventos, aclamacionesHoy, tiposPorEvento })
+  return NextResponse.json({ eventos, tiposPorEvento })
 }
 
 export async function POST(req: Request) {

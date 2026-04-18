@@ -10,7 +10,6 @@ const AgoraConTrigger = dynamic(
 
 type Props = {
   eventosIniciales: AgoraEvento[]
-  aclamacionesHoy: number
   tiposPorEvento: Record<string, string>
 }
 

@@ -4,7 +4,6 @@ import { db } from '@/lib/db'
 import { aclamaciones } from '@/lib/db/schema'
 import { eq, and, count } from 'drizzle-orm'
 import { getAgonistaByClerkId } from '@/lib/db/queries'
-import { ACLAMACIONES_POR_DIA } from '@/lib/db/constants'
 
 const TIPOS_ACLAMACION = [
   'fuego',
@@ -52,24 +51,6 @@ export async function POST(req: Request) {
 
   if (!esTipoAclamacion(tipo)) {
     return NextResponse.json({ error: 'Tipo de aclamación inválido' }, { status: 400 })
-  }
-
-  const usadas = await db
-    .select({ count: count() })
-    .from(aclamaciones)
-    .where(
-      and(
-        eq(aclamaciones.agonistId, agonista.id),
-        eq(aclamaciones.fecha, hoy)
-      )
-    )
-
-  const n = Number(usadas[0]?.count ?? 0)
-  if (n >= ACLAMACIONES_POR_DIA) {
-    return NextResponse.json(
-      { error: 'Has usado todas tus aclamaciones de hoy.' },
-      { status: 429 }
-    )
   }
 
   const yaAclamado = await db
@@ -122,8 +103,5 @@ export async function GET() {
     )
 
   const n = Number(usadas[0]?.count ?? 0)
-  return NextResponse.json({
-    usadas: n,
-    disponibles: ACLAMACIONES_POR_DIA - n,
-  })
+  return NextResponse.json({ usadas: n, disponibles: 999 })
 }

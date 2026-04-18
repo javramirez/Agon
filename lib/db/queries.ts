@@ -10,7 +10,7 @@ import {
   hegemonias,
   inscripciones,
 } from './schema'
-import { eq, and, gte, lte, desc, count, not, inArray } from 'drizzle-orm'
+import { eq, and, gte, lte, desc, not, inArray } from 'drizzle-orm'
 import {
   NIVEL_THRESHOLDS,
   NIVEL_LABELS,
@@ -211,20 +211,6 @@ export async function getAclamacionesPorEvento(eventoId: string) {
     .select()
     .from(aclamaciones)
     .where(eq(aclamaciones.eventoId, eventoId))
-}
-
-export async function getAclamacionesHoy(agonistId: string) {
-  const hoy = new Date().toISOString().split('T')[0]
-  const result = await db
-    .select({ count: count() })
-    .from(aclamaciones)
-    .where(
-      and(
-        eq(aclamaciones.agonistId, agonistId),
-        eq(aclamaciones.fecha, hoy)
-      )
-    )
-  return Number(result[0]?.count ?? 0)
 }
 
 export async function getTiposAclamacionHoyPorEvento(agonistId: string) {
