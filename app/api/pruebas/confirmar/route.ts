@@ -203,7 +203,12 @@ export async function POST(req: Request) {
   const semanaSagradaActiva = await db
     .select()
     .from(semanaSagrada)
-    .where(eq(semanaSagrada.activa, true))
+    .where(
+      and(
+        eq(semanaSagrada.activa, true),
+        eq(semanaSagrada.retoId, agonista.retoId ?? '')
+      )
+    )
     .limit(1)
   const multiplicadorSagrado = semanaSagradaActiva.length > 0 ? 2 : 1
 

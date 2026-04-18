@@ -1,6 +1,6 @@
 import { db } from '@/lib/db'
 import { semanaSagrada, agoraEventos } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { getAmbosAgonistas, getSemanaActual, getSemanaRango } from '@/lib/db/queries'
 import { triggerComentariosDioses } from '@/lib/dioses/trigger-comentarios'
 import { format } from 'date-fns'
@@ -24,7 +24,7 @@ export async function verificarYActivarSemanaSagrada(
   const yaActiva = await db
     .select()
     .from(semanaSagrada)
-    .where(eq(semanaSagrada.activa, true))
+    .where(and(eq(semanaSagrada.activa, true), eq(semanaSagrada.retoId, retoId)))
     .limit(1)
 
   if (yaActiva.length > 0) return false
@@ -38,6 +38,7 @@ export async function verificarYActivarSemanaSagrada(
     fechaInicio: format(hoy, 'yyyy-MM-dd'),
     fechaFin: finSemana,
     activadaEn: hoy,
+    retoId,
   })
 
   const ambos = await getAmbosAgonistas(retoId)
@@ -65,11 +66,11 @@ function fechaAString(f: Date | string | null | undefined): string | null {
   return format(f, 'yyyy-MM-dd')
 }
 
-export async function desactivarSemanaSagradaSiTermino(): Promise<void> {
+export async function desactivarSemanaSagradaSiTermino(retoId: string): Promise<void> {
   const activa = await db
     .select()
     .from(semanaSagrada)
-    .where(eq(semanaSagrada.activa, true))
+    .where(and(eq(semanaSagrada.activa, true), eq(semanaSagrada.retoId, retoId)))
     .limit(1)
 
   if (activa.length === 0) return
@@ -83,6 +84,6 @@ export async function desactivarSemanaSagradaSiTermino(): Promise<void> {
     await db
       .update(semanaSagrada)
       .set({ activa: false })
-      .where(eq(semanaSagrada.activa, true))
+      .where(and(eq(semanaSagrada.activa, true), eq(semanaSagrada.retoId, retoId)))
   }
 }

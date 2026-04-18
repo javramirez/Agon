@@ -21,6 +21,8 @@ interface DatosSemana {
   semana: number
   fechaInicio: string
   fechaFin: string
+  /** true = reto en solitario (sin rival) */
+  esSolo: boolean
   agonista1: DatosAgonista
   agonista2: DatosAgonista
   hegemonia: {
@@ -93,7 +95,7 @@ export async function generarCronica(
         fechaInicio: datos.fechaInicio,
         fechaFin: datos.fechaFin,
         kleosPropio: ambos[0].kleosTotal,
-        kleosRival: ambos[1]?.kleosTotal ?? 0,
+        kleosRival: datos.esSolo ? 0 : (ambos[1]?.kleosTotal ?? 0),
       },
     })
 
@@ -127,9 +129,10 @@ async function recopilarDatosEnRango(
   const finDia = new Date(finStr + 'T23:59:59.999Z')
 
   const ambos = await getAmbosAgonistas(retoId)
-  if (ambos.length < 2) throw new Error('No hay suficientes agonistas')
+  if (ambos.length < 1) throw new Error('No hay agonistas')
 
   const [a1, a2] = ambos
+  const esSolo = ambos.length === 1
 
   const [pruebas1, pruebas2, inscripciones1, inscripciones2, hegemoniaData, eventos] =
     await Promise.all([
@@ -143,16 +146,18 @@ async function recopilarDatosEnRango(
             lte(pruebasDiarias.fecha, finStr)
           )
         ),
-      db
-        .select()
-        .from(pruebasDiarias)
-        .where(
-          and(
-            eq(pruebasDiarias.agonistId, a2.id),
-            gte(pruebasDiarias.fecha, inicioStr),
-            lte(pruebasDiarias.fecha, finStr)
-          )
-        ),
+      esSolo
+        ? Promise.resolve([])
+        : db
+            .select()
+            .from(pruebasDiarias)
+            .where(
+              and(
+                eq(pruebasDiarias.agonistId, a2!.id),
+                gte(pruebasDiarias.fecha, inicioStr),
+                lte(pruebasDiarias.fecha, finStr)
+              )
+            ),
       db
         .select()
         .from(inscripciones)
@@ -163,16 +168,18 @@ async function recopilarDatosEnRango(
             lte(inscripciones.desbloqueadoEn, finDia)
           )
         ),
-      db
-        .select()
-        .from(inscripciones)
-        .where(
-          and(
-            eq(inscripciones.agonistId, a2.id),
-            gte(inscripciones.desbloqueadoEn, inicioDia),
-            lte(inscripciones.desbloqueadoEn, finDia)
-          )
-        ),
+      esSolo
+        ? Promise.resolve([])
+        : db
+            .select()
+            .from(inscripciones)
+            .where(
+              and(
+                eq(inscripciones.agonistId, a2!.id),
+                gte(inscripciones.desbloqueadoEn, inicioDia),
+                lte(inscripciones.desbloqueadoEn, finDia)
+              )
+            ),
       db
         .select()
         .from(hegemonias)
@@ -223,7 +230,20 @@ async function recopilarDatosEnRango(
     }
   }
 
-  const heg = hegemoniaData[0]
+  const heg = esSolo ? null : hegemoniaData[0]
+
+  const agonista2Datos: DatosAgonista = esSolo
+    ? {
+        nombre: '',
+        nivel: '',
+        kleosTotal: 0,
+        kleosSemana: 0,
+        diasPerfectos: 0,
+        pruebasCompletadas: 0,
+        pruebasTotales: 0,
+        inscripcionesNuevas: 0,
+      }
+    : calcularDatos(a2!, pruebas2, inscripciones2)
 
   const tiposDestacados = [
     'dia_perfecto',
@@ -244,19 +264,27 @@ async function recopilarDatosEnRango(
     semana,
     fechaInicio: inicioStr,
     fechaFin: finStr,
+    esSolo,
     agonista1: calcularDatos(a1, pruebas1, inscripciones1),
-    agonista2: calcularDatos(a2, pruebas2, inscripciones2),
-    hegemonia: {
-      ganador:
-        heg?.ganadorId === a1.id
-          ? a1.nombre
-          : heg?.ganadorId === a2.id
-            ? a2.nombre
-            : null,
-      empate: heg?.empate ?? false,
-      kleosGanador: heg?.kleosGanador ?? 0,
-      kleosRival: heg?.kleosRival ?? 0,
-    },
+    agonista2: agonista2Datos,
+    hegemonia: esSolo
+      ? {
+          ganador: null,
+          empate: false,
+          kleosGanador: 0,
+          kleosRival: 0,
+        }
+      : {
+          ganador:
+            heg?.ganadorId === a1.id
+              ? a1.nombre
+              : heg?.ganadorId === a2!.id
+                ? a2!.nombre
+                : null,
+          empate: heg?.empate ?? false,
+          kleosGanador: heg?.kleosGanador ?? 0,
+          kleosRival: heg?.kleosRival ?? 0,
+        },
     eventosDestacados,
   }
 }
@@ -310,7 +338,7 @@ export async function generarCronicaConFecha(
         fechaInicio: datos.fechaInicio,
         fechaFin: datos.fechaFin,
         kleosPropio: ambos[0].kleosTotal,
-        kleosRival: ambos[1]?.kleosTotal ?? 0,
+        kleosRival: datos.esSolo ? 0 : (ambos[1]?.kleosTotal ?? 0),
       },
     })
 
@@ -323,18 +351,45 @@ export async function generarCronicaConFecha(
 }
 
 function construirPrompt(datos: DatosSemana): string {
-  const { agonista1, agonista2, hegemonia, semana, eventosDestacados } = datos
+  const { agonista1, agonista2, hegemonia, semana, eventosDestacados, esSolo } =
+    datos
+
+  const eventosTexto =
+    eventosDestacados.length > 0
+      ? `\nEVENTOS DESTACADOS DE LA SEMANA:\n${eventosDestacados.map((e, i) => `${i + 1}. ${e}`).join('\n')}`
+      : '\nEVENTOS: Sin eventos destacados esta semana.'
+
+  if (esSolo) {
+    return `Eres el cronista del Gran Agon — un viaje épico de 29 días de disciplina personal en solitario. Escribes en el estilo del universo Agon: épico, filosófico, con referencias a la antigua Grecia, pero también con humor y calidez humana. Nunca cursi, siempre con peso.
+
+Datos de la Semana ${semana}:
+
+AGONISTA: ${agonista1.nombre}
+- Nivel: ${agonista1.nivel}
+- Kleos esta semana: ${agonista1.kleosSemana}
+- Kleos total: ${agonista1.kleosTotal}
+- Días perfectos: ${agonista1.diasPerfectos}
+- Pruebas completadas: ${agonista1.pruebasCompletadas}/${agonista1.pruebasTotales}
+- Inscripciones nuevas: ${agonista1.inscripcionesNuevas}
+${eventosTexto}
+
+Escribe La Crónica del Período en exactamente 120-150 palabras en español. Debe:
+1. Comenzar con una frase épica sobre el agon o la semana
+2. Narrar solo el camino de este agonista (sin rival ni duelo); mencionar eventos reales si los hay
+3. NO menciones rivales, Hegemonía ni enfrentamiento — es un reto personal contra sí mismo y el tiempo
+4. Terminar con una frase filosófica que mire hacia la semana siguiente
+
+IMPORTANTE: Si hay eventos destacados, menciónalos en la narrativa con el tono del universo Agon. No inventes eventos que no están en la lista.
+NO uses markdown, bullets ni formato especial. Solo prosa fluida y épica.
+NO inventes datos que no están en los números ni en la lista de eventos dados.
+SÍ puedes hacer referencias filosóficas griegas cuando corresponda.`
+  }
 
   const ganadorTexto = hegemonia.empate
     ? 'La semana terminó en empate — el Altis no pudo decidir.'
     : hegemonia.ganador
       ? `${hegemonia.ganador} conquistó La Hegemonía de esta semana.`
       : 'La Hegemonía no fue reclamada esta semana.'
-
-  const eventosTexto =
-    eventosDestacados.length > 0
-      ? `\nEVENTOS DESTACADOS DE LA SEMANA:\n${eventosDestacados.map((e, i) => `${i + 1}. ${e}`).join('\n')}`
-      : '\nEVENTOS: Sin eventos destacados esta semana.'
 
   return `Eres el cronista del Gran Agon — una competencia épica de 29 días de disciplina personal entre dos amigos. Escribes en el estilo del universo Agon: épico, filosófico, con referencias a la antigua Grecia, pero también con humor y calidez humana. Nunca cursi, siempre con peso.
 

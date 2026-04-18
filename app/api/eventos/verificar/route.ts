@@ -1,7 +1,12 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { comentariosAgora, agoraEventos, likesAgora } from '@/lib/db/schema'
+import {
+  comentariosAgora,
+  agoraEventos,
+  likesAgora,
+  cronicas,
+} from '@/lib/db/schema'
 import { and, asc, eq, isNotNull, lte } from 'drizzle-orm'
 import {
   verificarYActivarPruebas,
@@ -12,7 +17,13 @@ import {
   desactivarSemanaSagradaSiTermino,
 } from '@/lib/pruebas-extraordinarias/semana-sagrada'
 import { getDiaDelAgan, isGranAgonActivo } from '@/lib/utils'
-import { getAgonistaByClerkId, getRetoPorId } from '@/lib/db/queries'
+import {
+  calcularYGuardarHegemonia,
+  getAgonistaByClerkId,
+  getRetoPorId,
+  getSemanaActual,
+} from '@/lib/db/queries'
+import { generarCronica } from '@/lib/cronica/generar'
 import { procesarPruebasExpiradas } from '@/lib/pruebas-extraordinarias/expirar-pruebas'
 import {
   generarTextoComentario,
@@ -171,9 +182,37 @@ export async function GET() {
   const diaActual = getDiaDelAgan(fi)
   const resultado = await verificarYActivarPruebas(diaActual, fi, reto.id)
 
+  const semanaActual = getSemanaActual(fi)
+  if (semanaActual > 1) {
+    for (let s = 1; s < semanaActual; s++) {
+      const cronicaExistente = await db
+        .select({ id: cronicas.id })
+        .from(cronicas)
+        .where(and(eq(cronicas.semana, s), eq(cronicas.retoId, reto.id)))
+        .limit(1)
+
+      if (cronicaExistente.length === 0) {
+        void generarCronica(reto.id, fi, s).catch((err) =>
+          console.error(`generarCronica auto semana ${s}`, err)
+        )
+        break
+      }
+    }
+  }
+
+  const esInicioSemana = diaActual > 1 && (diaActual - 1) % 7 === 0
+  if (esInicioSemana && reto.modo === 'duelo') {
+    const semanaAnterior = getSemanaActual(fi) - 1
+    if (semanaAnterior >= 1) {
+      void calcularYGuardarHegemonia(semanaAnterior, reto.id, fi).catch((err) =>
+        console.error('calcularYGuardarHegemonia auto', err)
+      )
+    }
+  }
+
   const semanaSagradaActivada = await verificarYActivarSemanaSagrada(reto.id, fi)
 
-  await desactivarSemanaSagradaSiTermino()
+  await desactivarSemanaSagradaSiTermino(reto.id)
 
   try {
     await procesarPruebasExpiradas(userId)
